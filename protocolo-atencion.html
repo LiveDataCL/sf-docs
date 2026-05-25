@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocolo de Atención · Salon Men Saúl Fino</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── BASE ── */
+:root {
+  --bg:      #F9F6F1;
+  --white:   #FFFFFF;
+  --panel:   #F2EDE5;
+  --rule:    #DDD7CE;
+  --gold:    #7A5208;
+  --gold-lt: #F5EDDB;
+  --ink:     #1A1612;
+  --ink2:    #2E2A24;
+  --mid:     #4A4540;
+  --dim:     #6A6460;
+  --red:     #922A1A;
+  --red-lt:  #FBF0EE;
+  --green:   #1A5C38;
+  --green-lt:#EBF5F0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink2);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+/* ── COVER ── */
+.cover {
+  background: var(--ink);
+  color: #F0EBE0;
+  padding: 72px 56px 60px;
+  position: relative;
+  overflow: hidden;
+}
+.cover::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold), #C4A050, var(--gold));
+}
+.cover-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #C4A050;
+  margin-bottom: 28px;
+}
+.cover h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(44px, 8vw, 88px);
+  font-weight: 700;
+  line-height: 0.92;
+  color: #F5F0E8;
+  letter-spacing: -0.5px;
+}
+.cover h1 em { font-style: italic; color: #C4A050; font-weight: 400; }
+.cover-rule { width: 48px; height: 2px; background: #C4A050; margin: 28px 0; }
+.cover-desc {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-style: italic;
+  color: #B8B0A0;
+  max-width: 520px;
+  line-height: 1.65;
+}
+.cover-meta {
+  margin-top: 36px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #6A6050;
+}
+
+/* ── NAV ── */
+.nav {
+  background: var(--white);
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+}
+.nav::-webkit-scrollbar { height: 0; }
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 18px;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all .18s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nav a:hover { border-bottom-color: var(--gold); background: var(--gold-lt); }
+.nav-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--gold);
+  width: 18px;
+}
+.nav-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mid);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* ── BODY WRAPPER ── */
+.body {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+/* ── PHASE HEADER ── */
+.phase {
+  padding: 56px 0 28px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 2px;
+}
+.phase-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.phase-tag::after { content: ''; flex: 0 0 32px; height: 1px; background: var(--gold); }
+.phase h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(26px, 5vw, 46px);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.phase h2 em { font-style: italic; color: var(--gold); font-weight: 400; }
+.phase-desc {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--mid);
+  max-width: 580px;
+}
+
+/* ── STEP ── */
+.step {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--rule);
+  transition: background .15s;
+}
+.step:hover { background: rgba(122,82,8,0.02); }
+
+.step-left {
+  padding: 26px 16px 26px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  border-right: 1px solid var(--rule);
+}
+.step-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--rule);
+  line-height: 1;
+}
+.step-ico { font-size: 17px; }
+
+.step-right { padding: 26px 0 26px 24px; }
+
+.step-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  line-height: 1.2;
+}
+.badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  background: var(--gold-lt);
+  border-radius: 2px;
+  vertical-align: middle;
+  font-weight: 500;
+}
+.step-body {
+  font-size: 14px;
+  color: var(--mid);
+  margin-bottom: 14px;
+  line-height: 1.7;
+}
+
+/* ── ACTIONS ── */
+.actions { list-style: none; margin: 10px 0; }
+.action {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 9px 12px;
+  border-left: 2px solid var(--rule);
+  margin-bottom: 2px;
+  transition: border-color .15s, background .15s;
+}
+.action:hover { border-left-color: var(--gold); background: var(--gold-lt); }
+.ab {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+.at { font-size: 14px; color: var(--ink2); line-height: 1.65; }
+.at strong { color: var(--ink); font-weight: 600; }
+.at em { font-style: italic; color: var(--gold); font-family: 'Cormorant Garamond', serif; font-size: 16px; }
+
+/* ── DIALOGUE ── */
+.dialogue {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--gold);
+  padding: 16px 20px 16px 24px;
+  margin: 14px 0;
+  position: relative;
+}
+.dq {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 42px;
+  color: var(--gold);
+  opacity: .25;
+  position: absolute;
+  top: 2px; left: 10px;
+  line-height: 1;
+}
+.dt {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.6;
+  padding-left: 20px;
+}
+.dl {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding-left: 20px;
+  margin-top: 7px;
+}
+
+/* ── TIP ── */
+.tip {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  background: var(--gold-lt);
+  border: 1px solid rgba(122,82,8,0.18);
+  padding: 13px 16px;
+  margin: 10px 0;
+}
+.ti { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.tt { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+.tt strong { color: var(--gold); font-weight: 600; }
+
+/* ── NEVER ── */
+.never {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  background: var(--red-lt);
+  border: 1px solid rgba(146,42,26,0.15);
+  border-left: 3px solid var(--red);
+  padding: 13px 16px;
+  margin: 10px 0;
+}
+.ni { font-size: 15px; flex-shrink: 0; }
+.nt { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+.nt strong { color: var(--red); font-weight: 600; }
+
+/* ── HIGHLIGHT BOX ── */
+.hbox {
+  border-left: 3px solid var(--gold);
+  background: var(--panel);
+  padding: 18px 20px;
+  margin: 14px 0;
+}
+.hbox-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.hbox-body { font-size: 14px; color: var(--ink2); line-height: 1.65; }
+.hbox-body strong { color: var(--ink); font-weight: 600; }
+
+/* ── OSHIBORI SPECIAL BOX ── */
+.oshibori-box {
+  background: var(--green-lt);
+  border: 1px solid rgba(26,92,56,0.2);
+  border-left: 4px solid var(--green);
+  padding: 20px 22px;
+  margin: 16px 0;
+}
+.ob-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.ob-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.ob-item { font-size: 13px; color: var(--ink2); }
+.ob-item strong { display: block; color: var(--green); font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 3px; }
+
+/* ── DIVIDER ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 48px 0 0;
+}
+.divider-line { flex: 1; height: 1px; background: var(--rule); }
+.divider-mark {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  color: var(--gold);
+}
+
+/* ── PRINCIPLES ── */
+.principles {
+  background: var(--ink);
+  color: #E8E2D8;
+  padding: 44px 40px;
+  margin-top: 56px;
+}
+.principles h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #F0EBE0;
+  margin-bottom: 32px;
+  border-bottom: 1px solid rgba(196,160,80,0.3);
+  padding-bottom: 16px;
+}
+.pr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  gap: 24px;
+}
+.pr {
+  border-top: 2px solid #C4A050;
+  padding-top: 14px;
+}
+.pr-n {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  color: #C4A050;
+  margin-bottom: 7px;
+}
+.pr-t {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  color: #F0EBE0;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+.pr-b { font-size: 12px; color: #7A7060; line-height: 1.6; }
+
+/* ── QUICK REF ── */
+.qr {
+  margin-top: 56px;
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+.qr-head {
+  background: var(--gold);
+  padding: 14px 20px;
+}
+.qr-head h3 {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: white;
+  font-weight: 500;
+}
+.qr-row {
+  display: flex;
+  border-bottom: 1px solid var(--rule);
+  transition: background .12s;
+}
+.qr-row:last-child { border-bottom: none; }
+.qr-row:hover { background: var(--gold-lt); }
+.qr-n {
+  width: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border-right: 1px solid var(--rule);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gold);
+}
+.qr-t {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.55;
+}
+.qr-t strong { color: var(--ink); font-weight: 600; }
+
+/* ── FOOTER ── */
+footer {
+  text-align: center;
+  padding: 48px 32px;
+  border-top: 1px solid var(--rule);
+  margin-top: 60px;
+}
+footer p {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ── SPECIAL ── */
+.never-list { list-style: none; }
+.never-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(146,42,26,0.08);
+  font-size: 14px;
+  color: var(--ink2);
+}
+.never-list li:last-child { border-bottom: none; }
+.never-list li::before {
+  content: '✕';
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+@media(max-width:620px){
+  .cover { padding: 48px 24px 44px; }
+  .body { padding: 0 18px 60px; }
+  .step { grid-template-columns: 44px 1fr; }
+  .step-right { padding-left: 16px; }
+  .principles { padding: 28px 20px; }
+  .nav { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<header class="cover">
+  <div class="cover-tag">Salon Men Saúl Fino · Galería Santiago Centro · Línea 1 Metro</div>
+  <h1>Protocolo de<br><em>Atención</em><br>Premium</h1>
+  <div class="cover-rule"></div>
+  <p class="cover-desc">El estándar de excelencia que todos cumplimos — sin excepción y sin importar quién esté en la silla.</p>
+  <p class="cover-meta">Uso interno del equipo · Se revisa semestralmente · 2026</p>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#fase1"><span class="nav-num">—</span><span class="nav-lbl">Antes</span></a>
+  <a href="#s03"><span class="nav-num">01</span><span class="nav-lbl">Llegada</span></a>
+  <a href="#s04"><span class="nav-num">02</span><span class="nav-lbl">Invitar</span></a>
+  <a href="#s05"><span class="nav-num">03</span><span class="nav-lbl">La Capa</span></a>
+  <a href="#s06"><span class="nav-num">04</span><span class="nav-lbl">Oshibori</span></a>
+  <a href="#s07"><span class="nav-num">05</span><span class="nav-lbl">Consulta</span></a>
+  <a href="#s08"><span class="nav-num">06</span><span class="nav-lbl">Servicio</span></a>
+  <a href="#s09"><span class="nav-num">07</span><span class="nav-lbl">Bebida</span></a>
+  <a href="#s10"><span class="nav-num">08</span><span class="nav-lbl">Cierre</span></a>
+  <a href="#s11"><span class="nav-num">09</span><span class="nav-lbl">Despedida</span></a>
+  <a href="#nuevo"><span class="nav-num">⊕</span><span class="nav-lbl">Nuevo</span></a>
+  <a href="#nunca"><span class="nav-num">✕</span><span class="nav-lbl">Nunca</span></a>
+  <a href="#qr"><span class="nav-num">—</span><span class="nav-lbl">Referencia</span></a>
+</nav>
+
+<div class="body">
+
+<!-- ════════ FASE 1 — ANTES DEL CLIENTE ════════ -->
+<div class="phase" id="fase1">
+  <div class="phase-tag">Fase 1 — Antes de que llegue</div>
+  <h2>El puesto habla<br>antes que <em>tú</em></h2>
+  <p class="phase-desc">El cliente forma su primera impresión antes de que lo saludemos. El puesto, el barbero y el ambiente deben comunicar excelencia por sí solos.</p>
+</div>
+
+<!-- PASO 01 -->
+<div class="step" id="s01">
+  <div class="step-left"><span class="step-num">01</span><span class="step-ico">🪑</span></div>
+  <div class="step-right">
+    <div class="step-title">La silla siempre mirando hacia la puerta <span class="badge">Posición estándar</span></div>
+    <div class="step-body">Entre cliente y cliente, la silla se deja girada hacia la entrada — no hacia el espejo. El puesto vacío le dice al próximo cliente: <em>te estoy esperando.</em></div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at">Al terminar cada servicio, girar la silla hacia la puerta antes de limpiar el puesto.</span></li>
+      <li class="action"><span class="ab"></span><span class="at">La capa: doblada o colgada — nunca tirada sobre la silla.</span></li>
+      <li class="action"><span class="ab"></span><span class="at">Herramientas ordenadas y visibles. El orden comunica profesionalismo antes de decir una sola palabra.</span></li>
+    </ul>
+    <div class="tip"><span class="ti">💡</span><span class="tt"><strong>Por qué importa:</strong> la silla girada hacia la puerta es una invitación física. Es el mismo lenguaje de un restaurante de lujo donde la mesa ya está lista cuando el cliente llega.</span></div>
+  </div>
+</div>
+
+<!-- PASO 02 -->
+<div class="step" id="s02">
+  <div class="step-left"><span class="step-num">02</span><span class="step-ico">👔</span></div>
+  <div class="step-right">
+    <div class="step-title">El barbero listo antes del primer cliente <span class="badge">Presentación</span></div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>Uniforme impecable:</strong> limpio, sin manchas, bien puesto. El barbero es la primera exhibición de los servicios del local.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Herramientas desinfectadas</strong> antes de abrir. Las tijeras y maquinillas deben verse limpias — el cliente las observa antes de que las uses.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Puesto sin pelo del cliente anterior.</strong> Barrer entre cada cliente — no al final del día.</span></li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ════════ FASE 2 — RECEPCIÓN ════════ -->
+<div class="divider"><div class="divider-line"></div><span class="divider-mark">✦</span><div class="divider-line"></div></div>
+<div class="phase" id="fase2">
+  <div class="phase-tag">Fase 2 — El primer impacto</div>
+  <h2>La <em>bienvenida</em><br>que no se olvida</h2>
+  <p class="phase-desc">Los primeros 30 segundos determinan el tono de toda la visita. En ese momento el cliente decide si está en un lugar ordinario o en uno que vale la pena recomendar.</p>
+</div>
+
+<!-- PASO 03 -->
+<div class="step" id="s03">
+  <div class="step-left"><span class="step-num">03</span><span class="step-ico">👋</span></div>
+  <div class="step-right">
+    <div class="step-title">El saludo — contacto visual antes que cualquier cosa</div>
+    <div class="step-body">En el momento en que el cliente cruza la puerta, el barbero hace contacto visual, sonríe y lo saluda — incluso si está terminando con otro cliente.</div>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">Hola, bienvenido. Ahorita estoy contigo — queda poquito.</p>
+      <p class="dl">Si estás con otro cliente</p>
+    </div>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">Hola, ¿cómo estás? Pasa, te estoy esperando.</p>
+      <p class="dl">Si estás disponible</p>
+    </div>
+    <div class="never"><span class="ni">✕</span><span class="nt"><strong>Nunca:</strong> ignorar al cliente mientras llega, aunque estés ocupado. Ni levantar la vista dos segundos y seguir trabajando en silencio.</span></div>
+  </div>
+</div>
+
+<!-- PASO 04 -->
+<div class="step" id="s04">
+  <div class="step-left"><span class="step-num">04</span><span class="step-ico">🪑</span></div>
+  <div class="step-right">
+    <div class="step-title">Invitar a sentarse — tú sostienes la silla <span class="badge">El gesto que diferencia</span></div>
+    <div class="step-body">El cliente, por instinto, tomará la silla y la girará él mismo hacia el espejo para sentarse. <strong>No se lo permitas.</strong> Tú eres quien lo recibe e instala.</div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>Paso 1:</strong> camina hacia la silla. Tómala con ambas manos por el espaldar, desde atrás. La silla ya mira hacia la puerta — el cliente llega y la silla lo está esperando de frente.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Paso 2:</strong> con un gesto abierto del brazo, invita al cliente a sentarse como invitación, no como orden.</span></li>
+    </ul>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">Pasa, siéntate aquí.</p>
+      <p class="dl">Mientras sostienes la silla con ambas manos por el espaldar</p>
+    </div>
+    <div class="tip"><span class="ti">💡</span><span class="tt"><strong>Por qué funciona:</strong> cuando el barbero sostiene la silla, el cliente entiende que está en manos de alguien que cuida cada detalle. Es el mismo lenguaje de un restaurante de lujo donde el mesero corre la silla. Nadie lo olvida.</span></div>
+  </div>
+</div>
+
+<!-- PASO 05 -->
+<div class="step" id="s05">
+  <div class="step-left"><span class="step-num">05</span><span class="step-ico">🧣</span></div>
+  <div class="step-right">
+    <div class="step-title">Poner la capa — con el cuidado con que se pone un abrigo <span class="badge">Técnica obligatoria</span></div>
+    <div class="step-body">La capa no se lanza desde atrás. Se pone de frente al cliente, con el mismo cuidado con que se le pondría un abrigo a alguien.</div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>El barbero se coloca frente al cliente</strong> — cara a cara. La capa se pone como si fuera un babero, con el barbero mirando de frente.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Nunca pasar la mano frente a la cara del cliente.</strong> La capa se abre por los hombros desde los costados. El barbero da un paso atrás y ajusta el cierre por detrás.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Es el barbero quien gira la silla hacia el espejo</strong> — no el cliente.</span></li>
+    </ul>
+    <div class="tip"><span class="ti">💡</span><span class="tt"><strong>Por qué importa:</strong> pasar la mano frente a la cara de alguien es invasivo. Hacerlo desde los costados es elegante y respetuoso. El cliente lo percibe aunque no lo procese conscientemente.</span></div>
+    <div class="never"><span class="ni">✕</span><span class="nt"><strong>Nunca:</strong> lanzar la capa desde atrás como si fuera una toalla de playa, ni ajustar el cuello demasiado apretado sin preguntar.</span></div>
+  </div>
+</div>
+
+<!-- PASO 06 — OSHIBORI -->
+<div class="step" id="s06">
+  <div class="step-left"><span class="step-num">06</span><span class="step-ico">🌿</span></div>
+  <div class="step-right">
+    <div class="step-title">Oshibori — toallita de algodón con eucalipto <span class="badge">Ritual de bienvenida</span></div>
+    <div class="step-body">Originado en el Japón feudal como gesto de hospitalidad. En Salon Men Saúl Fino es el momento más recordado de toda la visita. El cliente llegó desde la calle, el Metro, los torniquetes. Esta toallita tibia aromática le dice: llegaste al lugar correcto.</div>
+
+    <div class="hbox">
+      <div class="hbox-tag">Preparación — se hace mientras el cliente se acomoda</div>
+      <div class="hbox-body">Bowl negro pequeño + agua tibia <strong>(40–45°C, nunca más caliente)</strong> + toalla comprimida de algodón. Colocar la toallita en el bowl, agregar el agua — en 5–8 segundos se expande. Añadir <strong>1 gota (solo una) de aceite esencial de eucalipto</strong>. Recoger con pinzas, escurrir levemente y presentar en el bowl.</div>
+    </div>
+
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>Presentar siempre en el bowl</strong> — nunca entregar la toalla directamente con la mano desnuda. El bowl es la diferencia visual entre una toallita y un ritual.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>El guión es corto.</strong> Solo esto, sin más explicación:</span></li>
+    </ul>
+
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">Antes de empezar — una toallita caliente para las manos y la cara. Algodón con eucalipto.</p>
+      <p class="dl">Entregar el bowl mientras se dice — la brevedad es parte del ritual</p>
+    </div>
+
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>Dar tiempo</strong> al cliente para usarla con calma. No apresurarse a empezar la consulta mientras el cliente todavía tiene la toalla en la cara.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Retirar la toalla usada</strong> con discreción. Nunca dejarla en el puesto ni en la repisa del espejo.</span></li>
+    </ul>
+
+    <div class="oshibori-box">
+      <div class="ob-title">Variaciones según la ocasión y el clima</div>
+      <div class="ob-grid">
+        <div class="ob-item"><strong>Verano / días calurosos</strong>Agua fría o temperatura ambiente. El contraste fresco es el efecto más potente.</div>
+        <div class="ob-item"><strong>Invierno / días fríos</strong>Agua tibia. El cliente viene del frío de la galería — el calor en la cara es un regalo inmediato.</div>
+        <div class="ob-item"><strong>Fiestas Patrias</strong>Eucalipto + 1 gota de menta. Fresco, limpio, festivo.</div>
+        <div class="ob-item"><strong>Mundial 2026</strong>Eucalipto + menta. Energía y activación antes del servicio.</div>
+        <div class="ob-item"><strong>Día de la Mujer</strong>Eucalipto + lavanda. Suave y especial.</div>
+        <div class="ob-item"><strong>Día estándar</strong>Eucalipto solo — siempre masculino, siempre limpio, nunca abrumador.</div>
+      </div>
+    </div>
+
+    <div class="tip"><span class="ti">💰</span><span class="tt"><strong>Costo real:</strong> toalla comprimida de algodón ($80–150 CLP) + 1 gota de aceite esencial (~$30 CLP) = menos de $200 CLP por cliente. Sobre un ticket de $12.000 representa el 1,6% del servicio. Ningún otro elemento genera tanto impacto por ese costo.</span></div>
+    <div class="tip"><span class="ti">🛒</span><span class="tt"><strong>Dónde comprar:</strong> MercadoLibre Chile — "toallas comprimidas mágicas algodón 100 unidades". Comprar en lotes de 200–500 unidades para bajar el costo unitario. AliExpress para stock de respaldo (espera 2–4 semanas).</span></div>
+
+    <div class="never"><span class="ni">✕</span><span class="nt"><strong>Nunca:</strong> agua sin verificar temperatura antes de entregar. <strong>Nunca:</strong> más de 1 gota de aceite — el objetivo es sutil, no abrumador. <strong>Nunca:</strong> entregar la toalla directamente con la mano sin bowl. <strong>Nunca:</strong> omitir este paso aunque el local esté lleno — toma 25 segundos y es el más recordado de toda la visita.</span></div>
+  </div>
+</div>
+
+
+<!-- ════════ FASE 3 — CONSULTA ════════ -->
+<div class="divider"><div class="divider-line"></div><span class="divider-mark">✦</span><div class="divider-line"></div></div>
+<div class="phase" id="fase3">
+  <div class="phase-tag">Fase 3 — La consulta</div>
+  <h2>Escuchar antes<br>de <em>cortar</em></h2>
+  <p class="phase-desc">El barbero que pregunta bien parece más experto que el que corta bien. La consulta es donde el cliente siente que está en manos de un profesional — no de alguien que ejecuta una instrucción.</p>
+</div>
+
+<!-- PASO 07 -->
+<div class="step" id="s07">
+  <div class="step-left"><span class="step-num">07</span><span class="step-ico">💬</span></div>
+  <div class="step-right">
+    <div class="step-title">La conversación desde el espejo</div>
+    <div class="step-body">Una vez el cliente está frente al espejo y usó la toallita, antes de tomar una sola herramienta, el barbero abre la consulta. Tres pilares: <strong>qué quiere, qué le conviene y qué hay que cuidar.</strong></div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>¿Qué estilo tiene en mente?</strong> Dejar que el cliente hable primero. Escuchar sin interrumpir.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Si no sabe qué quiere:</strong> hacer preguntas que acoten — "¿más clásico o más moderno?" — nunca más de dos opciones a la vez para no abrumar.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Asesoría según morfología:</strong> si el estilo pedido no favorece la forma del rostro, mencionarlo con respeto y proponer alternativa. Se sugiere, no se impone.</span></li>
+    </ul>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">Con tu cara eso queda bien, pero si lo trabajamos un poco más corto en los lados te va a quedar mucho mejor todavía. ¿Te lo muestro?</p>
+      <p class="dl">Asesoría — se ofrece, no se decide por el cliente</p>
+    </div>
+
+    <div class="step-title" style="margin-top:18px;font-size:17px;">La pregunta de seguridad <span class="badge">Siempre — todos los clientes</span></div>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">¿Tenés algún lunar, verruga o cicatriz de la que deba tener cuidado? Con la maquinilla o la navaja hay que saber dónde ir con cuidado.</p>
+      <p class="dl">Se hace SIEMPRE — incluso con clientes conocidos de hace años</p>
+    </div>
+    <div class="tip"><span class="ti">💡</span><span class="tt"><strong>Por qué esta pregunta es poderosa:</strong> nadie la hace. El cliente que la escucha por primera vez siente que está en manos de alguien que realmente lo cuida. Es la diferencia entre un barbero y un profesional.</span></div>
+  </div>
+</div>
+
+<!-- PASO CLIENTE NUEVO -->
+<div class="step" id="nuevo">
+  <div class="step-left"><span class="step-num">⊕</span><span class="step-ico">🆕</span></div>
+  <div class="step-right">
+    <div class="step-title">Protocolo especial — Cliente nuevo <span class="badge">Primera visita</span></div>
+    <div class="step-body">El cliente que viene por primera vez está evaluando si va a volver. Cada detalle pesa el doble.</div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>Pedir el nombre</strong> al inicio y usarlo al menos dos veces durante el servicio. Registrarlo en el sistema de reservas.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Preguntar de dónde viene:</strong> "¿Pasabas por acá o nos buscaste?" — abre conversación y permite saber cómo llegó al salon.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Mencionar servicios</strong> naturalmente, sin sonar a vendedor: "Si algún día querés arreglar también la barba, lo trabajamos juntos."</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Al terminar:</strong> invitar a volver con fecha concreta — "Si venís cada 3 semanas te queda siempre bien. ¿Te agendo?"</span></li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ════════ FASE 4 — SERVICIO ════════ -->
+<div class="divider"><div class="divider-line"></div><span class="divider-mark">✦</span><div class="divider-line"></div></div>
+<div class="phase" id="fase4">
+  <div class="phase-tag">Fase 4 — Durante el servicio</div>
+  <h2>El silencio y<br>la <em>conversación</em></h2>
+  <p class="phase-desc">El cliente está frente al espejo, en pausa. El barbero debe leer qué necesita cada uno — hay quien quiere conversar y hay quien necesita silencio. Ambos son válidos.</p>
+</div>
+
+<!-- PASO 08 -->
+<div class="step" id="s08">
+  <div class="step-left"><span class="step-num">08</span><span class="step-ico">✂️</span></div>
+  <div class="step-right">
+    <div class="step-title">Leer al cliente — hablar o no hablar <span class="badge">Inteligencia emocional</span></div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>Si el cliente habla:</strong> el barbero escucha más de lo que habla. Nunca interrumpir. Responder con preguntas que demuestren interés genuino.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Si el cliente está callado o en el teléfono:</strong> respetar ese silencio. Un cliente que puede estar tranquilo sin llenar el silencio es un cliente que confía.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Temas seguros:</strong> fútbol, música, trabajo en términos generales, el barrio. <strong>Temas a evitar:</strong> política, religión, relaciones, dinero.</span></li>
+      <li class="action"><span class="ab"></span><span class="at"><strong>Confirmar avances:</strong> "¿Cómo lo ves hasta acá?" en un momento de pausa — el cliente siente que tiene control.</span></li>
+    </ul>
+    <div class="tip"><span class="ti">💡</span><span class="tt"><strong>El silencio cómodo es un lujo.</strong> En un salon premium el cliente puede estar en paz. El trabajo habla por sí solo — no hay que llenarlo con palabras.</span></div>
+  </div>
+</div>
+
+<!-- PASO 09 -->
+<div class="step" id="s09">
+  <div class="step-left"><span class="step-num">09</span><span class="step-ico">☕</span></div>
+  <div class="step-right">
+    <div class="step-title">La bebida de cortesía <span class="badge">Incluida en cada servicio</span></div>
+    <div class="step-body">La bebida no se ofrece al azar ni se olvida. Es parte del servicio — tan estándar como la capa y el Oshibori.</div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at"><strong>Ofrecerla en los primeros minutos del corte</strong> — cuando hay un momento natural de pausa en la conversación.</span></li>
+      <li class="action"><span class="ab"></span><span class="at">Si el cliente ya la pidió por WhatsApp al QR de llegada, <strong>confirmar que ya viene:</strong> "Ya sé que pediste un café, en un momento está."</span></li>
+    </ul>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">¿Te traigo algo mientras tanto? Café, [opciones del día]. Sin costo — es parte del servicio.</p>
+      <p class="dl">La frase "es parte del servicio" eleva inmediatamente la percepción del salon</p>
+    </div>
+    <div class="never"><span class="ni">✕</span><span class="nt"><strong>Nunca:</strong> olvidar ofrecer la bebida. <strong>Nunca:</strong> entregarla sin servilleta. <strong>Nunca:</strong> dejarla en un lugar inestable.</span></div>
+  </div>
+</div>
+
+
+<!-- ════════ FASE 5 — CIERRE ════════ -->
+<div class="divider"><div class="divider-line"></div><span class="divider-mark">✦</span><div class="divider-line"></div></div>
+<div class="phase" id="fase5">
+  <div class="phase-tag">Fase 5 — El cierre del servicio</div>
+  <h2>El último detalle<br>que <em>recuerdan</em></h2>
+  <p class="phase-desc">El cliente forma su recuerdo final en los últimos dos minutos. El cierre es tan importante como la bienvenida.</p>
+</div>
+
+<!-- PASO 10 -->
+<div class="step" id="s10">
+  <div class="step-left"><span class="step-num">10</span><span class="step-ico">🪞</span></div>
+  <div class="step-right">
+    <div class="step-title">Espejo de mano — validación final</div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at">Sostener el espejo de mano detrás de la cabeza para mostrar la nuca. Dar tiempo al cliente para mirar sin apresurarse.</span></li>
+      <li class="action"><span class="ab"></span><span class="at">Preguntar: <em>"¿Cómo lo ves? ¿Querés que ajuste algo?"</em> — aunque esté perfecto. Esta pregunta da control al cliente y construye confianza.</span></li>
+    </ul>
+    <div class="tip"><span class="ti">💡</span><span class="tt">El 99% dirá "está perfecto". Pero el 1% que tenía un ajuste pendiente lo agradecerá de por vida — y lo recomendará.</span></div>
+
+    <div class="step-title" style="margin-top:18px;font-size:17px;">Quitar la capa — con el mismo cuidado con que se puso</div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at">Sacudir la capa <strong>hacia atrás y lejos del cliente</strong> — nunca hacia adelante ni hacia el espejo.</span></li>
+      <li class="action"><span class="ab"></span><span class="at">Usar el pincel de cuello para repasar nuca y cuello antes de quitar la capa. El cliente no debe salir con pelo en la camisa.</span></li>
+      <li class="action"><span class="ab"></span><span class="at">Aplicar loción o talco en la nuca con el pincel — pequeño gesto que se siente de primera clase.</span></li>
+    </ul>
+    <div class="never"><span class="ni">✕</span><span class="nt"><strong>Nunca</strong> dejar que el cliente salga con pelo en el cuello. Es el detalle más mencionado negativamente en reseñas de barberías.</span></div>
+  </div>
+</div>
+
+<!-- PASO 11 -->
+<div class="step">
+  <div class="step-left"><span class="step-num">11</span><span class="step-ico">🪮</span></div>
+  <div class="step-right">
+    <div class="step-title">El toque final — producto y peinado</div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at">Preguntar: <em>"¿Te lo peino o lo llevás como lo traías?"</em></span></li>
+      <li class="action"><span class="ab"></span><span class="at">Si el cliente quiere peinado: <strong>nombrar el producto que usaste.</strong> "Te puse un poco de pomada mate — queda sin brillo, ideal para tu tipo de cabello." Esto genera interés en comprar.</span></li>
+      <li class="action"><span class="ab"></span><span class="at">Momento de upselling natural: <em>"Si querés, el mismo producto lo tenemos en la vitrina."</em></span></li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ════════ FASE 6 — DESPEDIDA ════════ -->
+<div class="divider"><div class="divider-line"></div><span class="divider-mark">✦</span><div class="divider-line"></div></div>
+<div class="phase" id="fase6">
+  <div class="phase-tag">Fase 6 — La despedida</div>
+  <h2>Lo último que dicen<br>te <em>sigue</em></h2>
+  <p class="phase-desc">La despedida es la semilla del regreso. Las últimas palabras que escucha el cliente determinan si vuelve por hábito o por convicción.</p>
+</div>
+
+<!-- PASO 12 -->
+<div class="step" id="s11">
+  <div class="step-left"><span class="step-num">12</span><span class="step-ico">📅</span></div>
+  <div class="step-right">
+    <div class="step-title">La invitación a volver — con fecha concreta</div>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">En unas 3 semanas debería estar perfecto de nuevo. ¿Te anoto para que no tengas que esperar?</p>
+      <p class="dl">Si acepta, agendar ahí mismo — le llega confirmación automática por WhatsApp</p>
+    </div>
+    <ul class="actions">
+      <li class="action"><span class="ab"></span><span class="at">Si el cliente no quiere agendar, no insistir. Decir: <em>"Cuando quieras, estamos acá. También podés agendarte por WhatsApp."</em></span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- PASO 13 -->
+<div class="step">
+  <div class="step-left"><span class="step-num">13</span><span class="step-ico">🤝</span></div>
+  <div class="step-right">
+    <div class="step-title">El cierre con el nombre</div>
+    <div class="dialogue"><span class="dq">"</span>
+      <p class="dt">Listo, [Nombre]. Que te vaya bien — acá nos vemos.</p>
+      <p class="dl">La última frase incluye el nombre del cliente. Siempre.</p>
+    </div>
+    <div class="tip"><span class="ti">💡</span><span class="tt"><strong>Si no recuerdas el nombre:</strong> preguntarlo en el cierre no es un error — "Disculpa, ¿cómo era tu nombre? Lo anoto para la próxima." El cliente aprecia que quieras recordarlo.</span></div>
+    <div class="never"><span class="ni">✕</span><span class="nt"><strong>Nunca</strong> despedirse mientras ya estás recogiendo herramientas o mirando al próximo cliente. Atención completa hasta que el cliente cruce la puerta.</span></div>
+  </div>
+</div>
+
+
+<!-- ════════ LO QUE NUNCA OCURRE AQUÍ ════════ -->
+<div class="divider"><div class="divider-line"></div><span class="divider-mark">✦</span><div class="divider-line"></div></div>
+<div class="phase" id="nunca">
+  <div class="phase-tag">Estándares absolutos</div>
+  <h2>Lo que nunca<br><em>ocurre</em> aquí</h2>
+  <p class="phase-desc">Estos no son errores — son rupturas de confianza. Un solo incidente puede borrar diez visitas perfectas.</p>
+</div>
+
+<div style="background:var(--white);border:1px solid var(--rule);padding:24px 28px;margin-top:8px;">
+  <ul class="never-list">
+    <li><strong>El teléfono personal durante el servicio.</strong> El mensaje puede esperar. El cliente, no. El teléfono no existe mientras hay alguien en la silla.</li>
+    <li><strong>Conversaciones cruzadas entre barberos</strong> mientras el cliente está sentado. Hablar de temas ajenos por encima de la cabeza del cliente lo hace sentir invisible.</li>
+    <li><strong>Comentarios negativos sobre el corte o estilo previo del cliente.</strong> Nunca: "¿Quién te cortó esto?" Si hay algo que mejorar, se dice en positivo.</li>
+    <li><strong>Barrer el pelo mientras el cliente está sentado.</strong> Se barre entre clientes — nunca durante el servicio. El cliente que ve su cabello barrido mientras está en la silla siente que ya fue descartado.</li>
+    <li><strong>Trato diferente según la apariencia del cliente.</strong> El protocolo es igual para todos. La reputación se construye en ambos casos.</li>
+    <li><strong>Omitir el Oshibori</strong> porque el local está lleno. Toma 25 segundos. Es el paso más recordado.</li>
+    <li><strong>Agua demasiado caliente en el Oshibori</strong> sin verificar antes de entregar. Siempre comprobar la temperatura.</li>
+  </ul>
+</div>
+
+
+<!-- ════════ PRINCIPIOS ════════ -->
+<div class="principles">
+  <h3>Los cinco principios que guían todo lo demás</h3>
+  <div class="pr-grid">
+    <div class="pr">
+      <div class="pr-n">01</div>
+      <div class="pr-t">El cliente no interrumpe</div>
+      <div class="pr-b">No importa qué estés haciendo cuando entra — él tiene la prioridad. Siempre. Sin excepción.</div>
+    </div>
+    <div class="pr">
+      <div class="pr-n">02</div>
+      <div class="pr-t">El detalle es el servicio</div>
+      <div class="pr-b">El cliente paga por el corte pero vuelve por los detalles. La capa, el Oshibori, el nombre al despedirse.</div>
+    </div>
+    <div class="pr">
+      <div class="pr-n">03</div>
+      <div class="pr-t">Preguntar es demostrar pericia</div>
+      <div class="pr-b">El barbero que pregunta bien parece más experto que el que simplemente ejecuta.</div>
+    </div>
+    <div class="pr">
+      <div class="pr-n">04</div>
+      <div class="pr-t">Consistencia sobre excelencia</div>
+      <div class="pr-b">Una experiencia de 9/10 en cada visita supera a un 10 una vez y un 6 la siguiente.</div>
+    </div>
+    <div class="pr">
+      <div class="pr-n">05</div>
+      <div class="pr-t">La reputación se queda</div>
+      <div class="pr-b">Cada persona que sale habla con cinco más. Lo que cuente depende de cómo se sintió en estas sillas.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════ REFERENCIA RÁPIDA ════════ -->
+<div class="qr" id="qr">
+  <div class="qr-head"><h3>✦  Referencia Rápida — El protocolo de un vistazo</h3></div>
+  <div class="qr-row"><div class="qr-n">01</div><div class="qr-t"><strong>Entre clientes:</strong> silla hacia la puerta, capa doblada, puesto limpio, herramientas ordenadas.</div></div>
+  <div class="qr-row"><div class="qr-n">02</div><div class="qr-t"><strong>Llegada:</strong> contacto visual inmediato + saludo, aunque estés con otro cliente.</div></div>
+  <div class="qr-row"><div class="qr-n">03</div><div class="qr-t"><strong>Invitar a sentarse:</strong> tomar la silla con ambas manos por el espaldar. Tú giras la silla — no el cliente.</div></div>
+  <div class="qr-row"><div class="qr-n">04</div><div class="qr-t"><strong>La capa:</strong> ponerse de frente, pasar por los costados sin cruzar frente a la cara, ajustar por detrás, girar la silla hacia el espejo.</div></div>
+  <div class="qr-row" style="background:var(--green-lt);border-left:3px solid var(--green);"><div class="qr-n" style="color:var(--green)">05</div><div class="qr-t"><strong>Oshibori:</strong> bowl negro + agua 40–45°C + toalla comprimida + 1 gota eucalipto. Entregar con bowl antes de la consulta. Solo decir: <em>"Una toallita caliente — algodón con eucalipto."</em> Dar tiempo. Retirar discretamente.</div></div>
+  <div class="qr-row"><div class="qr-n">06</div><div class="qr-t"><strong>Consulta:</strong> escuchar primero, asesorar según morfología facial, preguntar por lunares o verrugas SIEMPRE.</div></div>
+  <div class="qr-row"><div class="qr-n">07</div><div class="qr-t"><strong>Cliente nuevo:</strong> pedir nombre, preguntar cómo llegó, mencionar servicios naturalmente, invitar a volver con fecha.</div></div>
+  <div class="qr-row"><div class="qr-n">08</div><div class="qr-t"><strong>Servicio:</strong> leer si quiere conversar o silencio. Confirmar avance a mitad del corte.</div></div>
+  <div class="qr-row"><div class="qr-n">09</div><div class="qr-t"><strong>Bebida:</strong> ofrecer en los primeros minutos. "Es parte del servicio." Si pidió por WhatsApp, confirmar que viene.</div></div>
+  <div class="qr-row"><div class="qr-n">10</div><div class="qr-t"><strong>Cierre:</strong> espejo de mano para la nuca, preguntar si está conforme, pincel de cuello + loción, sacudir capa hacia atrás.</div></div>
+  <div class="qr-row"><div class="qr-n">11</div><div class="qr-t"><strong>Producto:</strong> nombrar lo que usaste y mencionar que está en vitrina. Upselling natural, nunca forzado.</div></div>
+  <div class="qr-row"><div class="qr-n">12</div><div class="qr-t"><strong>Despedida:</strong> proponer próxima cita con fecha. Cerrar con el nombre del cliente.</div></div>
+  <div class="qr-row" style="background:var(--red-lt);"><div class="qr-n" style="color:var(--red)">✕</div><div class="qr-t"><strong>Nunca:</strong> teléfono en mano · conversaciones cruzadas · barrer con cliente sentado · comentarios sobre corte previo · agua Oshibori sin verificar · más de 1 gota de aceite · omitir el Oshibori · trato diferente según apariencia.</div></div>
+</div>
+
+</div><!-- /body -->
+
+<footer>
+  <p>Salon Men Saúl Fino · Galería Santiago Centro · Línea 1 Metro · Protocolo de Atención Premium · 2026</p>
+  <p style="margin-top:6px;">Uso exclusivo del equipo · Confidencial · Se actualiza semestralmente</p>
+</footer>
+
+</body>
+</html>

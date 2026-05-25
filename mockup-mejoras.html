@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barbería Local 222 — Antes & Después</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background: var(--dark);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  overflow-x: hidden;
+}
+
+:root {
+  --gold: #8A6010;
+  --gold-light: #A07820;
+  --dark: #FAFAF7;
+  --dark-2: #FFFFFF;
+  --dark-3: #F0EDE6;
+  --cream: #1A1714;
+  --text-dim: #4A4440;
+  --red: #B03A2E;
+  --green: #1A7048;
+  --rule: #E2DDD5;
+  --ink: #1A1714;
+}
+
+/* HEADER */
+header {
+  text-align: center;
+  padding: 60px 24px 40px;
+  border-bottom: 1px solid rgba(138,96,16,0.18);
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background: radial-gradient(ellipse 60% 80% at 50% -20%, rgba(201,168,76,0.08), transparent 70%);
+  pointer-events:none;
+}
+.header-tag {
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  color:var(--gold);
+  text-transform:uppercase;
+  margin-bottom:16px;
+}
+header h1 {
+  font-family:'Playfair Display',serif;
+  font-size:clamp(32px,6vw,64px);
+  font-weight:900;
+  color:var(--cream);
+  line-height:1;
+}
+header h1 em { color:var(--gold); font-style:italic; }
+header p {
+  font-size:14px;
+  color:var(--text-dim);
+  margin-top:16px;
+  font-family:'DM Mono',monospace;
+  letter-spacing:1px;
+}
+
+/* TAB NAV */
+.tab-nav {
+  display:flex;
+  justify-content:center;
+  gap:0;
+  padding: 32px 24px 0;
+  max-width:900px;
+  margin:0 auto;
+}
+.tab-btn {
+  flex:1;
+  max-width:200px;
+  padding:14px 20px;
+  background:#FFFFFF;
+  border:1px solid rgba(138,96,16,0.2);
+  color:var(--text-dim);
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .3s;
+}
+.tab-btn:first-child { border-right:none; }
+.tab-btn.active {
+  background:var(--gold);
+  color:#FFFFFF;
+  border-color:var(--gold);
+  font-weight:500;
+}
+.tab-btn:not(.active):hover { border-color:var(--gold); color:var(--gold); }
+
+/* MAIN CONTAINER */
+.container {
+  max-width:1100px;
+  margin:0 auto;
+  padding:40px 24px 80px;
+}
+
+/* VIEW PANELS */
+.view { display:none; }
+.view.active { display:block; animation: fadeIn .4s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+/* SECTION LABELS */
+.scene-label {
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:28px;
+  margin-top:40px;
+}
+.scene-label:first-child { margin-top:0; }
+.scene-label h2 {
+  font-family:'Playfair Display',serif;
+  font-size:22px;
+  color:var(--cream);
+}
+.scene-label .pill {
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  padding:4px 12px;
+  text-transform:uppercase;
+}
+.pill-before { border:1px solid var(--red); color:var(--red); }
+.pill-after  { border:1px solid var(--green); color:var(--green); background:rgba(39,174,96,0.06); }
+
+/* SVG SCENE */
+.scene-wrap {
+  background:var(--dark-2);
+  border:1px solid rgba(138,96,16,0.15);
+  overflow:hidden;
+  position:relative;
+}
+.scene-wrap svg {
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+/* LEGEND */
+.legend {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:12px;
+  margin-top:20px;
+}
+.legend-item {
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  background:var(--dark-2);
+  border:1px solid var(--rule);
+  padding:14px 16px;
+}
+.legend-dot {
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  flex-shrink:0;
+  margin-top:4px;
+}
+.legend-title {
+  font-size:12px;
+  color:var(--cream);
+  font-weight:500;
+  margin-bottom:3px;
+}
+.legend-desc {
+  font-size:11px;
+  color:var(--text-dim);
+  line-height:1.5;
+}
+
+/* CALLOUT BOXES */
+.callout-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:16px;
+  margin-top:32px;
+}
+.callout {
+  border-left:3px solid;
+  padding:20px;
+  background:var(--dark-2);
+}
+.callout.problem { border-color:var(--red); }
+.callout.solution { border-color:var(--green); }
+.callout-tag {
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+.callout.problem .callout-tag { color:var(--red); }
+.callout.solution .callout-tag { color:var(--green); }
+.callout h4 { font-size:13px; color:var(--cream); margin-bottom:6px; font-weight:500; }
+.callout p  { font-size:12px; color:var(--text-dim); line-height:1.6; }
+
+/* INVESTMENT TABLE */
+.inv-table {
+  width:100%;
+  border-collapse:collapse;
+  margin-top:16px;
+  font-size:13px;
+}
+.inv-table th {
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  color:var(--gold);
+  text-transform:uppercase;
+  text-align:left;
+  padding:12px 16px;
+  border-bottom:1px solid rgba(201,168,76,0.2);
+}
+.inv-table td {
+  padding:12px 16px;
+  border-bottom:1px solid var(--rule);
+  color:var(--cream);
+  vertical-align:top;
+}
+.inv-table tr.total td {
+  color:var(--gold-light);
+  font-weight:500;
+  border-top:1px solid rgba(201,168,76,0.2);
+  border-bottom:none;
+}
+.badge-f1 { color:var(--red); font-family:'DM Mono',monospace; font-size:9px; }
+.badge-f2 { color:var(--gold); font-family:'DM Mono',monospace; font-size:9px; }
+
+.section-divider {
+  height:1px;
+  background:rgba(138,96,16,0.12);
+  margin:48px 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-tag">Local 222 · Galería Santiago Centro · Línea 1</div>
+  <h1>Antes &amp; <em>Después</em></h1>
+  <p>Plan de mejoras físicas · Fachada e Interior · 2025</p>
+</header>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showView('fachada')">Fachada</button>
+  <button class="tab-btn" onclick="showView('interior')">Interior</button>
+  <button class="tab-btn" onclick="showView('inversion')">Inversión</button>
+</div>
+
+<!-- ═══════════════════════════════ FACHADA ═══════════════════════════════ -->
+<div class="container">
+<div id="view-fachada" class="view active">
+
+  <!-- ANTES -->
+  <div class="scene-label">
+    <h2>Fachada actual</h2>
+    <span class="pill pill-before">Estado hoy</span>
+  </div>
+  <div class="scene-wrap">
+    <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg">
+      <!-- Techo galería -->
+      <rect width="900" height="420" fill="#1a1714"/>
+      <rect x="0" y="0" width="900" height="60" fill="#EDE8E0"/>
+      <!-- Suelo galería -->
+      <rect x="0" y="340" width="900" height="80" fill="#EDE8E0" rx="0"/>
+      <!-- Líneas piso -->
+      <line x1="0" y1="340" x2="900" y2="340" stroke="#3a3028" stroke-width="1"/>
+      <ellipse cx="450" cy="380" rx="350" ry="20" fill="rgba(0,0,0,0.3)"/>
+
+      <!-- FACHADA COMPLETA -->
+      <rect x="60" y="60" width="780" height="280" fill="#F5F2EC" rx="2"/>
+
+      <!-- FRANJA SUPERIOR NEGRA (toldo) -->
+      <rect x="60" y="60" width="780" height="70" fill="#FAFAF7" rx="2"/>
+
+      <!-- LETRERO BARBERÍA -->
+      <text x="620" y="105" font-family="Georgia,serif" font-size="32" font-weight="bold" fill="#cccccc" letter-spacing="3">BARBERÍA</text>
+      <text x="622" y="122" font-family="Georgia,serif" font-size="9" fill="#888" letter-spacing="4">CORTE · PERFILADO DE BARBA · DEPILACIÓN</text>
+
+      <!-- LOGOS NEGROS (decorativos izq) -->
+      <text x="150" y="105" font-family="Georgia,serif" font-size="40" fill="#D8D4CC">W</text>
+      <text x="230" y="108" font-family="Georgia,serif" font-size="36" fill="#E8E4DC">∞</text>
+
+      <!-- VENTANA IZQUIERDA (Salon Women) -->
+      <rect x="70" y="140" width="230" height="185" fill="#1a1a2e" stroke="#333" stroke-width="2"/>
+      <!-- Foto mujer fondo -->
+      <rect x="70" y="140" width="100" height="185" fill="#1a1510"/>
+      <ellipse cx="120" cy="220" rx="40" ry="55" fill="#2a2010"/>
+      <!-- Cartel salon women -->
+      <rect x="75" y="155" width="90" height="120" fill="#FAFAF7" stroke="#333" stroke-width="1"/>
+      <text x="120" y="175" font-family="sans-serif" font-size="7" fill="#888" text-anchor="middle">Salon women</text>
+      <!-- Cartel amarillo PROBLEMA -->
+      <rect x="175" y="200" width="85" height="45" fill="#e8c84c" rx="2"/>
+      <text x="218" y="220" font-family="sans-serif" font-size="7" fill="#FAFAF7" text-anchor="middle" font-weight="bold">CORTE EXPRESS</text>
+      <text x="218" y="232" font-family="sans-serif" font-size="9" fill="#FAFAF7" text-anchor="middle" font-weight="bold">$10.990</text>
+      <!-- Flecha error -->
+      <circle cx="262" cy="222" r="10" fill="#c0392b" opacity="0.9"/>
+      <text x="262" y="226" font-family="sans-serif" font-size="11" fill="white" text-anchor="middle">!</text>
+
+      <!-- VENTANA CENTRAL -->
+      <rect x="310" y="140" width="250" height="185" fill="#F0EDE6" stroke="#333" stroke-width="2"/>
+      <!-- Silla central vacía -->
+      <ellipse cx="435" cy="290" rx="25" ry="8" fill="#E8E4DC"/>
+      <rect x="420" y="250" width="30" height="40" fill="#D8D4CC" rx="3"/>
+      <rect x="415" y="248" width="40" height="8" fill="#E8E4DC" rx="2"/>
+      <!-- Persona sentada -->
+      <ellipse cx="435" cy="230" rx="15" ry="15" fill="#C0BAB0"/>
+      <rect x="420" y="245" width="30" height="25" fill="#D0CAC0"/>
+
+      <!-- VENTANA DERECHA (poste + interior) -->
+      <rect x="570" y="140" width="260" height="185" fill="#F0EDE6" stroke="#333" stroke-width="2"/>
+      <!-- Poste barbería -->
+      <rect x="800" y="140" width="16" height="185" fill="#FAFAF7" stroke="#333" stroke-width="1"/>
+      <rect x="802" y="148" width="4" height="20" fill="#c0392b"/>
+      <rect x="806" y="148" width="4" height="20" fill="#f0f0f0"/>
+      <rect x="810" y="148" width="4" height="20" fill="#2980b9"/>
+      <rect x="802" y="168" width="4" height="20" fill="#f0f0f0"/>
+      <rect x="806" y="168" width="4" height="20" fill="#c0392b"/>
+      <rect x="810" y="168" width="4" height="20" fill="#f0f0f0"/>
+      <!-- Interior derecho barbero -->
+      <ellipse cx="650" cy="260" rx="15" ry="15" fill="#D0CAC0"/>
+      <rect x="635" y="275" width="30" height="30" fill="#E8E4DC"/>
+      <!-- Persona cliente -->
+      <ellipse cx="700" cy="255" rx="14" ry="14" fill="#C0BAB0"/>
+      <rect x="686" y="268" width="28" height="30" fill="#D8D4CC"/>
+
+      <!-- Marco puerta central -->
+      <rect x="380" y="200" width="60" height="125" fill="#0a0a0a" stroke="#444" stroke-width="1"/>
+
+      <!-- ZONA DE ESPERA VACÍA - problema -->
+      <rect x="150" y="290" width="200" height="8" fill="none" stroke="#c0392b" stroke-width="1" stroke-dasharray="5,3"/>
+      <text x="250" y="310" font-family="sans-serif" font-size="8" fill="#c0392b" text-anchor="middle">sin zona de espera</text>
+
+      <!-- Numeración local -->
+      <rect x="71" y="141" width="35" height="14" fill="#0a2a4a"/>
+      <text x="88" y="151" font-family="sans-serif" font-size="7" fill="#5588bb" text-anchor="middle">LOCAL 222</text>
+
+      <!-- Marcadores de problemas -->
+      <circle cx="217" cy="200" r="12" fill="none" stroke="#c0392b" stroke-width="2"/>
+      <text x="217" y="205" font-family="sans-serif" font-size="14" fill="#c0392b" text-anchor="middle" font-weight="bold">!</text>
+
+    </svg>
+  </div>
+
+  <div class="callout-grid">
+    <div class="callout problem">
+      <div class="callout-tag">Problema 1</div>
+      <h4>Precio desactualizado en vitrina</h4>
+      <p>Cartel amarillo "Corte Express $10.990" visible desde la galería. Comunica precio antiguo y bajo posicionamiento de marca.</p>
+    </div>
+    <div class="callout problem">
+      <div class="callout-tag">Problema 2</div>
+      <h4>Sin zona de espera definida</h4>
+      <p>El enorme espacio central del local está completamente vacío. Un cliente que espera no tiene dónde sentarse dignamente.</p>
+    </div>
+    <div class="callout problem">
+      <div class="callout-tag">Problema 3</div>
+      <h4>Iluminación fría y plana</h4>
+      <p>La iluminación interior no invita desde afuera. Sin luz cálida focalizada que cree atmósfera visible desde la galería.</p>
+    </div>
+    <div class="callout problem">
+      <div class="callout-tag">Problema 4</div>
+      <h4>Sin identidad de marca en vitrina</h4>
+      <p>No hay QR de reservas, no hay precios actualizados, no hay elemento que capture al cliente que pasa por la escalera mecánica.</p>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- DESPUÉS -->
+  <div class="scene-label">
+    <h2>Fachada propuesta</h2>
+    <span class="pill pill-after">Con mejoras</span>
+  </div>
+  <div class="scene-wrap">
+    <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#C9A84C;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#E8C97A;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="warmLight" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#fff8e7;stop-opacity:0.15" />
+          <stop offset="100%" style="stop-color:#fff8e7;stop-opacity:0" />
+        </linearGradient>
+        <radialGradient id="spotLight1" cx="30%" cy="0%" r="60%">
+          <stop offset="0%" style="stop-color:#fff4d4;stop-opacity:0.2"/>
+          <stop offset="100%" style="stop-color:#fff4d4;stop-opacity:0"/>
+        </radialGradient>
+        <radialGradient id="spotLight2" cx="70%" cy="0%" r="60%">
+          <stop offset="0%" style="stop-color:#fff4d4;stop-opacity:0.2"/>
+          <stop offset="100%" style="stop-color:#fff4d4;stop-opacity:0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- Fondo galería -->
+      <rect width="900" height="420" fill="#1a1714"/>
+      <rect x="0" y="0" width="900" height="60" fill="#EDE8E0"/>
+      <rect x="0" y="340" width="900" height="80" fill="#EDE8E0"/>
+      <line x1="0" y1="340" x2="900" y2="340" stroke="#3a3028" stroke-width="1"/>
+      <ellipse cx="450" cy="375" rx="380" ry="18" fill="rgba(201,168,76,0.04)"/>
+
+      <!-- FACHADA -->
+      <rect x="60" y="60" width="780" height="280" fill="#F5F2EC" rx="2"/>
+
+      <!-- TOLDO NEGRO PREMIUM -->
+      <rect x="60" y="60" width="780" height="70" fill="#0a0a0a" rx="2"/>
+      <!-- Línea dorada bajo toldo -->
+      <rect x="60" y="128" width="780" height="2" fill="url(#goldGrad)"/>
+
+      <!-- LETRERO MEJORADO -->
+      <text x="450" y="103" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="url(#goldGrad)" letter-spacing="6" text-anchor="middle">BARBERÍA</text>
+      <text x="450" y="120" font-family="Georgia,serif" font-size="8" fill="#C9A84C" letter-spacing="5" text-anchor="middle">CORTE · PERFILADO DE BARBA · DEPILACIÓN</text>
+
+      <!-- VENTANA IZQUIERDA - zona productos -->
+      <rect x="70" y="140" width="230" height="185" fill="#F5F2EC" stroke="#2a2520" stroke-width="2"/>
+      <!-- Luz cálida interior izquierda -->
+      <rect x="70" y="140" width="230" height="185" fill="url(#spotLight1)"/>
+      <!-- Vitrina de productos -->
+      <rect x="85" y="155" width="95" height="160" fill="#1a1712" stroke="#C9A84C" stroke-width="1" rx="2"/>
+      <text x="132" y="173" font-family="sans-serif" font-size="7" fill="#C9A84C" text-anchor="middle" letter-spacing="1">PRODUCTOS</text>
+      <!-- Productos en vitrina -->
+      <rect x="92" y="180" width="20" height="30" fill="#2a2010" rx="2"/>
+      <rect x="116" y="180" width="20" height="30" fill="#1a2a10" rx="2"/>
+      <rect x="140" y="180" width="20" height="30" fill="#10182a" rx="2"/>
+      <rect x="92" y="215" width="20" height="25" fill="#2a1510" rx="2"/>
+      <rect x="116" y="215" width="20" height="25" fill="#202010" rx="2"/>
+      <rect x="140" y="215" width="20" height="25" fill="#1a1a2a" rx="2"/>
+      <!-- Precios en vitrina -->
+      <rect x="85" y="245" width="95" height="30" fill="#FAFAF7" rx="1"/>
+      <text x="132" y="260" font-family="sans-serif" font-size="7" fill="#C9A84C" text-anchor="middle">CORTE $12.000</text>
+      <text x="132" y="271" font-family="sans-serif" font-size="7" fill="#888" text-anchor="middle">CORTE + BARBA $20.000</text>
+      <!-- QR Code -->
+      <rect x="195" y="180" width="90" height="90" fill="#f5f0e8" rx="2"/>
+      <rect x="200" y="185" width="80" height="80" fill="#FAFAF7" rx="1"/>
+      <!-- QR pattern simulado -->
+      <rect x="203" y="188" width="20" height="20" fill="#f5f0e8"/>
+      <rect x="205" y="190" width="16" height="16" fill="#FAFAF7"/>
+      <rect x="207" y="192" width="12" height="12" fill="#f5f0e8"/>
+      <rect x="247" y="188" width="20" height="20" fill="#f5f0e8"/>
+      <rect x="249" y="190" width="16" height="16" fill="#FAFAF7"/>
+      <rect x="251" y="192" width="12" height="12" fill="#f5f0e8"/>
+      <rect x="203" y="228" width="20" height="20" fill="#f5f0e8"/>
+      <rect x="205" y="230" width="16" height="16" fill="#FAFAF7"/>
+      <rect x="207" y="232" width="12" height="12" fill="#f5f0e8"/>
+      <rect x="220" y="200" width="6" height="6" fill="#f5f0e8"/>
+      <rect x="230" y="200" width="6" height="6" fill="#f5f0e8"/>
+      <rect x="240" y="210" width="6" height="6" fill="#f5f0e8"/>
+      <rect x="225" y="215" width="6" height="6" fill="#f5f0e8"/>
+      <rect x="235" y="220" width="6" height="6" fill="#f5f0e8"/>
+      <text x="240" y="285" font-family="sans-serif" font-size="7" fill="#888" text-anchor="middle">Reserva online</text>
+
+      <!-- VENTANA CENTRAL - ambiente premium -->
+      <rect x="310" y="140" width="250" height="185" fill="#F5F2EC" stroke="#2a2520" stroke-width="2"/>
+      <rect x="310" y="140" width="250" height="185" fill="url(#warmLight)"/>
+      <!-- Pared con vinilo/mural fondo -->
+      <rect x="320" y="145" width="230" height="100" fill="#131211"/>
+      <!-- Vinilo barbería clásica -->
+      <text x="435" y="185" font-family="Georgia,serif" font-size="28" fill="#1e1c18" text-anchor="middle" font-weight="bold">✂</text>
+      <text x="435" y="210" font-family="Georgia,serif" font-size="11" fill="#2a2820" text-anchor="middle" letter-spacing="4">SINCE 2020</text>
+      <!-- Counter recepción -->
+      <rect x="340" y="255" width="90" height="50" fill="#1a1810" stroke="#C9A84C" stroke-width="1" rx="2"/>
+      <rect x="345" y="260" width="30" height="20" fill="#F5F2EC" rx="1"/><!-- tablet -->
+      <rect x="346" y="261" width="28" height="18" fill="#1a2a3a"/>
+      <text x="380" y="272" font-family="sans-serif" font-size="7" fill="#C9A84C">RESERVAS</text>
+      <text x="380" y="282" font-family="sans-serif" font-size="6" fill="#666">Check-in</text>
+      <!-- Zona espera -->
+      <rect x="440" y="248" width="50" height="35" fill="#1a1612" stroke="#333" stroke-width="1" rx="3"/>
+      <rect x="445" y="250" width="40" height="20" fill="#D8D4CC" rx="2"/><!-- sillón -->
+      <rect x="442" y="268" width="46" height="6" fill="#1a1612" rx="1"/><!-- base -->
+      <rect x="495" y="248" width="50" height="35" fill="#1a1612" stroke="#333" stroke-width="1" rx="3"/>
+      <rect x="500" y="250" width="40" height="20" fill="#D8D4CC" rx="2"/>
+      <rect x="497" y="268" width="46" height="6" fill="#1a1612" rx="1"/>
+      <text x="435" y="300" font-family="sans-serif" font-size="7" fill="#C9A84C" text-anchor="middle">ZONA DE ESPERA</text>
+      <!-- Marco puerta -->
+      <rect x="400" y="200" width="50" height="125" fill="#0a0a0a" stroke="#C9A84C" stroke-width="1"/>
+
+      <!-- VENTANA DERECHA - iluminación focalizada -->
+      <rect x="570" y="140" width="220" height="185" fill="#F5F2EC" stroke="#2a2520" stroke-width="2"/>
+      <rect x="570" y="140" width="220" height="185" fill="url(#spotLight2)"/>
+      <!-- Barbero con luz focal -->
+      <circle cx="620" cy="190" r="6" fill="#fff4d4" opacity="0.6"/><!-- luz focal -->
+      <ellipse cx="620" cy="220" rx="13" ry="13" fill="#D0CAC0"/>
+      <rect x="607" y="233" width="26" height="25" fill="#E8E4DC"/>
+      <!-- Cliente -->
+      <ellipse cx="665" cy="215" rx="13" ry="13" fill="#C0BAB0"/>
+      <rect x="652" y="228" width="26" height="25" fill="#D8D4CC"/>
+      <!-- Luz focal barbero 2 -->
+      <circle cx="665" cy="185" r="6" fill="#fff4d4" opacity="0.6"/>
+      <!-- Uniforme con logo simulado -->
+      <rect x="735" y="250" width="40" height="50" fill="#FAFAF7" stroke="#C9A84C" stroke-width="1" rx="2"/>
+      <text x="755" y="275" font-family="sans-serif" font-size="6" fill="#C9A84C" text-anchor="middle">✂</text>
+      <text x="755" y="285" font-family="sans-serif" font-size="5" fill="#888" text-anchor="middle">UNIFORME</text>
+
+      <!-- Poste mejorado (mismo lugar) -->
+      <rect x="783" y="140" width="14" height="185" fill="#FAFAF7" stroke="#C9A84C" stroke-width="1" rx="1"/>
+      <rect x="785" y="148" width="3.5" height="18" fill="#c0392b"/>
+      <rect x="788.5" y="148" width="3.5" height="18" fill="#f0f0f0"/>
+      <rect x="792" y="148" width="3.5" height="18" fill="#2980b9"/>
+      <rect x="785" y="166" width="3.5" height="18" fill="#f0f0f0"/>
+      <rect x="788.5" y="166" width="3.5" height="18" fill="#c0392b"/>
+      <rect x="792" y="166" width="3.5" height="18" fill="#f0f0f0"/>
+      <rect x="785" y="184" width="3.5" height="18" fill="#c0392b"/>
+      <rect x="788.5" y="184" width="3.5" height="18" fill="#f0f0f0"/>
+      <rect x="792" y="184" width="3.5" height="18" fill="#2980b9"/>
+
+      <!-- CHECK MARKS mejoras -->
+      <circle cx="160" cy="320" r="10" fill="#27ae60" opacity="0.9"/>
+      <text x="160" y="324" font-family="sans-serif" font-size="11" fill="white" text-anchor="middle">✓</text>
+      <circle cx="435" cy="320" r="10" fill="#27ae60" opacity="0.9"/>
+      <text x="435" y="324" font-family="sans-serif" font-size="11" fill="white" text-anchor="middle">✓</text>
+      <circle cx="680" cy="320" r="10" fill="#27ae60" opacity="0.9"/>
+      <text x="680" y="324" font-family="sans-serif" font-size="11" fill="white" text-anchor="middle">✓</text>
+
+      <!-- Numeración local -->
+      <rect x="71" y="141" width="35" height="14" fill="#0a2a4a"/>
+      <text x="88" y="151" font-family="sans-serif" font-size="7" fill="#5588bb" text-anchor="middle">LOCAL 222</text>
+    </svg>
+  </div>
+
+  <div class="callout-grid">
+    <div class="callout solution">
+      <div class="callout-tag">Mejora 1</div>
+      <h4>Vitrina de productos + precios actualizados</h4>
+      <p>Exhibidor iluminado con productos capilares visible desde la galería. Precios $12.000/$20.000 en señalética premium y QR de reserva Bewe.</p>
+    </div>
+    <div class="callout solution">
+      <div class="callout-tag">Mejora 2</div>
+      <h4>Counter de recepción con tablet</h4>
+      <p>Punto de bienvenida profesional con check-in en Bewe. Donde se ofrece la bebida y el cliente percibe el nivel del negocio desde el primer segundo.</p>
+    </div>
+    <div class="callout solution">
+      <div class="callout-tag">Mejora 3</div>
+      <h4>Zona de espera definida</h4>
+      <p>Sillones con identidad del local en el espacio central hoy vacío. La espera se convierte en parte de la experiencia, no en una incomodidad.</p>
+    </div>
+    <div class="callout solution">
+      <div class="callout-tag">Mejora 4</div>
+      <h4>Iluminación focalizada + uniformes</h4>
+      <p>Luz cálida por puesto que crea atmósfera visible desde la galería. Equipo con uniforme unificado — imagen de marca coherente y profesional.</p>
+    </div>
+  </div>
+
+</div><!-- /view-fachada -->
+
+<!-- ═══════════════════════════════ INTERIOR ═══════════════════════════════ -->
+<div id="view-interior" class="view">
+
+  <div class="scene-label">
+    <h2>Interior actual</h2>
+    <span class="pill pill-before">Estado hoy</span>
+  </div>
+  <div class="scene-wrap">
+    <svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+      <!-- Suelo -->
+      <rect width="900" height="500" fill="#161412"/>
+      <rect x="0" y="400" width="900" height="100" fill="#1a1815"/>
+      <!-- Piso blanco -->
+      <rect x="0" y="350" width="900" height="60" fill="#E8E4DC"/>
+      <!-- Grid piso -->
+      <g stroke="#222" stroke-width="1">
+        <line x1="0" y1="350" x2="900" y2="350"/>
+        <line x1="150" y1="350" x2="150" y2="420"/>
+        <line x1="300" y1="350" x2="300" y2="420"/>
+        <line x1="450" y1="350" x2="450" y2="420"/>
+        <line x1="600" y1="350" x2="600" y2="420"/>
+        <line x1="750" y1="350" x2="750" y2="420"/>
+      </g>
+
+      <!-- PARED FONDO blanca vacía -->
+      <rect x="0" y="50" width="900" height="260" fill="#E8E4DC"/>
+      <!-- Pared blanca visible -->
+      <rect x="60" y="60" width="780" height="240" fill="#e8e8e8" rx="1"/>
+
+      <!-- TECHO -->
+      <rect x="0" y="0" width="900" height="60" fill="#D8D4CC"/>
+      <!-- Lámparas genéricas (sin foco) -->
+      <ellipse cx="200" cy="50" rx="30" ry="8" fill="#C0BAB0"/>
+      <line x1="200" y1="30" x2="200" y2="55" stroke="#444" stroke-width="2"/>
+      <ellipse cx="450" cy="50" rx="30" ry="8" fill="#C0BAB0"/>
+      <line x1="450" y1="30" x2="450" y2="55" stroke="#444" stroke-width="2"/>
+      <ellipse cx="700" cy="50" rx="30" ry="8" fill="#C0BAB0"/>
+      <line x1="700" y1="30" x2="700" y2="55" stroke="#444" stroke-width="2"/>
+      <!-- Luz blanca fría uniforme sin dirección -->
+      <rect x="60" y="60" width="780" height="240" fill="rgba(220,230,255,0.04)"/>
+
+      <!-- PUESTOS DE TRABAJO -->
+      <!-- Puesto 1 -->
+      <rect x="70" y="150" width="5" height="150" fill="#555"/><!-- barra soporte espejo -->
+      <rect x="60" y="100" width="120" height="90" fill="#d0d0d0" stroke="#aaa" stroke-width="1" rx="1"/><!-- espejo -->
+      <rect x="75" y="102" width="90" height="86" fill="#b8c8d8" opacity="0.5"/><!-- reflejo -->
+      <!-- Silla 1 con cliente -->
+      <ellipse cx="115" cy="320" rx="25" ry="8" fill="#C0BAB0"/>
+      <rect x="100" y="270" width="30" height="50" fill="#D0CAC0" rx="2"/>
+      <rect x="95" y="268" width="40" height="10" fill="#D8D4CC" rx="2"/>
+      <ellipse cx="115" cy="255" rx="18" ry="18" fill="#444"/>
+      <rect x="100" y="270" width="30" height="20" fill="#C0BAB0" rx="1"/>
+      <!-- Barbero de pie -->
+      <ellipse cx="145" cy="235" rx="12" ry="12" fill="#555"/>
+      <rect x="133" y="247" width="24" height="45" fill="#D0CAC0"/>
+      <line x1="145" y1="255" x2="125" y2="270" stroke="#555" stroke-width="3"/><!-- brazo -->
+      <!-- Pelo en el suelo - PROBLEMA -->
+      <ellipse cx="115" cy="345" rx="30" ry="8" fill="#FAFAF7" opacity="0.8"/>
+      <circle cx="105" cy="348" r="2" fill="#C0BAB0"/>
+      <circle cx="120" cy="343" r="2" fill="#C0BAB0"/>
+      <circle cx="130" cy="347" r="3" fill="#C0BAB0"/>
+      <circle cx="100" cy="342" r="2" fill="#C0BAB0"/>
+
+      <!-- Puesto 2 vacío -->
+      <rect x="220" y="100" width="120" height="90" fill="#d0d0d0" stroke="#aaa" stroke-width="1" rx="1"/>
+      <rect x="235" y="102" width="90" height="86" fill="#b8c8d8" opacity="0.5"/>
+      <ellipse cx="275" cy="310" rx="25" ry="8" fill="#C0BAB0"/>
+      <rect x="260" y="265" width="30" height="45" fill="#D0CAC0" rx="2"/>
+      <rect x="255" y="263" width="40" height="10" fill="#D8D4CC" rx="2"/>
+      <!-- silla vacía -->
+
+      <!-- Puesto 3 vacío -->
+      <rect x="380" y="100" width="120" height="90" fill="#d0d0d0" stroke="#aaa" stroke-width="1" rx="1"/>
+      <rect x="395" y="102" width="90" height="86" fill="#b8c8d8" opacity="0.5"/>
+      <ellipse cx="435" cy="310" rx="25" ry="8" fill="#C0BAB0"/>
+      <rect x="420" y="265" width="30" height="45" fill="#D0CAC0" rx="2"/>
+      <rect x="415" y="263" width="40" height="10" fill="#D8D4CC" rx="2"/>
+
+      <!-- Puesto 4 con cliente -->
+      <rect x="540" y="100" width="120" height="90" fill="#d0d0d0" stroke="#aaa" stroke-width="1" rx="1"/>
+      <rect x="555" y="102" width="90" height="86" fill="#b8c8d8" opacity="0.5"/>
+      <ellipse cx="595" cy="320" rx="25" ry="8" fill="#C0BAB0"/>
+      <rect x="580" y="270" width="30" height="50" fill="#D0CAC0" rx="2"/>
+      <rect x="575" y="268" width="40" height="10" fill="#D8D4CC" rx="2"/>
+      <ellipse cx="595" cy="255" rx="18" ry="18" fill="#444"/>
+      <rect x="583" y="270" width="24" height="20" fill="#C0BAB0" rx="1"/>
+      <!-- Barbero 4 -->
+      <ellipse cx="625" cy="235" rx="12" ry="12" fill="#555"/>
+      <rect x="613" y="247" width="24" height="45" fill="#D0CAC0"/>
+
+      <!-- PARED FONDO VACÍA - problema señalado -->
+      <rect x="100" y="65" width="700" height="200" fill="#e5e5e5" opacity="0.8"/>
+      <!-- Cruz pared vacía -->
+      <rect x="420" y="120" width="60" height="3" fill="#ccc"/>
+      <rect x="449" y="100" width="3" height="45" fill="#ccc"/>
+      <text x="450" y="175" font-family="sans-serif" font-size="10" fill="#bbb" text-anchor="middle">PARED VACÍA</text>
+
+      <!-- Marcadores de problemas -->
+      <circle cx="115" cy="345" r="12" fill="none" stroke="#c0392b" stroke-width="2"/>
+      <text x="115" y="349" font-family="sans-serif" font-size="14" fill="#c0392b" text-anchor="middle">!</text>
+      <text x="115" y="370" font-family="sans-serif" font-size="8" fill="#c0392b" text-anchor="middle">pelo en piso</text>
+
+      <circle cx="450" cy="155" r="12" fill="none" stroke="#c0392b" stroke-width="2"/>
+      <text x="450" y="159" font-family="sans-serif" font-size="14" fill="#c0392b" text-anchor="middle">!</text>
+      <text x="450" y="180" font-family="sans-serif" font-size="8" fill="#c0392b" text-anchor="middle">pared vacía</text>
+
+      <!-- Zona central vacía - problema -->
+      <rect x="200" y="360" width="500" height="50" fill="none" stroke="#c0392b" stroke-width="1" stroke-dasharray="6,3"/>
+      <text x="450" y="385" font-family="sans-serif" font-size="10" fill="#c0392b" text-anchor="middle">ESPACIO CENTRAL SIN USO</text>
+
+      <!-- Puerta fondo -->
+      <rect x="430" y="185" width="40" height="115" fill="#d8d0c8" stroke="#aaa" stroke-width="1"/>
+      <circle cx="435" cy="243" r="3" fill="#888"/>
+    </svg>
+  </div>
+
+  <div class="callout-grid">
+    <div class="callout problem">
+      <div class="callout-tag">Problema A</div>
+      <h4>Pared del fondo completamente vacía</h4>
+      <p>~10 metros de pared blanca sin identidad. Espacio de marca desaprovechado que en redes sociales aparece como fondo vacío.</p>
+    </div>
+    <div class="callout problem">
+      <div class="callout-tag">Problema B</div>
+      <h4>Sin iluminación focalizada por puesto</h4>
+      <p>Lámparas de techo generales sin dirección. El barbero trabaja sin luz adecuada sobre el puesto y el cliente no percibe atmósfera premium.</p>
+    </div>
+    <div class="callout problem">
+      <div class="callout-tag">Problema C</div>
+      <h4>Pelo en el suelo durante la operación</h4>
+      <p>Visible en las fotos. El protocolo actual es limpiar al final del día. Debe ser entre cada cliente para mantener imagen impecable.</p>
+    </div>
+    <div class="callout problem">
+      <div class="callout-tag">Problema D</div>
+      <h4>Sin música ambiente y espacio muerto</h4>
+      <p>El gran espacio central está completamente vacío. Sin zona de espera, sin ambientación sonora, sin vitrina de productos visible.</p>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- DESPUÉS INTERIOR -->
+  <div class="scene-label">
+    <h2>Interior propuesto</h2>
+    <span class="pill pill-after">Con mejoras</span>
+  </div>
+  <div class="scene-wrap">
+    <svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="foco1" cx="50%" cy="0%" r="70%">
+          <stop offset="0%" style="stop-color:#fff4d4;stop-opacity:0.35"/>
+          <stop offset="100%" style="stop-color:#fff4d4;stop-opacity:0"/>
+        </radialGradient>
+        <radialGradient id="foco2" cx="50%" cy="0%" r="70%">
+          <stop offset="0%" style="stop-color:#fff4d4;stop-opacity:0.35"/>
+          <stop offset="100%" style="stop-color:#fff4d4;stop-opacity:0"/>
+        </radialGradient>
+        <radialGradient id="foco3" cx="50%" cy="0%" r="70%">
+          <stop offset="0%" style="stop-color:#fff4d4;stop-opacity:0.35"/>
+          <stop offset="100%" style="stop-color:#fff4d4;stop-opacity:0"/>
+        </radialGradient>
+        <linearGradient id="muralGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#1a1812;stop-opacity:1"/>
+          <stop offset="50%" style="stop-color:#22200e;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#1a1812;stop-opacity:1"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Base oscura cálida -->
+      <rect width="900" height="500" fill="#F5F2EC"/>
+      <rect x="0" y="400" width="900" height="100" fill="#1a1815"/>
+
+      <!-- Piso negro premium con reflejo -->
+      <rect x="0" y="350" width="900" height="70" fill="#1a1815"/>
+      <g stroke="#222" stroke-width="1" opacity="0.5">
+        <line x1="0" y1="350" x2="900" y2="350"/>
+        <line x1="150" y1="350" x2="150" y2="420"/>
+        <line x1="300" y1="350" x2="300" y2="420"/>
+        <line x1="450" y1="350" x2="450" y2="420"/>
+        <line x1="600" y1="350" x2="600" y2="420"/>
+        <line x1="750" y1="350" x2="750" y2="420"/>
+      </g>
+      <!-- Reflexión piso -->
+      <rect x="0" y="350" width="900" height="70" fill="rgba(201,168,76,0.02)"/>
+
+      <!-- TECHO con spots LED focales -->
+      <rect x="0" y="0" width="900" height="60" fill="#F5F2EC"/>
+      <!-- Lámparas con foco cálido -->
+      <g>
+        <!-- Spot puesto 1 -->
+        <ellipse cx="115" cy="52" rx="12" ry="5" fill="#444"/>
+        <line x1="115" y1="30" x2="115" y2="55" stroke="#555" stroke-width="2"/>
+        <circle cx="115" cy="58" r="4" fill="#fff4d4" opacity="0.9"/>
+        <!-- Cono luz -->
+        <path d="M 105 60 L 85 200 L 145 200 L 125 60 Z" fill="rgba(255,244,212,0.04)"/>
+
+        <!-- Spot puesto 2 -->
+        <ellipse cx="275" cy="52" rx="12" ry="5" fill="#444"/>
+        <line x1="275" y1="30" x2="275" y2="55" stroke="#555" stroke-width="2"/>
+        <circle cx="275" cy="58" r="4" fill="#fff4d4" opacity="0.9"/>
+        <path d="M 265 60 L 245 200 L 305 200 L 285 60 Z" fill="rgba(255,244,212,0.04)"/>
+
+        <!-- Spot puesto 3 -->
+        <ellipse cx="435" cy="52" rx="12" ry="5" fill="#444"/>
+        <line x1="435" y1="30" x2="435" y2="55" stroke="#555" stroke-width="2"/>
+        <circle cx="435" cy="58" r="4" fill="#fff4d4" opacity="0.9"/>
+        <path d="M 425 60 L 405 200 L 465 200 L 445 60 Z" fill="rgba(255,244,212,0.04)"/>
+
+        <!-- Spot puesto 4 -->
+        <ellipse cx="595" cy="52" rx="12" ry="5" fill="#444"/>
+        <line x1="595" y1="30" x2="595" y2="55" stroke="#555" stroke-width="2"/>
+        <circle cx="595" cy="58" r="4" fill="#fff4d4" opacity="0.9"/>
+        <path d="M 585 60 L 565 200 L 625 200 L 605 60 Z" fill="rgba(255,244,212,0.04)"/>
+
+        <!-- Spot zona espera -->
+        <ellipse cx="780" cy="52" rx="12" ry="5" fill="#444"/>
+        <line x1="780" y1="30" x2="780" y2="55" stroke="#555" stroke-width="2"/>
+        <circle cx="780" cy="58" r="4" fill="#fff4d4" opacity="0.7"/>
+      </g>
+
+      <!-- PARED FONDO CON MURAL/VINILO -->
+      <rect x="60" y="60" width="780" height="220" fill="url(#muralGrad)"/>
+      <!-- Vinilo diseño barbería clásica -->
+      <text x="450" y="140" font-family="Georgia,serif" font-size="60" fill="#1e1c14" text-anchor="middle" font-weight="bold" opacity="0.8">✂</text>
+      <text x="450" y="190" font-family="Georgia,serif" font-size="18" fill="#2a2818" text-anchor="middle" letter-spacing="8" opacity="0.9">BARBERÍA</text>
+      <line x1="200" y1="200" x2="360" y2="200" stroke="#2a2818" stroke-width="1" opacity="0.6"/>
+      <text x="450" y="215" font-family="Georgia,serif" font-size="9" fill="#2a2818" text-anchor="middle" letter-spacing="6" opacity="0.7">GALERÍA SANTIAGO CENTRO</text>
+      <line x1="540" y1="200" x2="700" y2="200" stroke="#2a2818" stroke-width="1" opacity="0.6"/>
+      <!-- Línea dorada decorativa -->
+      <rect x="60" y="275" width="780" height="1.5" fill="#C9A84C" opacity="0.4"/>
+
+      <!-- PUESTO 1 con iluminación cálida -->
+      <rect x="60" y="100" width="120" height="80" fill="#1a1810" stroke="#C9A84C" stroke-width="1" rx="1"/><!-- marco espejo dorado -->
+      <rect x="62" y="102" width="116" height="76" fill="#1e2a30" opacity="0.7"/><!-- espejo -->
+      <!-- Luz focal sobre puesto -->
+      <ellipse cx="115" cy="180" rx="50" ry="30" fill="rgba(255,244,212,0.08)"/>
+      <!-- Silla cliente -->
+      <ellipse cx="115" cy="330" rx="26" ry="9" fill="#1a1610"/>
+      <rect x="100" y="275" width="30" height="55" fill="#1e1c18" rx="2"/>
+      <rect x="95" y="272" width="40" height="10" fill="#161412" rx="2"/>
+      <ellipse cx="115" cy="260" rx="18" ry="18" fill="#3a3830"/>
+      <!-- Capa cliente negra -->
+      <path d="M 90 275 Q 115 310 140 275 L 140 335 Q 115 350 90 335 Z" fill="#0a0a0a" opacity="0.8"/>
+      <!-- Barbero uniforme -->
+      <ellipse cx="148" cy="235" rx="12" ry="12" fill="#3a3830"/>
+      <rect x="136" y="247" width="24" height="45" fill="#FAFAF7" rx="1"/><!-- uniforme negro -->
+      <!-- Logo en uniforme -->
+      <rect x="140" y="252" width="10" height="10" fill="none" stroke="#C9A84C" stroke-width="0.5"/>
+      <text x="145" y="260" font-family="sans-serif" font-size="5" fill="#C9A84C" text-anchor="middle">✂</text>
+      <!-- Piso limpio -->
+      <ellipse cx="115" cy="350" rx="28" ry="6" fill="#1a1815"/>
+
+      <!-- PUESTO 2 -->
+      <rect x="220" y="100" width="120" height="80" fill="#1a1810" stroke="#C9A84C" stroke-width="1" rx="1"/>
+      <rect x="222" y="102" width="116" height="76" fill="#1e2a30" opacity="0.7"/>
+      <ellipse cx="275" cy="180" rx="50" ry="30" fill="rgba(255,244,212,0.08)"/>
+      <ellipse cx="275" cy="320" rx="26" ry="9" fill="#1a1610"/>
+      <rect x="260" y="270" width="30" height="50" fill="#1e1c18" rx="2"/>
+      <rect x="255" y="268" width="40" height="10" fill="#161412" rx="2"/>
+      <ellipse cx="275" cy="255" rx="18" ry="18" fill="#3a3830"/>
+      <path d="M 250 270 Q 275 305 300 270 L 300 330 Q 275 345 250 330 Z" fill="#0a0a0a" opacity="0.8"/>
+      <ellipse cx="308" cy="235" rx="12" ry="12" fill="#3a3830"/>
+      <rect x="296" y="247" width="24" height="45" fill="#FAFAF7" rx="1"/>
+      <rect x="300" y="252" width="10" height="10" fill="none" stroke="#C9A84C" stroke-width="0.5"/>
+      <text x="305" y="260" font-family="sans-serif" font-size="5" fill="#C9A84C" text-anchor="middle">✂</text>
+
+      <!-- PUESTO 3 -->
+      <rect x="380" y="100" width="120" height="80" fill="#1a1810" stroke="#C9A84C" stroke-width="1" rx="1"/>
+      <rect x="382" y="102" width="116" height="76" fill="#1e2a30" opacity="0.7"/>
+      <ellipse cx="435" cy="180" rx="50" ry="30" fill="rgba(255,244,212,0.08)"/>
+      <ellipse cx="435" cy="320" rx="26" ry="9" fill="#1a1610"/>
+      <rect x="420" y="270" width="30" height="50" fill="#1e1c18" rx="2"/>
+      <rect x="415" y="268" width="40" height="10" fill="#161412" rx="2"/>
+      <ellipse cx="435" cy="255" rx="18" ry="18" fill="#3a3830"/>
+      <path d="M 410 270 Q 435 305 460 270 L 460 330 Q 435 345 410 330 Z" fill="#0a0a0a" opacity="0.8"/>
+      <ellipse cx="468" cy="235" rx="12" ry="12" fill="#3a3830"/>
+      <rect x="456" y="247" width="24" height="45" fill="#FAFAF7" rx="1"/>
+      <rect x="460" y="252" width="10" height="10" fill="none" stroke="#C9A84C" stroke-width="0.5"/>
+      <text x="465" y="260" font-family="sans-serif" font-size="5" fill="#C9A84C" text-anchor="middle">✂</text>
+
+      <!-- PUESTO 4 -->
+      <rect x="540" y="100" width="120" height="80" fill="#1a1810" stroke="#C9A84C" stroke-width="1" rx="1"/>
+      <rect x="542" y="102" width="116" height="76" fill="#1e2a30" opacity="0.7"/>
+      <ellipse cx="595" cy="180" rx="50" ry="30" fill="rgba(255,244,212,0.08)"/>
+      <ellipse cx="595" cy="320" rx="26" ry="9" fill="#1a1610"/>
+      <rect x="580" y="270" width="30" height="50" fill="#1e1c18" rx="2"/>
+      <rect x="575" y="268" width="40" height="10" fill="#161412" rx="2"/>
+      <ellipse cx="595" cy="255" rx="18" ry="18" fill="#3a3830"/>
+      <path d="M 570 270 Q 595 305 620 270 L 620 330 Q 595 345 570 330 Z" fill="#0a0a0a" opacity="0.8"/>
+      <ellipse cx="628" cy="235" rx="12" ry="12" fill="#3a3830"/>
+      <rect x="616" y="247" width="24" height="45" fill="#FAFAF7" rx="1"/>
+      <rect x="620" y="252" width="10" height="10" fill="none" stroke="#C9A84C" stroke-width="0.5"/>
+      <text x="625" y="260" font-family="sans-serif" font-size="5" fill="#C9A84C" text-anchor="middle">✂</text>
+
+      <!-- ZONA DE ESPERA (derecha) -->
+      <rect x="695" y="180" width="180" height="160" fill="#14120f" stroke="#2a2520" stroke-width="1" rx="2"/>
+      <!-- Título zona espera -->
+      <text x="785" y="200" font-family="sans-serif" font-size="8" fill="#C9A84C" text-anchor="middle" letter-spacing="2">ZONA DE ESPERA</text>
+      <!-- Sillones espera -->
+      <rect x="705" y="210" width="50" height="35" fill="#1e1c18" rx="3" stroke="#333" stroke-width="1"/>
+      <rect x="707" y="212" width="46" height="22" fill="#252218" rx="2"/>
+      <rect x="705" y="232" width="50" height="8" fill="#1a1816" rx="1"/>
+      <rect x="760" y="210" width="50" height="35" fill="#1e1c18" rx="3" stroke="#333" stroke-width="1"/>
+      <rect x="762" y="212" width="46" height="22" fill="#252218" rx="2"/>
+      <rect x="760" y="232" width="50" height="8" fill="#1a1816" rx="1"/>
+      <rect x="705" y="255" width="50" height="35" fill="#1e1c18" rx="3" stroke="#333" stroke-width="1"/>
+      <rect x="707" y="257" width="46" height="22" fill="#252218" rx="2"/>
+      <rect x="760" y="255" width="50" height="35" fill="#1e1c18" rx="3" stroke="#333" stroke-width="1"/>
+      <rect x="762" y="257" width="46" height="22" fill="#252218" rx="2"/>
+      <!-- Mesita central -->
+      <rect x="730" y="225" width="30" height="30" fill="#1a1710" stroke="#C9A84C" stroke-width="0.5" rx="2"/>
+      <rect x="735" y="230" width="20" height="15" fill="#0a0a0a" rx="1"/><!-- tablet -->
+      <rect x="736" y="231" width="18" height="13" fill="#1a2a3a"/>
+      <!-- Parlante música -->
+      <rect x="820" y="200" width="45" height="60" fill="#FAFAF7" stroke="#333" stroke-width="1" rx="3"/>
+      <circle cx="842" cy="220" r="12" fill="#0a0a0a" stroke="#444" stroke-width="1"/>
+      <circle cx="842" cy="220" r="6" fill="#FAFAF7"/>
+      <circle cx="842" cy="220" r="2" fill="#C9A84C"/>
+      <text x="842" y="255" font-family="sans-serif" font-size="7" fill="#888" text-anchor="middle">♪</text>
+      <!-- Persona esperando -->
+      <ellipse cx="730" cy="210" rx="10" ry="10" fill="#3a3830"/>
+      <rect x="723" y="220" width="14" height="20" fill="#2a2820"/>
+      <ellipse cx="780" cy="210" rx="10" ry="10" fill="#3a3830"/>
+      <rect x="773" y="220" width="14" height="20" fill="#2a2820"/>
+
+      <!-- COUNTER RECEPCIÓN (entrada, izquierda) -->
+      <!-- No hay espacio visible desde este ángulo, mostrar como elemento indicado -->
+
+      <!-- CHECKLIST final -->
+      <g>
+        <circle cx="820" cy="355" r="9" fill="#27ae60" opacity="0.9"/>
+        <text x="820" y="359" font-family="sans-serif" font-size="10" fill="white" text-anchor="middle">✓</text>
+        <text x="845" y="360" font-family="sans-serif" font-size="8" fill="#27ae60">Zona espera activa</text>
+      </g>
+      <g>
+        <circle cx="820" cy="372" r="9" fill="#27ae60" opacity="0.9"/>
+        <text x="820" y="376" font-family="sans-serif" font-size="10" fill="white" text-anchor="middle">✓</text>
+        <text x="845" y="377" font-family="sans-serif" font-size="8" fill="#27ae60">Piso limpio</text>
+      </g>
+      <g>
+        <circle cx="820" cy="389" r="9" fill="#27ae60" opacity="0.9"/>
+        <text x="820" y="393" font-family="sans-serif" font-size="10" fill="white" text-anchor="middle">✓</text>
+        <text x="845" y="394" font-family="sans-serif" font-size="8" fill="#27ae60">Uniformes equipo</text>
+      </g>
+
+      <!-- Puerta fondo -->
+      <rect x="430" y="200" width="40" height="80" fill="#1a1810" stroke="#C9A84C" stroke-width="0.5"/>
+      <circle cx="435" cy="240" r="3" fill="#C9A84C"/>
+    </svg>
+  </div>
+
+  <div class="callout-grid">
+    <div class="callout solution">
+      <div class="callout-tag">Mejora A</div>
+      <h4>Mural/vinilo de marca en pared del fondo</h4>
+      <p>Identidad visual consistente en las ~10m de pared blanca. Transforma el fondo de fotos y videos para redes — cada contenido publicado refuerza la marca.</p>
+    </div>
+    <div class="callout solution">
+      <div class="callout-tag">Mejora B</div>
+      <h4>Iluminación LED focalizada por puesto</h4>
+      <p>Spot cálido sobre cada silla. Mejora la calidad del trabajo del barbero, crea atmósfera premium y genera contenido visual superior para redes.</p>
+    </div>
+    <div class="callout solution">
+      <div class="callout-tag">Mejora C</div>
+      <h4>Zona de espera con ambientación</h4>
+      <p>Sillones, mesita con tablet (Bewe check-in), parlante con música ambiente y vitrina lateral. El espacio central vacío se convierte en parte del servicio.</p>
+    </div>
+    <div class="callout solution">
+      <div class="callout-tag">Mejora D</div>
+      <h4>Protocolo de limpieza + uniformes</h4>
+      <p>Barrido entre cada cliente (no al final del día). Equipo con uniforme negro con logo en dorado — coherencia visual total en cada foto y video.</p>
+    </div>
+  </div>
+
+</div><!-- /view-interior -->
+
+<!-- ═══════════════════════════════ INVERSIÓN ═══════════════════════════════ -->
+<div id="view-inversion" class="view">
+
+  <div class="scene-label" style="margin-top:0;">
+    <h2>Plan de inversión</h2>
+    <span class="pill pill-after">2 fases · 30 días</span>
+  </div>
+
+  <div style="background:var(--dark-2);border:1px solid rgba(138,96,16,0.18);overflow:hidden;">
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th>Fase</th>
+          <th>Mejora</th>
+          <th>Impacto</th>
+          <th>Costo estimado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge-f1">FASE 1 · Sem 1</span></td>
+          <td>Cartelería fachada actualizada ($12.000/$20.000 + QR Bewe)</td>
+          <td>Precio correcto visible desde escalera mecánica</td>
+          <td>$30.000 – $80.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f1">FASE 1 · Sem 1</span></td>
+          <td>Protocolo limpieza entre clientes (disciplina operativa)</td>
+          <td>Imagen impecable en todo momento</td>
+          <td>$0</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f1">FASE 1 · Sem 1</span></td>
+          <td>Iluminación LED focalizada por puesto (hasta 9 spots)</td>
+          <td>Atmósfera premium + calidad de trabajo barbero</td>
+          <td>$135.000 – $360.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f2">FASE 2 · Mes 1</span></td>
+          <td>Vitrina de productos capilares iluminada</td>
+          <td>Canal de venta detalle visible desde galería</td>
+          <td>$100.000 – $250.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f2">FASE 2 · Mes 1</span></td>
+          <td>Zona de espera (sillones + mesita + tablet)</td>
+          <td>Experiencia de espera → parte del servicio</td>
+          <td>$150.000 – $400.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f2">FASE 2 · Mes 1</span></td>
+          <td>Sistema de música ambiente (parlante premium)</td>
+          <td>Atmósfera percibida → mejor reseñas</td>
+          <td>$50.000 – $150.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f2">FASE 2 · Mes 1</span></td>
+          <td>Mural/vinilo de marca en pared del fondo</td>
+          <td>Identidad visual en fotos/videos para RRSS</td>
+          <td>$80.000 – $200.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f2">FASE 2 · Mes 1</span></td>
+          <td>Counter de recepción con tablet Bewe</td>
+          <td>Primer impacto profesional al entrar</td>
+          <td>$200.000 – $500.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f2">FASE 2 · Mes 1</span></td>
+          <td>Máquina de café automática</td>
+          <td>Experiencia diferenciadora · 1 café por cliente</td>
+          <td>$150.000 – $400.000</td>
+        </tr>
+        <tr>
+          <td><span class="badge-f2">FASE 2 · Mes 1</span></td>
+          <td>Uniformes equipo con logo (hasta 9 personas)</td>
+          <td>Imagen de marca coherente en todo el equipo</td>
+          <td>$135.000 – $270.000</td>
+        </tr>
+        <tr class="total">
+          <td colspan="3"><strong>Total estimado inversión</strong></td>
+          <td><strong>$1.030.000 – $2.610.000</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout-grid" style="margin-top:32px;">
+    <div class="callout solution">
+      <div class="callout-tag">ROI Fase 1</div>
+      <h4>Recuperación inmediata</h4>
+      <p>Inversión máxima $440.000. Con el esquema 10% sobre facturación, se recupera en menos de 1 semana de operación. El cartel actualizado y la iluminación son visibles desde la escalera mecánica desde el día 1.</p>
+    </div>
+    <div class="callout solution">
+      <div class="callout-tag">ROI Fase 2</div>
+      <h4>Recuperación en 4–6 semanas</h4>
+      <p>Inversión total máxima ~$2.6M. Con una facturación mensual proyectada en $10M+ desde el mes 2, la inversión completa se recupera en menos de 2 meses de operación mejorada.</p>
+    </div>
+  </div>
+
+</div><!-- /view-inversion -->
+</div><!-- /container -->
+
+<script>
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({top: 80, behavior: 'smooth'});
+}
+</script>
+</body>
+</html>

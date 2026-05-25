@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis Financiero · Salon Men Saúl Fino</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #F8F5F0;
+  --white:    #FFFFFF;
+  --panel:    #F0EBE2;
+  --rule:     #DDD7CC;
+  --ink:      #18140E;
+  --ink2:     #2C2820;
+  --mid:      #48443C;
+  --dim:      #6E6A60;
+  --gold:     #7A5A08;
+  --gold2:    #C49A28;
+  --gold-lt:  #FAF3E0;
+  --red:      #8C2218;
+  --red-lt:   #FBF0EE;
+  --green:    #1A5C38;
+  --green-lt: #EAF4EE;
+  --blue:     #1A3A6C;
+  --blue-lt:  #EBF0FA;
+  --amber:    #7A3A08;
+  --amber-lt: #FDF3E8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--ink2);
+  font-family:'Barlow',sans-serif;
+  font-size:15px;
+  font-weight:400;
+  line-height:1.7;
+}
+
+/* ── COVER ── */
+.cover{
+  background:var(--ink);
+  color:#EAE4D8;
+  padding:64px 52px 52px;
+  position:relative;
+  overflow:hidden;
+}
+.cover::before{
+  content:'';
+  position:absolute;
+  top:-80px;right:-80px;
+  width:360px;height:360px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(196,154,40,0.08),transparent 70%);
+  pointer-events:none;
+}
+.cover::after{
+  content:'';
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:3px;
+  background:linear-gradient(90deg,var(--gold),#C49A28,var(--gold));
+}
+.cover-tag{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:4px;text-transform:uppercase;
+  color:#C49A28;margin-bottom:24px;
+}
+.cover h1{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(36px,7vw,80px);
+  font-weight:900;line-height:0.92;
+  color:#F5EFE4;letter-spacing:-1px;
+}
+.cover h1 em{font-style:italic;color:#C49A28;font-weight:400;}
+.cover-rule{width:48px;height:2px;background:#C49A28;margin:24px 0;}
+.cover-desc{
+  font-family:'Barlow',sans-serif;
+  font-size:15px;color:#9A9080;
+  max-width:540px;line-height:1.65;
+}
+.cover-kpis{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:1px;background:rgba(255,255,255,0.06);
+  margin-top:44px;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.ck{
+  padding:20px 18px;background:rgba(255,255,255,0.03);
+}
+.ck-label{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;
+  color:#7A7060;margin-bottom:8px;
+}
+.ck-val{
+  font-family:'Playfair Display',serif;
+  font-size:26px;font-weight:700;
+  color:#F0E8D8;line-height:1;
+}
+.ck-sub{font-size:11px;color:#7A7060;margin-top:5px;}
+
+/* ── NAV ── */
+.nav{
+  background:var(--white);border-bottom:1px solid var(--rule);
+  display:flex;overflow-x:auto;position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 6px rgba(0,0,0,0.07);
+}
+.nav::-webkit-scrollbar{height:0;}
+.nav a{
+  display:flex;align-items:center;gap:7px;
+  padding:13px 18px;text-decoration:none;
+  border-bottom:2px solid transparent;
+  transition:all .18s;white-space:nowrap;flex-shrink:0;
+}
+.nav a:hover{border-bottom-color:var(--gold);background:var(--gold-lt);}
+.nav-n{font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);font-weight:500;}
+.nav-l{font-size:11px;font-weight:600;color:var(--mid);letter-spacing:0.3px;text-transform:uppercase;}
+
+/* ── SECTIONS ── */
+.wrap{max-width:960px;margin:0 auto;padding:0 32px 80px;}
+
+.section{padding:52px 0 0;}
+.sec-tag{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:3px;text-transform:uppercase;color:var(--gold);
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+.sec-tag::after{content:'';flex:0 0 28px;height:1px;background:var(--gold);}
+.sec-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(24px,4vw,42px);font-weight:700;
+  color:var(--ink);line-height:1.05;margin-bottom:10px;
+}
+.sec-title em{font-style:italic;color:var(--gold);font-weight:400;}
+.sec-desc{font-size:14px;color:var(--mid);max-width:620px;margin-bottom:28px;}
+
+/* ── CARDS GRID ── */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:1px;background:var(--rule);
+  border:1px solid var(--rule);margin-bottom:24px;
+}
+.card{background:var(--white);padding:22px 20px;}
+.card-tag{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--dim);margin-bottom:10px;
+}
+.card-val{
+  font-family:'Playfair Display',serif;
+  font-size:28px;font-weight:700;color:var(--ink);line-height:1;
+}
+.card-val.green{color:var(--green);}
+.card-val.red{color:var(--red);}
+.card-val.gold{color:var(--gold);}
+.card-sub{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.5;}
+
+/* ── TABLE ── */
+.tbl-wrap{
+  background:var(--white);border:1px solid var(--rule);
+  overflow:hidden;margin-bottom:20px;
+}
+.tbl-title{
+  padding:14px 20px;border-bottom:1px solid var(--rule);
+  background:var(--panel);
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:8px;
+}
+.tbl-title strong{
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;
+  letter-spacing:1px;text-transform:uppercase;font-weight:600;color:var(--ink);
+}
+.tbl-tag{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--gold);background:var(--gold-lt);
+  border:1px solid rgba(122,90,8,0.2);padding:2px 8px;
+}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--dim);text-align:left;
+  padding:10px 14px;border-bottom:2px solid var(--rule);
+  background:var(--panel);
+}
+th.r{text-align:right;}
+td{padding:10px 14px;border-bottom:1px solid rgba(0,0,0,0.04);color:var(--ink2);}
+td.r{text-align:right;font-family:'DM Mono',monospace;font-size:12px;}
+td.r.g{color:var(--green);font-weight:500;}
+td.r.r{color:var(--red);font-weight:500;}
+td.r.gold{color:var(--gold);font-weight:500;}
+tr:last-child td{border-bottom:none;}
+tr.total td{
+  background:var(--ink);color:#F0E8D8;font-weight:600;
+  font-family:'Barlow Condensed',sans-serif;font-size:14px;
+  letter-spacing:.3px;
+}
+tr.total td.r{font-family:'DM Mono',monospace;font-size:13px;color:#C49A28;}
+tr.subtotal td{background:var(--panel);font-weight:600;}
+tr.highlight td{background:var(--gold-lt);}
+
+/* ── INSIGHT BOX ── */
+.insight{
+  border-left:4px solid var(--gold);background:var(--gold-lt);
+  padding:16px 20px;margin:16px 0;
+}
+.ins-tag{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:7px;font-weight:500;
+}
+.ins-body{font-size:14px;color:var(--ink2);line-height:1.65;}
+.ins-body strong{color:var(--ink);font-weight:600;}
+
+.alert-red{
+  border-left:4px solid var(--red);background:var(--red-lt);
+  padding:16px 20px;margin:16px 0;
+}
+.alert-green{
+  border-left:4px solid var(--green);background:var(--green-lt);
+  padding:16px 20px;margin:16px 0;
+}
+.alert-blue{
+  border-left:4px solid var(--blue);background:var(--blue-lt);
+  padding:16px 20px;margin:16px 0;
+}
+.alert-tag{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:7px;font-weight:500;
+}
+.alert-red .alert-tag{color:var(--red);}
+.alert-green .alert-tag{color:var(--green);}
+.alert-blue .alert-tag{color:var(--blue);}
+.alert-body{font-size:14px;color:var(--ink2);line-height:1.65;}
+.alert-body strong{color:var(--ink);font-weight:600;}
+
+/* ── CHART CARD ── */
+.chart-card{
+  background:var(--white);border:1px solid var(--rule);
+  padding:24px;margin-bottom:20px;
+}
+.chart-title{
+  font-family:'Playfair Display',serif;
+  font-size:17px;font-weight:700;color:var(--ink);margin-bottom:4px;
+}
+.chart-sub{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--dim);margin-bottom:16px;
+}
+.chart-wrap{position:relative;height:300px;}
+.chart-wrap-sm{position:relative;height:220px;}
+
+/* ── 2-col grid ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+@media(max-width:680px){.two-col{grid-template-columns:1fr;}}
+
+/* ── COMMISSION VISUAL ── */
+.comm-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--rule);
+  border:1px solid var(--rule);margin-bottom:20px;
+}
+.comm-card{background:var(--white);padding:24px 20px;text-align:center;}
+.comm-method{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dim);
+  margin-bottom:14px;
+}
+.comm-pct{
+  font-family:'Playfair Display',serif;font-size:52px;
+  font-weight:900;line-height:1;color:var(--ink);
+}
+.comm-pct .pct-mark{font-size:28px;color:var(--gold);}
+.comm-bar-bg{height:8px;background:var(--rule);border-radius:4px;margin:14px 0 10px;}
+.comm-bar-fill{height:100%;border-radius:4px;}
+.comm-breakdown{font-size:12px;color:var(--mid);line-height:1.6;}
+.comm-breakdown strong{color:var(--ink);font-weight:600;}
+
+/* ── EQUILIBRIO BOX ── */
+.eq-box{
+  background:var(--ink);color:#EAE4D8;
+  padding:36px;margin:28px 0;
+  position:relative;overflow:hidden;
+}
+.eq-box::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--gold),#C49A28,var(--gold));
+}
+.eq-title{
+  font-family:'Playfair Display',serif;
+  font-size:22px;font-weight:700;color:#F0E8D8;
+  margin-bottom:20px;
+}
+.eq-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:20px;
+}
+.eq-item{}
+.eq-label{
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;
+  color:#7A7060;margin-bottom:6px;
+}
+.eq-val{
+  font-family:'Playfair Display',serif;
+  font-size:28px;font-weight:700;color:#C49A28;line-height:1;
+}
+.eq-sub{font-size:11px;color:#7A7060;margin-top:4px;}
+
+/* ── SERVICES TABLE ── */
+.svc-badge{
+  display:inline-block;
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:1px;padding:2px 8px;border-radius:2px;
+  text-transform:uppercase;font-weight:500;
+}
+.svc-core{background:var(--blue-lt);color:var(--blue);}
+.svc-premium{background:var(--amber-lt);color:var(--amber);}
+.svc-new{background:var(--green-lt);color:var(--green);}
+
+/* ── DIVIDER ── */
+.div{
+  display:flex;align-items:center;gap:16px;
+  margin:44px 0 0;
+}
+.div-line{flex:1;height:1px;background:var(--rule);}
+.div-mark{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);}
+
+/* ── FOOTER ── */
+footer{
+  text-align:center;padding:40px;
+  border-top:1px solid var(--rule);margin-top:48px;
+}
+footer p{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dim);
+}
+
+@media(max-width:640px){
+  .cover{padding:40px 20px 36px;}
+  .wrap{padding:0 16px 60px;}
+  .comm-grid{grid-template-columns:1fr;}
+  .eq-grid{grid-template-columns:1fr 1fr;}
+  .nav{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<header class="cover">
+  <div class="cover-tag">Análisis Financiero Integral · Salon Men Saúl Fino · Galería Santiago Centro</div>
+  <h1>Rentabilidad<br>& Punto de<br><em>Equilibrio</em></h1>
+  <div class="cover-rule"></div>
+  <p class="cover-desc">Análisis completo del modelo de comisiones, puntos de equilibrio por barbero, proyección de servicios y estructura de costos operativos. <strong>Nuevo baseline: $6.500.000/mes en servicios únicamente</strong> — el arriendo del spa femenino ya no está vigente. El piso real de facturación bajó $780.000 respecto al período anterior.</p>
+  <div class="cover-kpis">
+    <div class="ck"><div class="ck-label">Facturación actual</div><div class="ck-val">$6,5M</div><div class="ck-sub">Solo servicios · Spa cerrado</div></div>
+    <div class="ck"><div class="ck-label">Barberos activos</div><div class="ck-val">3–4</div><div class="ck-sub">3 fijos + 1 intermitente</div></div>
+    <div class="ck"><div class="ck-label">Precio base corte</div><div class="ck-val">$12.000</div><div class="ck-sub">Corte+Barba $20.000</div></div>
+    <div class="ck"><div class="ck-label">Meta año 1</div><div class="ck-val">$22M</div><div class="ck-sub">9 barberos · Abr 2027</div></div>
+    <div class="ck"><div class="ck-label">Arriendo spa</div><div class="ck-val" style="color:#C49A28">$0</div><div class="ck-sub">Cerrado · Nuevo piso: $6,5M</div></div>
+    <div class="ck"><div class="ck-label">Días operativos</div><div class="ck-val">26</div><div class="ck-sub">L–V + Sábados AM</div></div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#comisiones"><span class="nav-n">01</span><span class="nav-l">Comisiones</span></a>
+  <a href="#equilibrio"><span class="nav-n">02</span><span class="nav-l">Equilibrio</span></a>
+  <a href="#servicios"><span class="nav-n">03</span><span class="nav-l">Servicios</span></a>
+  <a href="#barbero"><span class="nav-n">04</span><span class="nav-l">Por barbero</span></a>
+  <a href="#gastos"><span class="nav-n">05</span><span class="nav-l">Gastos</span></a>
+  <a href="#proyeccion"><span class="nav-n">06</span><span class="nav-l">Proyección</span></a>
+  <a href="#conclusiones"><span class="nav-n">07</span><span class="nav-l">Conclusiones</span></a>
+</nav>
+
+<div class="wrap">
+
+<!-- ════════ 01 COMISIONES ════════ -->
+<div class="section" id="comisiones">
+  <div class="sec-tag">Sección 01</div>
+  <h2 class="sec-title">Estructura de <em>Comisiones</em></h2>
+  <p class="sec-desc">El salon opera con un modelo de comisión por método de pago. El diferencial entre efectivo/transferencia (50%) y débito (43%) responde al descuento de la comisión del terminal de pago (~7%), lo que mantiene el margen neto del negocio estable independiente del canal.</p>
+
+  <div class="comm-grid">
+    <div class="comm-card">
+      <div class="comm-method">💵 Efectivo</div>
+      <div class="comm-pct">50<span class="pct-mark">%</span></div>
+      <div class="comm-bar-bg"><div class="comm-bar-fill" style="width:50%;background:var(--green)"></div></div>
+      <div class="comm-breakdown">
+        <strong>Barbero recibe:</strong> 50%<br>
+        <strong>Negocio retiene:</strong> 50%<br>
+        En corte $12.000 → barbero: <strong>$6.000</strong><br>
+        En combo $20.000 → barbero: <strong>$10.000</strong>
+      </div>
+    </div>
+    <div class="comm-card">
+      <div class="comm-method">💳 Débito / Tarjeta</div>
+      <div class="comm-pct">43<span class="pct-mark">%</span></div>
+      <div class="comm-bar-bg"><div class="comm-bar-fill" style="width:43%;background:var(--amber)"></div></div>
+      <div class="comm-breakdown">
+        <strong>Barbero recibe:</strong> 43%<br>
+        <strong>Terminal de pago:</strong> ~7%<br>
+        <strong>Negocio retiene:</strong> 50%<br>
+        En corte $12.000 → barbero: <strong>$5.160</strong>
+      </div>
+    </div>
+    <div class="comm-card">
+      <div class="comm-method">📲 Transferencia</div>
+      <div class="comm-pct">50<span class="pct-mark">%</span></div>
+      <div class="comm-bar-bg"><div class="comm-bar-fill" style="width:50%;background:var(--blue)"></div></div>
+      <div class="comm-breakdown">
+        <strong>Barbero recibe:</strong> 50%<br>
+        <strong>Negocio retiene:</strong> 50%<br>
+        Sin comisión de terminal<br>
+        Mismo margen que efectivo
+      </div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="ins-tag">Análisis del modelo</div>
+    <div class="ins-body">El modelo de comisión garantiza que el negocio <strong>siempre retiene exactamente el 50% de cada servicio</strong>, independientemente del método de pago. La diferencia del débito la absorbe el propio terminal — no el barbero ni el negocio. Este diseño es correcto y protege el margen operativo. Sin embargo, <strong>el negocio debe cubrir todos los gastos fijos con ese 50%</strong>: arriendo, servicios básicos, insumos, equipamiento y cualquier costo estructural. El punto de equilibrio depende completamente de cuánto corta cada barbero al día.</div>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Ingreso por comisión según servicio y método de pago</strong><span class="tbl-tag">Barbero vs. Negocio</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Servicio</th><th class="r">Precio</th>
+          <th class="r">Barbero efectivo/transf.</th>
+          <th class="r">Barbero débito</th>
+          <th class="r">Negocio (siempre)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Corte clásico</td><td class="r">$12.000</td><td class="r g">$6.000</td><td class="r">$5.160</td><td class="r gold">$6.000</td></tr>
+        <tr><td>Corte + Barba</td><td class="r">$20.000</td><td class="r g">$10.000</td><td class="r">$8.600</td><td class="r gold">$10.000</td></tr>
+        <tr><td>Perfilado de cejas</td><td class="r">$6.000</td><td class="r g">$3.000</td><td class="r">$2.580</td><td class="r gold">$3.000</td></tr>
+        <tr><td>Black Mask facial</td><td class="r">$10.000</td><td class="r g">$5.000</td><td class="r">$4.300</td><td class="r gold">$5.000</td></tr>
+        <tr><td>Masaje craneal</td><td class="r">$8.000</td><td class="r g">$4.000</td><td class="r">$3.440</td><td class="r gold">$4.000</td></tr>
+        <tr><td>Combo corte+cejas</td><td class="r">$16.000</td><td class="r g">$8.000</td><td class="r">$6.880</td><td class="r gold">$8.000</td></tr>
+        <tr><td>Combo premium (corte+barba+black mask)</td><td class="r">$26.000</td><td class="r g">$13.000</td><td class="r">$11.180</td><td class="r gold">$13.000</td></tr>
+        <tr style="opacity:0.45"><td style="text-decoration:line-through">Arriendo spa femenino (eliminado)</td><td class="r" style="text-decoration:line-through">$780.000/mes</td><td class="r" colspan="2" style="color:#8C2218">Ya no vigente — spa cerrado</td><td class="r" style="color:#8C2218">$0</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════ 02 PUNTO DE EQUILIBRIO ════════ -->
+<div class="div"><div class="div-line"></div><span class="div-mark">◆</span><div class="div-line"></div></div>
+<div class="section" id="equilibrio">
+  <div class="sec-tag">Sección 02</div>
+  <h2 class="sec-title">Punto de <em>Equilibrio</em></h2>
+  <p class="sec-desc">¿Cuántos cortes debe hacer cada barbero al día para que el negocio cubra sus gastos? Este es el número más importante del análisis.</p>
+
+  <div class="alert-red">
+    <div class="alert-tag">⚠ Cambio de baseline — Spa femenino cerrado</div>
+    <div class="alert-body">El arriendo del espacio trasero para el spa femenino (<strong>$30.000/día × 26 días = $780.000/mes</strong>) ya no está vigente. El negocio operaba con $7.280.000 de facturación que incluía ese ingreso fijo. <strong>El nuevo piso real es $6.500.000 solo en servicios de barbería.</strong><br><br>Esto reduce el disponible del negocio de $4.030.000 a <strong>$3.250.000 mensuales</strong> (50% de $6.500.000), lo que deja el margen operativo muy ajustado o en déficit leve dependiendo del nivel de gastos fijos. El reto inmediato es compensar los $780.000 perdidos lo antes posible mediante el crecimiento de volumen y ticket promedio.</div>
+  </div>
+
+  <div class="eq-box">
+    <div class="eq-title">Estructura financiera real — Mayo 2026 (sin spa)</div>
+    <div class="eq-grid">
+      <div class="eq-item"><div class="eq-label">Facturación servicios</div><div class="eq-val">$6,5M</div><div class="eq-sub">Solo cortes y barbas · Nuevo piso</div></div>
+      <div class="eq-item"><div class="eq-label">Arriendo spa</div><div class="eq-val" style="color:#8C2218">$0</div><div class="eq-sub">Eliminado — ya no existe</div></div>
+      <div class="eq-item"><div class="eq-label">Disponible negocio (50%)</div><div class="eq-val">$3,25M</div><div class="eq-sub">Vs. $4,03M antes · -$780K</div></div>
+      <div class="eq-item"><div class="eq-label">Pago barberos (50%)</div><div class="eq-val">$3,25M</div><div class="eq-sub">3–4 barberos activos</div></div>
+      <div class="eq-item"><div class="eq-label">Gastos fijos estimados</div><div class="eq-val">~$3,2M</div><div class="eq-sub">Arriendo + servicios + insumos</div></div>
+      <div class="eq-item"><div class="eq-label">Margen neto estimado</div><div class="eq-val" style="color:#8C2218">~$50K</div><div class="eq-sub">Equilibrio muy tenso · Urgente crecer</div></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Punto de equilibrio por barbero al día — solo cortes a $12.000</strong><span class="tbl-tag">Escenario base</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Barberos activos</th>
+          <th class="r">Cortes/día necesarios total</th>
+          <th class="r">Cortes/día por barbero</th>
+          <th class="r">Facturación mensual</th>
+          <th class="r">Ingreso negocio (50%)</th>
+          <th class="r">Margen vs. gastos</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>3 barberos</td><td class="r">30</td><td class="r"><strong>10 cortes/día</strong></td><td class="r">$9.360.000</td><td class="r gold">$4.680.000</td><td class="r g">+$900.000</td></tr>
+        <tr><td>4 barberos</td><td class="r">30</td><td class="r"><strong>7–8 cortes/día</strong></td><td class="r">$9.360.000</td><td class="r gold">$4.680.000</td><td class="r g">+$900.000</td></tr>
+        <tr class="highlight"><td><strong>4 barberos (actual · sin spa)</strong></td><td class="r"><strong>23</strong></td><td class="r"><strong>~6 cortes/día ← equilibrio mínimo</strong></td><td class="r">$6.500.000</td><td class="r gold">$3.250.000</td><td class="r r">Margen muy ajustado</td></tr>
+        <tr><td>6 barberos</td><td class="r">30</td><td class="r"><strong>5 cortes/día</strong></td><td class="r">$9.360.000</td><td class="r gold">$4.680.000</td><td class="r g">+$900.000</td></tr>
+        <tr><td>9 barberos (meta)</td><td class="r">50</td><td class="r"><strong>6 cortes/día</strong></td><td class="r">$15.600.000</td><td class="r gold">$7.800.000</td><td class="r g">+$4.000.000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="insight">
+    <div class="ins-tag">Hallazgo clave</div>
+    <div class="ins-body">Con el spa cerrado, los 4 barberos deben generar <strong>al menos $6.500.000 en servicios para no perder dinero</strong>. Eso requiere ~5,6 cortes/barbero/día. Sin embargo, los gastos fijos (arriendo galería, Bewe, básicos) pueden superar los $3.250.000 disponibles en un mes flojo — por lo que <strong>el negocio está operando sin colchón financiero</strong>. La incorporación de 2 barberos en junio es la palanca más urgente: con 6 barberos haciendo 6 cortes/día, la facturación sube a $11.232.000 y el disponible del negocio llega a $5.616.000 — cubriendo gastos con margen real por primera vez.</div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-title">Cortes/día necesarios por barbero para equilibrio</div>
+      <div class="chart-sub">Según cantidad de barberos activos</div>
+      <div class="chart-wrap-sm"><canvas id="eqChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Facturación mensual según cortes/día por barbero</div>
+      <div class="chart-sub">4 barberos activos · Solo cortes $12.000</div>
+      <div class="chart-wrap-sm"><canvas id="facChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Horario y capacidad máxima por barbero</strong><span class="tbl-tag">L–V 10:00–20:00 · Sáb 10:00–15:00</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Día</th><th class="r">Horas disponibles</th>
+          <th class="r">Cortes posibles (30 min c/u)</th>
+          <th class="r">Cortes posibles (45 min c/u)</th>
+          <th class="r">Ingresos máx. (30 min)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Lunes a Viernes</td><td class="r">10 horas</td><td class="r g"><strong>16–18 cortes</strong></td><td class="r">12–13 cortes</td><td class="r gold">$192.000–216.000</td></tr>
+        <tr><td>Sábado</td><td class="r">5 horas</td><td class="r">8–10 cortes</td><td class="r">6–7 cortes</td><td class="r gold">$96.000–120.000</td></tr>
+        <tr class="subtotal"><td><strong>Semana completa (1 barbero)</strong></td><td class="r">55 horas</td><td class="r"><strong>88–100 cortes</strong></td><td class="r">66–72 cortes</td><td class="r">$1.056.000–1.200.000</td></tr>
+        <tr class="total"><td>Mes completo (1 barbero)</td><td class="r">~230 hrs</td><td class="r">~370 cortes (máx. teórico)</td><td class="r">—</td><td class="r">$4.440.000 (máx.)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert-red">
+    <div class="alert-tag">Señal de alerta</div>
+    <div class="alert-body">La capacidad máxima teórica es de 16–18 cortes por barbero por día. El equilibrio actual se logra con solo 6 cortes/día. Eso significa que <strong>cada barbero está usando solo el 35–40% de su capacidad instalada</strong>. La oportunidad de crecimiento no requiere más espacio ni más inversión inmediata — requiere más clientes llenando los turnos disponibles. Ahí es donde apuntan todas las estrategias de marketing, suscripciones y alianzas corporativas del plan.</div>
+  </div>
+</div>
+
+
+<!-- ════════ 03 CATÁLOGO DE SERVICIOS ════════ -->
+<div class="div"><div class="div-line"></div><span class="div-mark">◆</span><div class="div-line"></div></div>
+<div class="section" id="servicios">
+  <div class="sec-tag">Sección 03</div>
+  <h2 class="sec-title">Catálogo de <em>Servicios</em> y Rentabilidad</h2>
+  <p class="sec-desc">Análisis de cada servicio según precio de mercado, costo estimado de insumos, margen neto para el negocio y tiempo de ejecución. Los servicios premium cortos (cejas, black mask) son los de mayor rentabilidad por minuto.</p>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Rentabilidad por servicio — Análisis completo</strong><span class="tbl-tag">Precio mercado Santiago 2026</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Servicio</th><th class="r">Precio</th><th class="r">Insumo estimado</th>
+          <th class="r">Tiempo</th><th class="r">Negocio recibe</th>
+          <th class="r">Margen neto negocio</th><th class="r">$/hora negocio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="svc-badge svc-core">Base</span> Corte clásico</td>
+          <td class="r">$12.000</td><td class="r">$400</td><td class="r">30 min</td>
+          <td class="r gold">$6.000</td><td class="r g">$5.600</td><td class="r g">$11.200</td>
+        </tr>
+        <tr>
+          <td><span class="svc-badge svc-core">Base</span> Corte + Barba</td>
+          <td class="r">$20.000</td><td class="r">$700</td><td class="r">50 min</td>
+          <td class="r gold">$10.000</td><td class="r g">$9.300</td><td class="r g">$11.160</td>
+        </tr>
+        <tr>
+          <td><span class="svc-badge svc-new">Nuevo</span> Perfilado de cejas</td>
+          <td class="r">$6.000</td><td class="r">$150</td><td class="r">15 min</td>
+          <td class="r gold">$3.000</td><td class="r g">$2.850</td><td class="r" style="color:var(--amber);font-weight:600">$11.400</td>
+        </tr>
+        <tr class="highlight">
+          <td><span class="svc-badge svc-new">Nuevo</span> Black Mask facial</td>
+          <td class="r">$10.000</td><td class="r">$600</td><td class="r">20 min</td>
+          <td class="r gold">$5.000</td><td class="r g"><strong>$4.400</strong></td>
+          <td class="r" style="color:var(--green);font-weight:700"><strong>$13.200 ★</strong></td>
+        </tr>
+        <tr class="highlight">
+          <td><span class="svc-badge svc-new">Nuevo</span> Masaje craneal</td>
+          <td class="r">$8.000</td><td class="r">$200</td><td class="r">15 min</td>
+          <td class="r gold">$4.000</td><td class="r g"><strong>$3.800</strong></td>
+          <td class="r" style="color:var(--green);font-weight:700"><strong>$15.200 ★</strong></td>
+        </tr>
+        <tr>
+          <td><span class="svc-badge svc-premium">Combo</span> Corte + Cejas</td>
+          <td class="r">$16.000</td><td class="r">$550</td><td class="r">45 min</td>
+          <td class="r gold">$8.000</td><td class="r g">$7.450</td><td class="r g">$9.933</td>
+        </tr>
+        <tr>
+          <td><span class="svc-badge svc-premium">Combo</span> Corte + Barba + Black Mask</td>
+          <td class="r">$26.000</td><td class="r">$1.300</td><td class="r">70 min</td>
+          <td class="r gold">$13.000</td><td class="r g">$11.700</td><td class="r g">$10.029</td>
+        </tr>
+        <tr>
+          <td><span class="svc-badge svc-premium">Combo</span> Corte + Masaje craneal</td>
+          <td class="r">$18.000</td><td class="r">$600</td><td class="r">45 min</td>
+          <td class="r gold">$9.000</td><td class="r g">$8.400</td><td class="r g">$11.200</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="insight">
+    <div class="ins-tag">Hallazgo estratégico — Rentabilidad por minuto</div>
+    <div class="ins-body">El <strong>masaje craneal es el servicio más rentable por hora</strong> ($15.200 de margen neto/hora para el negocio), seguido del <strong>black mask</strong> ($13.200/hora). Ambos se pueden ofrecer como add-on durante el corte o la espera sin ocupar la silla de un barbero adicional. <strong>Si solo el 20% de los clientes agrega un masaje craneal o un black mask a su corte</strong>, la facturación mensual del negocio sube entre $400.000 y $600.000 adicionales — sin incorporar ningún barbero nuevo.</div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Margen neto del negocio por hora según servicio</div>
+    <div class="chart-sub">CLP por hora de ocupación · Mayor barra = más eficiente</div>
+    <div class="chart-wrap"><canvas id="svcChart"></canvas></div>
+  </div>
+</div>
+
+
+<!-- ════════ 04 ANÁLISIS POR BARBERO ════════ -->
+<div class="div"><div class="div-line"></div><span class="div-mark">◆</span><div class="div-line"></div></div>
+<div class="section" id="barbero">
+  <div class="sec-tag">Sección 04</div>
+  <h2 class="sec-title">Análisis <em>por barbero</em></h2>
+  <p class="sec-desc">¿Cuánto gana un barbero al mes según cuántos cortes hace al día? ¿Cuándo le conviene un servicio vs. otro? Esta sección da la respuesta directa.</p>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Ingreso mensual barbero vs. negocio — Solo cortes $12.000</strong><span class="tbl-tag">Efectivo/transferencia · 50%</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Cortes/día</th><th class="r">Cortes/mes (×26)</th>
+          <th class="r">Facturación total</th>
+          <th class="r">Barbero recibe (50%)</th>
+          <th class="r">Negocio recibe (50%)</th>
+          <th class="r">Estado negocio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>4 cortes/día</td><td class="r">104</td><td class="r">$1.248.000</td><td class="r">$624.000</td><td class="r gold">$624.000</td><td class="r r">Bajo equilibrio</td></tr>
+        <tr><td>5 cortes/día</td><td class="r">130</td><td class="r">$1.560.000</td><td class="r">$780.000</td><td class="r gold">$780.000</td><td class="r r">Bajo equilibrio</td></tr>
+        <tr class="highlight"><td><strong>6 cortes/día</strong></td><td class="r"><strong>156</strong></td><td class="r"><strong>$1.872.000</strong></td><td class="r g"><strong>$936.000</strong></td><td class="r gold"><strong>$936.000</strong></td><td class="r" style="color:var(--amber);font-weight:600">Equilibrio</td></tr>
+        <tr><td>8 cortes/día</td><td class="r">208</td><td class="r">$2.496.000</td><td class="r g">$1.248.000</td><td class="r gold">$1.248.000</td><td class="r g">+Margen</td></tr>
+        <tr><td>10 cortes/día</td><td class="r">260</td><td class="r">$3.120.000</td><td class="r g">$1.560.000</td><td class="r gold">$1.560.000</td><td class="r g">Buena rentabilidad</td></tr>
+        <tr><td>12 cortes/día</td><td class="r">312</td><td class="r">$3.744.000</td><td class="r g">$1.872.000</td><td class="r gold">$1.872.000</td><td class="r g">Excelente</td></tr>
+        <tr class="total"><td>15 cortes/día (máx. real)</td><td class="r">390</td><td class="r">$4.680.000</td><td class="r">$2.340.000</td><td class="r">$2.340.000</td><td class="r">Máxima capacidad</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Impacto del upselling — Qué pasa cuando el barbero agrega un servicio</strong><span class="tbl-tag">Análisis de mezcla de servicios</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Escenario (6 clientes/día)</th>
+          <th class="r">Facturación/día</th>
+          <th class="r">Facturación/mes</th>
+          <th class="r">Barbero/mes</th>
+          <th class="r">Negocio/mes</th>
+          <th class="r">Vs. solo cortes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>6 cortes simples</td><td class="r">$72.000</td><td class="r">$1.872.000</td><td class="r">$936.000</td><td class="r gold">$936.000</td><td class="r">Base</td></tr>
+        <tr><td>4 cortes + 2 combos barba</td><td class="r">$88.000</td><td class="r">$2.288.000</td><td class="r g">$1.144.000</td><td class="r gold">$1.144.000</td><td class="r g">+$208.000</td></tr>
+        <tr class="highlight"><td>5 cortes + 1 black mask add-on</td><td class="r">$70.000</td><td class="r">$1.820.000</td><td class="r">$910.000</td><td class="r gold">$910.000</td><td class="r g">+$26.000</td></tr>
+        <tr class="highlight"><td>5 cortes + 1 masaje craneal add-on</td><td class="r">$68.000</td><td class="r">$1.768.000</td><td class="r">$884.000</td><td class="r gold">$884.000</td><td class="r g">+$26.000 menos tiempo</td></tr>
+        <tr><td>3 cortes + 2 combos barba + 1 black mask</td><td class="r">$96.000</td><td class="r">$2.496.000</td><td class="r g">$1.248.000</td><td class="r gold">$1.248.000</td><td class="r g">+$312.000</td></tr>
+        <tr class="total"><td>Mix óptimo: 4 cortes + 1 barba + 1 black mask + 1 masaje</td><td class="r">$106.000</td><td class="r">$2.756.000</td><td class="r">$1.378.000</td><td class="r">$1.378.000</td><td class="r">+$442.000/mes</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert-green">
+    <div class="alert-tag">Conclusión práctica para el equipo</div>
+    <div class="alert-body">Con el <strong>mix óptimo</strong> (4 cortes + 1 combo barba + 1 black mask + 1 masaje craneal por día), un barbero gana <strong>$1.378.000 mensuales</strong> versus $936.000 haciendo solo cortes — un 47% más de ingreso por la misma cantidad de clientes, simplemente cambiando la mezcla de servicios. <strong>No se necesitan más clientes, se necesitan más servicios por cliente.</strong> El masaje craneal de 15 minutos añade $4.000 al ticket sin casi esfuerzo adicional.</div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Ingreso mensual barbero según cortes/día y mezcla de servicios</div>
+    <div class="chart-sub">Comparativo: solo cortes vs. mix con servicios adicionales</div>
+    <div class="chart-wrap"><canvas id="barbChart"></canvas></div>
+  </div>
+</div>
+
+
+<!-- ════════ 05 GASTOS OPERATIVOS ════════ -->
+<div class="div"><div class="div-line"></div><span class="div-mark">◆</span><div class="div-line"></div></div>
+<div class="section" id="gastos">
+  <div class="sec-tag">Sección 05</div>
+  <h2 class="sec-title">Gastos <em>Operativos</em></h2>
+  <p class="sec-desc">Estimación de la estructura de costos del negocio. Basada en el hecho de que con $4.030.000 (50% de servicios + arriendo spa) el negocio estaba en equilibrio — lo que permite inferir el peso de cada gasto.</p>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Estructura de gastos operativos mensuales estimada</strong><span class="tbl-tag">Inferida del punto de equilibrio actual</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Gasto</th><th class="r">Monto estimado</th>
+          <th class="r">% del ingreso negocio</th><th>Tipo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Arriendo galería (local)</td><td class="r">$1.800.000–2.200.000</td><td class="r">45–55%</td><td><span class="svc-badge svc-core">Fijo</span></td></tr>
+        <tr><td>Servicios básicos (agua, luz, internet, gas)</td><td class="r">$150.000–250.000</td><td class="r">4–6%</td><td><span class="svc-badge svc-core">Fijo</span></td></tr>
+        <tr><td>Insumos consumibles (capas, productos, toallitas, etc.)</td><td class="r">$120.000–180.000</td><td class="r">3–4%</td><td><span class="svc-badge svc-new">Variable</span></td></tr>
+        <tr><td>Plataforma Bewe (ya contratado)</td><td class="r">$150.000</td><td class="r">3.7%</td><td><span class="svc-badge svc-core">Fijo</span></td></tr>
+        <tr><td>Comisión terminal de pago (~7% de pagos con débito)</td><td class="r">$80.000–150.000</td><td class="r">2–4%</td><td><span class="svc-badge svc-new">Variable</span></td></tr>
+        <tr><td>Mantenimiento y limpieza de equipos</td><td class="r">$50.000–100.000</td><td class="r">1–2%</td><td><span class="svc-badge svc-new">Variable</span></td></tr>
+        <tr><td>Marketing / flyers / impresión</td><td class="r">$50.000–100.000</td><td class="r">1–2%</td><td><span class="svc-badge svc-new">Variable</span></td></tr>
+        <tr><td>Oshibori y bebidas de cortesía (est. 30 clientes/día)</td><td class="r">$62.000–120.000</td><td class="r">1.5–3%</td><td><span class="svc-badge svc-new">Variable</span></td></tr>
+        <tr><td>Imprevistos y fondo de reposición</td><td class="r">$100.000–200.000</td><td class="r">2–5%</td><td><span class="svc-badge svc-premium">Reserva</span></td></tr>
+        <tr class="subtotal"><td><strong>Total gastos fijos + variables estimados</strong></td><td class="r"><strong>$2.562.000–3.500.000</strong></td><td class="r"><strong>64–87%</strong></td><td></td></tr>
+        <tr class="subtotal"><td><strong>Total gastos fijos estimados</strong></td><td class="r"><strong>$2.562.000–3.200.000</strong></td><td class="r"><strong>79–98%</strong></td><td></td></tr>
+        <tr class="total"><td>Margen disponible (sobre $3.250.000 disponibles)</td><td class="r">$50.000–688.000</td><td class="r">1–21%</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert-red">
+    <div class="alert-tag">Riesgo principal identificado</div>
+    <div class="alert-body">El <strong>arriendo del local representa el 45–55% de todos los ingresos que retiene el negocio</strong>. Esto es un nivel de concentración de costo muy alto y el mayor riesgo financiero de la operación. Con la facturación actual ($4.030.000 disponibles para el negocio), si el arriendo sube aunque sea un 10%, el margen desaparece completamente. <strong>La única forma de reducir este riesgo es crecer la facturación</strong> — lo que diluye el peso porcentual del arriendo sobre el total.</div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-title">Distribución de gastos operativos</div>
+      <div class="chart-sub">Como % del ingreso disponible del negocio</div>
+      <div class="chart-wrap-sm"><canvas id="gastosChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Margen neto del negocio según facturación</div>
+      <div class="chart-sub">Gastos fijos como ancla — el margen crece con el volumen</div>
+      <div class="chart-wrap-sm"><canvas id="margenChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════ 06 PROYECCIÓN ════════ -->
+<div class="div"><div class="div-line"></div><span class="div-mark">◆</span><div class="div-line"></div></div>
+<div class="section" id="proyeccion">
+  <div class="sec-tag">Sección 06</div>
+  <h2 class="sec-title"><em>Proyección</em> a 12 meses</h2>
+  <p class="sec-desc">Escenario progresivo de crecimiento incorporando barberos nuevos, servicios adicionales y canales de ingresos secundarios. Base: Mayo 2026 → Abril 2027.</p>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Proyección mensual de facturación total — 4 canales</strong><span class="tbl-tag">Mayo 2026 – Abril 2027</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Mes</th><th class="r">Barberos</th><th class="r">Servicios</th><th class="r">Productos</th><th class="r">Mayorista</th><th class="r">Total</th><th class="r">Negocio (50% svc + otros)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Mayo 2026</td><td class="r">4</td><td class="r">$6.500.000</td><td class="r">$0</td><td class="r">$0</td><td class="r gold">$6.500.000</td><td class="r r">$3.250.000 ⚠</td></tr>
+        <tr><td>Jun 2026</td><td class="r">6</td><td class="r">$8.000.000</td><td class="r">$150.000</td><td class="r">$200.000</td><td class="r gold">$8.350.000</td><td class="r g">$4.350.000</td></tr>
+        <tr><td>Jul 2026</td><td class="r">6</td><td class="r">$9.500.000</td><td class="r">$350.000</td><td class="r">$500.000</td><td class="r gold">$10.350.000</td><td class="r g">$5.600.000</td></tr>
+        <tr><td>Ago 2026</td><td class="r">7</td><td class="r">$11.500.000</td><td class="r">$600.000</td><td class="r">$900.000</td><td class="r gold">$13.000.000</td><td class="r g">$7.250.000</td></tr>
+        <tr><td>Sep 2026</td><td class="r">9</td><td class="r">$13.500.000</td><td class="r">$900.000</td><td class="r">$1.300.000</td><td class="r gold">$15.700.000</td><td class="r g">$8.950.000</td></tr>
+        <tr><td>Oct 2026</td><td class="r">9</td><td class="r">$15.500.000</td><td class="r">$1.200.000</td><td class="r">$1.700.000</td><td class="r gold">$18.400.000</td><td class="r g">$10.650.000</td></tr>
+        <tr><td>Nov 2026</td><td class="r">9</td><td class="r">$17.000.000</td><td class="r">$1.500.000</td><td class="r">$2.000.000</td><td class="r gold">$20.500.000</td><td class="r g">$12.000.000</td></tr>
+        <tr><td>Dic 2026</td><td class="r">9</td><td class="r">$19.000.000</td><td class="r">$2.000.000</td><td class="r">$2.300.000</td><td class="r gold">$23.300.000</td><td class="r g">$13.800.000</td></tr>
+        <tr><td>Ene 2027</td><td class="r">9</td><td class="r">$17.000.000</td><td class="r">$1.200.000</td><td class="r">$1.800.000</td><td class="r gold">$20.000.000</td><td class="r g">$11.500.000</td></tr>
+        <tr><td>Feb 2027</td><td class="r">9</td><td class="r">$18.500.000</td><td class="r">$1.400.000</td><td class="r">$2.000.000</td><td class="r gold">$21.900.000</td><td class="r g">$12.650.000</td></tr>
+        <tr><td>Mar 2027</td><td class="r">9</td><td class="r">$20.000.000</td><td class="r">$1.600.000</td><td class="r">$2.200.000</td><td class="r gold">$23.800.000</td><td class="r g">$13.800.000</td></tr>
+        <tr><td>Abr 2027</td><td class="r">9</td><td class="r">$21.500.000</td><td class="r">$1.800.000</td><td class="r">$2.500.000</td><td class="r gold">$25.800.000</td><td class="r g">$15.050.000</td></tr>
+        <tr class="total"><td><strong>Total Año 1</strong></td><td class="r">—</td><td class="r">$177.500.000</td><td class="r">$12.700.000</td><td class="r">$17.400.000</td><td class="r">$207.600.000</td><td class="r">$118.850.000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Proyección de facturación total — Plan 12 meses</div>
+    <div class="chart-sub">4 canales apilados · Mayo 2026 → Abril 2027</div>
+    <div class="chart-wrap"><canvas id="projChart"></canvas></div>
+  </div>
+</div>
+
+
+<!-- ════════ 07 CONCLUSIONES ════════ -->
+<div class="div"><div class="div-line"></div><span class="div-mark">◆</span><div class="div-line"></div></div>
+<div class="section" id="conclusiones">
+  <div class="sec-tag">Sección 07</div>
+  <h2 class="sec-title"><em>Conclusiones</em> y Recomendaciones</h2>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-tag">El modelo de comisiones</div>
+      <div class="card-val green">Sólido</div>
+      <div class="card-sub">50/43/50 protege el margen del negocio independientemente del método de pago. No requiere cambios.</div>
+    </div>
+    <div class="card">
+      <div class="card-tag">Punto de equilibrio por barbero</div>
+      <div class="card-val gold">6/día</div>
+      <div class="card-sub">Solo cortes. Con mezcla de servicios, baja a 4–5 clientes/día. La capacidad real es 15–18/día.</div>
+    </div>
+    <div class="card">
+      <div class="card-tag">Mayor oportunidad inmediata</div>
+      <div class="card-val gold">Upselling</div>
+      <div class="card-sub">El masaje craneal ($8.000, 15 min) y el black mask ($10.000, 20 min) son los más rentables por minuto.</div>
+    </div>
+    <div class="card">
+      <div class="card-tag">Mayor riesgo actual</div>
+      <div class="card-val red">Arriendo</div>
+      <div class="card-sub">Representa el 45–55% de los ingresos del negocio. Solo el crecimiento en volumen lo diluye.</div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="tbl-title"><strong>Las 5 recomendaciones prioritarias — ordenadas por impacto/esfuerzo</strong></div>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Recomendación</th><th class="r">Impacto estimado</th><th>Esfuerzo</th><th>Plazo</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>1</strong></td><td><strong>Activar upselling de masaje craneal y black mask</strong> en cada consulta. El barbero lo menciona al inicio — "¿Le sumamos un masaje de 15 minutos?"</td><td class="r g">+$400.000–800.000/mes</td><td>Bajo</td><td>Inmediato</td></tr>
+        <tr><td><strong>2</strong></td><td><strong>Llenar los horarios de baja demanda</strong> con las alianzas corporativas (bancos, universidades). Los turnos vacíos de 10–12h y 16–18h son dinero perdido.</td><td class="r g">+$1.000.000–2.000.000/mes</td><td>Medio</td><td>Mes 2</td></tr>
+        <tr><td><strong>3</strong></td><td><strong>Incorporar 2 barberos nuevos en junio</strong> para pasar de 4 a 6. Con 6 barberos haciendo 6 cortes/día el negocio genera $1.500.000 de margen mensual sobre gastos fijos.</td><td class="r g">+$3.000.000/mes facturación</td><td>Medio</td><td>Mes 2</td></tr>
+        <tr><td><strong>4</strong></td><td><strong>Activar suscripciones</strong> ($20.000/mes · 2 cortes). Con 50 suscriptores = $1.000.000 recurrentes garantizados sin depender del flujo diario.</td><td class="r g">+$1.000.000 garantizados</td><td>Bajo</td><td>Semana 3</td></tr>
+        <tr><td><strong>5</strong></td><td><strong>Monitorear el ratio efectivo/débito/transferencia</strong> mensualmente. Si el débito sube sobre el 40%, evaluar estrategias para incentivar transferencias (sin comisión de terminal).</td><td class="r g">+$80.000–150.000/mes</td><td>Bajo</td><td>Permanente</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</div><!-- /wrap -->
+
+<footer>
+  <p>Salon Men Saúl Fino · Análisis Financiero Integral · Mayo 2026</p>
+  <p style="margin-top:6px;">Documento confidencial · Uso interno · Proyecciones sujetas a comportamiento real del mercado</p>
+</footer>
+
+<script>
+const gold='#7A5A08', green='#1A5C38', red='#8C2218', blue='#1A3A6C', amber='#7A3A08';
+const bg='rgba(0,0,0,0)';
+const defaults={
+  responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{labels:{font:{family:'DM Mono, monospace',size:10},color:'#48443C'}},
+    tooltip:{backgroundColor:'#18140E',titleColor:'#C49A28',bodyColor:'#EAE4D8',padding:10,cornerRadius:3}},
+  scales:{x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:'DM Mono,monospace',size:10},color:'#6E6A60'}},
+    y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:'DM Mono,monospace',size:10},color:'#6E6A60',
+      callback:v=>v>=1000000?'$'+(v/1000000).toFixed(0)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v}}}
+};
+
+// Equilibrio chart
+new Chart(document.getElementById('eqChart'),{type:'bar',
+  data:{labels:['3 barb.','4 barb.','6 barb.','9 barb.'],
+    datasets:[{label:'Cortes/día por barbero para equilibrio',
+      data:[10,7,5,4],backgroundColor:[gold+'CC',gold+'99',gold+'88',gold+'77'],
+      borderColor:gold,borderWidth:1,borderRadius:3}]},
+  options:{...defaults,scales:{...defaults.scales,y:{...defaults.scales.y,
+    ticks:{...defaults.scales.y.ticks,callback:v=>v+' cortes'}}}}
+});
+
+// Facturacion chart
+new Chart(document.getElementById('facChart'),{type:'line',
+  data:{labels:['4','5','6','7','8','9','10','12','15'],
+    datasets:[
+      {label:'Facturación mensual (4 barb.)',data:[4992000,6240000,7488000,8736000,9984000,11232000,12480000,14976000,18720000],
+        borderColor:gold,backgroundColor:gold+'15',fill:true,tension:0.3,pointRadius:3},
+      {label:'Nuevo piso real ($6.5M)',data:[null,null,null,6500000,null,null,null,null,null],
+        borderColor:red,pointRadius:8,pointBackgroundColor:red,pointStyle:'triangle',showLine:false}
+    ]},options:defaults
+});
+
+// Services rentability chart
+new Chart(document.getElementById('svcChart'),{type:'bar',
+  data:{labels:['Masaje\ncraneal','Black\nMask','Cejas','Corte','Corte\n+Barba','Combo\npremium'],
+    datasets:[{label:'Margen negocio $/hora',
+      data:[15200,13200,11400,11200,11160,10029],
+      backgroundColor:[green+'CC',green+'99',amber+'CC',gold+'99',gold+'88',gold+'66'],
+      borderRadius:3}]},
+  options:{...defaults,indexAxis:'y',scales:{
+    x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:'DM Mono,monospace',size:10},color:'#6E6A60',
+      callback:v=>'$'+v.toLocaleString('es-CL')}},
+    y:{grid:{display:false},ticks:{font:{family:'DM Mono,monospace',size:10},color:'#6E6A60'}}}}
+});
+
+// Barbero income chart
+new Chart(document.getElementById('barbChart'),{type:'bar',
+  data:{labels:['4 c/día','5 c/día','6 c/día','8 c/día','10 c/día','12 c/día'],
+    datasets:[
+      {label:'Solo cortes',data:[624000,780000,936000,1248000,1560000,1872000],backgroundColor:gold+'88',borderRadius:2},
+      {label:'Mix óptimo (mismo N° clientes)',data:[780000,975000,1170000,1560000,1950000,2340000],backgroundColor:green+'99',borderRadius:2}
+    ]},options:defaults
+});
+
+// Gastos donut
+new Chart(document.getElementById('gastosChart'),{type:'doughnut',
+  data:{labels:['Arriendo local','Servicios básicos','Insumos consumibles','Bewe','Terminal pago','Marketing','Oshibori/bebidas','Imprevistos'],
+    datasets:[{data:[50,5,4,4,4,2,3,3],
+      backgroundColor:[red+'CC',blue+'99',gold+'99',amber+'88',green+'88','#7A5A08AA','#5A8A5A88','#8A8A5A88'],
+      borderWidth:2,borderColor:'#F8F5F0'}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{family:'DM Mono,monospace',size:9},color:'#48443C',boxWidth:12}}}}
+});
+
+// Margen chart
+new Chart(document.getElementById('margenChart'),{type:'line',
+  data:{labels:['$4M','$6M','$6,5M\n(hoy)','$8M','$10M','$12M','$15M'],
+    datasets:[
+      {label:'Ingreso negocio (50% svc)',data:[2000000,3000000,3250000,4000000,5000000,6000000,7500000],
+        borderColor:gold,tension:0.3,fill:false,borderWidth:2},
+      {label:'Gastos fijos estimados',data:[3200000,3200000,3200000,3400000,3700000,4000000,4800000],
+        borderColor:red,borderDash:[5,3],tension:0,fill:false,borderWidth:1.5},
+      {label:'Margen neto',data:[-1200000,-200000,50000,600000,1300000,2000000,2700000],
+        borderColor:green,backgroundColor:green+'15',fill:true,tension:0.3,borderWidth:2}
+    ]},options:defaults
+});
+
+// Projection stacked chart
+new Chart(document.getElementById('projChart'),{type:'bar',
+  data:{
+    labels:['May','Jun','Jul','Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr'],
+    datasets:[
+      {label:'Servicios barbería',data:[6500000,8000000,9500000,11500000,13500000,15500000,17000000,19000000,17000000,18500000,20000000,21500000],backgroundColor:blue+'CC',borderRadius:0},
+      {label:'Arriendo spa',data:[780000,780000,780000,780000,780000,780000,780000,780000,780000,780000,780000,780000],backgroundColor:gold+'CC',borderRadius:0},
+      {label:'Productos detalle',data:[0,150000,350000,600000,900000,1200000,1500000,2000000,1200000,1400000,1600000,1800000],backgroundColor:green+'CC',borderRadius:0},
+      {label:'Mayorista',data:[0,200000,500000,900000,1300000,1700000,2000000,2300000,1800000,2000000,2200000,2500000],backgroundColor:amber+'CC',borderRadius:2},
+    ]},
+  options:{...defaults,scales:{
+    x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:'DM Mono,monospace',size:10},color:'#6E6A60'}},
+    y:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:'DM Mono,monospace',size:10},color:'#6E6A60',
+      callback:v=>v>=1000000?'$'+(v/1000000).toFixed(0)+'M':''}}}}
+});
+</script>
+</body>
+</html>

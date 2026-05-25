@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan de Ataque — Barbería Local 222</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:    #8A6010;
+  --gold-dim: rgba(138,96,16,0.10);
+  --gold-line: rgba(138,96,16,0.20);
+  --ink:     #1A1714;
+  --ink-2:   #FFFFFF;
+  --ink-3:   #F5F2EC;
+  --cream:   #1A1714;
+  --cream-dim: #3D3830;
+  --red:     #B03A2E;
+  --amber:   #A06010;
+  --green:   #1A6B44;
+  --blue:    #1A5276;
+  --phase1:  #B03A2E;
+  --phase2:  #A06010;
+  --phase3:  #1A6B44;
+  --ops:     #2B6CB0;
+  --tech:    #6B3FA0;
+  --mkt:     #B84F10;
+  --ventas:  #1A7048;
+  --rrhh:    #1A5A8A;
+  --alianza: #8A6010;
+  --bp:      #AD2D1E;
+  --dim:     #5A5450;
+  --rule:    #E2DDD5;
+  --paper:   #FAFAF7;
+  --white:   #FFFFFF;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+body {
+  background: var(--paper);
+  color: #3D3830;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-weight: 400;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* GRAIN OVERLAY */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:999;
+  opacity:0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 60px 48px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--gold-line);
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #FBF8F2 0%, #F5F0E8 100%);
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(201,168,76,0.03) 79px, rgba(201,168,76,0.03) 80px),
+    repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(201,168,76,0.03) 79px, rgba(201,168,76,0.03) 80px);
+}
+
+.hero-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 4px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.hero-tag::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.hero h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(64px, 14vw, 160px);
+  line-height: 0.88;
+  color: var(--ink);
+  letter-spacing: 2px;
+  position: relative;
+  animation: revealUp 1s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero h1 .gold { color: var(--gold); }
+
+.hero-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #3D3830;
+  text-transform: uppercase;
+  margin-top: 32px;
+  position: relative;
+  animation: revealUp 1s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+}
+
+.hero-phases {
+  display: flex;
+  gap: 24px;
+  margin-top: 48px;
+  position: relative;
+  animation: revealUp 1s cubic-bezier(0.16,1,0.3,1) 0.2s both;
+  flex-wrap: wrap;
+}
+
+.phase-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border: 1px solid;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.phase-pill.p1 { border-color: var(--phase1); color: var(--phase1); }
+.phase-pill.p2 { border-color: var(--phase2); color: var(--phase2); }
+.phase-pill.p3 { border-color: var(--phase3); color: var(--phase3); }
+
+.phase-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.p1 .phase-dot { background: var(--phase1); }
+.p2 .phase-dot { background: var(--phase2); }
+.p3 .phase-dot { background: var(--phase3); }
+
+/* ── TIMELINE NAV ── */
+.timeline-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(250,250,247,0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--gold-line);
+  display: flex;
+  align-items: center;
+  padding: 0 48px;
+  height: 56px;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.tnav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px;
+  height: 100%;
+  border-right: 1px solid rgba(0,0,0,0.05);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .2s;
+  white-space: nowrap;
+}
+.tnav-item:first-child { padding-left: 0; }
+.tnav-item:hover { background: rgba(138,96,16,0.05); }
+
+.tnav-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.tnav-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #3D3830;
+}
+
+/* ── SECTIONS ── */
+.phase-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 80px 48px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.phase-header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 32px;
+  align-items: start;
+  margin-bottom: 64px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--gold-line);
+}
+
+.phase-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 120px;
+  line-height: 0.8;
+  opacity: 0.08;
+  letter-spacing: -4px;
+}
+.p1-num { color: var(--phase1); }
+.p2-num { color: var(--phase2); }
+.p3-num { color: var(--phase3); }
+
+.phase-meta {}
+.phase-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.p1-eye { color: var(--phase1); }
+.p2-eye { color: var(--phase2); }
+.p3-eye { color: var(--phase3); }
+
+.phase-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 6vw, 72px);
+  color: var(--ink);
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+
+.phase-desc {
+  font-size: 16px;
+  color: #3D3830;
+  max-width: 600px;
+  line-height: 1.75;
+}
+
+.phase-kpis {
+  display: flex;
+  gap: 24px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.kpi {
+  background: var(--white);
+  border: 1px solid var(--gold-line);
+  padding: 14px 20px;
+  min-width: 130px;
+}
+.kpi-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  color: var(--gold);
+  line-height: 1;
+}
+.kpi-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #3D3830;
+  margin-top: 4px;
+}
+
+/* ── WEEKS ── */
+.weeks-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.week-block {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0;
+  border: 1px solid rgba(0,0,0,0.05);
+  overflow: hidden;
+  transition: border-color .3s;
+}
+.week-block:hover { border-color: var(--gold-line); }
+
+.week-label {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  border-right: 1px solid rgba(0,0,0,0.05);
+  background: var(--white);
+}
+
+.week-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  line-height: 1;
+  color: var(--ink);
+}
+.week-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #3D3830;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.week-days {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--gold);
+  margin-top: 12px;
+  letter-spacing: 1px;
+}
+
+.week-content {
+  padding: 24px 28px;
+  background: var(--paper);
+}
+
+.week-focus {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.week-focus::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gold-line);
+}
+
+.tasks { list-style: none; display: grid; gap: 8px; }
+
+.task {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  font-size: 14px;
+  color: #3D3830;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+}
+.task:last-child { border-bottom: none; }
+
+.task-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.t-ops { background: #5D6D7E; }
+.t-tech { background: #8E44AD; }
+.t-mkt { background: #E67E22; }
+.t-ventas { background: #27AE60; }
+.t-rrhh { background: #2980B9; }
+.t-alianza { background: #C9A84C; }
+.t-bp { background: #E74C3C; }
+
+.task-text { line-height: 1.5; }
+.task-text strong { color: var(--ink); font-weight: 600; }
+
+.task-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+  align-self: start;
+  margin-top: 4px;
+}
+.tag-ops    { border: 1px solid #5D6D7E; color: #5D6D7E; }
+.tag-tech   { border: 1px solid #8E44AD; color: #8E44AD; }
+.tag-mkt    { border: 1px solid #E67E22; color: #E67E22; }
+.tag-ventas { border: 1px solid #27AE60; color: #27AE60; }
+.tag-rrhh   { border: 1px solid #2980B9; color: #2980B9; }
+.tag-alianza{ border: 1px solid #C9A84C; color: #C9A84C; }
+.tag-bp     { border: 1px solid #E74C3C; color: #E74C3C; background: rgba(231,76,60,0.06); }
+
+/* ── MILESTONE ── */
+.milestone {
+  border: 1px solid var(--gold);
+  background: rgba(138,96,16,0.05);
+  padding: 24px 28px;
+  margin-top: 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.milestone-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+.milestone-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.milestone-text {
+  font-size: 16px;
+  color: var(--ink);
+  font-style: italic;
+}
+
+/* ── LEGEND ── */
+.legend-bar {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+  padding: 16px 20px;
+  background: var(--white);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #3D3830;
+}
+.leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+/* ── SUMMARY TABLE ── */
+.summary-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 80px 48px;
+}
+
+.summary-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(36px, 5vw, 64px);
+  color: var(--ink);
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--gold-line);
+  border: 1px solid var(--gold-line);
+  margin-bottom: 48px;
+}
+
+.summary-col {
+  background: var(--white);
+  padding: 32px 24px;
+}
+
+.summary-col-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid;
+}
+.s-p1 { color: var(--phase1); border-color: var(--phase1); }
+.s-p2 { color: var(--phase2); border-color: var(--phase2); }
+.s-p3 { color: var(--phase3); border-color: var(--phase3); }
+
+.summary-period {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.summary-income {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  color: var(--gold);
+  margin-bottom: 20px;
+}
+.summary-items { list-style: none; }
+.summary-items li {
+  font-size: 13px;
+  color: #3D3830;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  display: flex;
+  gap: 8px;
+  line-height: 1.5;
+}
+.summary-items li::before { content: '→'; color: var(--gold); flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+
+/* ── DAILY ROUTINE ── */
+.routine-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px;
+  background: var(--gold-line);
+  border: 1px solid var(--gold-line);
+}
+.routine-block {
+  background: var(--paper);
+  padding: 24px 20px;
+}
+.routine-time {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  color: var(--gold);
+  line-height: 1;
+}
+.routine-title {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 600;
+  margin: 6px 0;
+}
+.routine-desc {
+  font-size: 12px;
+  color: #3D3830;
+  line-height: 1.6;
+}
+
+/* ── FOOTER ── */
+footer {
+  text-align: center;
+  padding: 60px 48px;
+  border-top: 1px solid var(--gold-line);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: rgba(184,178,168,0.3);
+  text-transform: uppercase;
+}
+
+@keyframes revealUp {
+  from { opacity:0; transform:translateY(30px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@media (max-width:700px) {
+  .hero { padding: 40px 24px; }
+  .phase-section, .summary-section { padding: 60px 24px; }
+  .timeline-nav { padding: 0 24px; }
+  .week-block { grid-template-columns: 80px 1fr; }
+  .phase-header { grid-template-columns: 1fr; }
+  .phase-number { font-size: 60px; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .task { grid-template-columns: 20px 1fr; }
+  .task-tag { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-tag">Barbería · Local 222 · Galería Santiago Centro</div>
+  <h1>PLAN DE<br><span class="gold">ATAQUE</span></h1>
+  <p class="hero-sub">Cronograma de actividades · Corto · Mediano · Largo Plazo · 2025</p>
+  <div class="hero-phases">
+    <div class="phase-pill p1"><span class="phase-dot"></span>Fase 1 · Semanas 1–4 · Encender el motor</div>
+    <div class="phase-pill p2"><span class="phase-dot"></span>Fase 2 · Meses 2–4 · Escalar</div>
+    <div class="phase-pill p3"><span class="phase-dot"></span>Fase 3 · Meses 5–12 · Dominar</div>
+  </div>
+</section>
+
+<!-- NAV -->
+<nav class="timeline-nav">
+  <a class="tnav-item" href="#fase1"><span class="tnav-dot" style="background:var(--phase1)"></span><span class="tnav-label">Fase 1 · Sem 1–4</span></a>
+  <a class="tnav-item" href="#fase2"><span class="tnav-dot" style="background:var(--phase2)"></span><span class="tnav-label">Fase 2 · Mes 2–4</span></a>
+  <a class="tnav-item" href="#fase3"><span class="tnav-dot" style="background:var(--phase3)"></span><span class="tnav-label">Fase 3 · Mes 5–12</span></a>
+  <a class="tnav-item" href="#rutina"><span class="tnav-dot" style="background:var(--gold)"></span><span class="tnav-label">Rutina Diaria</span></a>
+  <a class="tnav-item" href="#resumen"><span class="tnav-dot" style="background:var(--cream-dim)"></span><span class="tnav-label">Resumen</span></a>
+</nav>
+
+<!-- ════════════════ FASE 1 ════════════════ -->
+<section class="phase-section" id="fase1">
+  <div class="phase-header">
+    <div class="phase-number p1-num">1</div>
+    <div class="phase-meta">
+      <div class="phase-eyebrow p1-eye">Fase 1 · Semanas 1–4 · Corto Plazo</div>
+      <div class="phase-title">ENCENDER<br>EL MOTOR</div>
+      <p class="phase-desc">Todo lo que está pagado pero dormido se activa. El local pasa de operar en modo supervivencia a operar con sistema. Esta fase no requiere inversión en herramientas nuevas — solo ejecución.</p>
+      <div class="phase-kpis">
+        <div class="kpi"><div class="kpi-val">+20%</div><div class="kpi-label">Ocupación proyectada</div></div>
+        <div class="kpi"><div class="kpi-val">7 días</div><div class="kpi-label">Bewe activo</div></div>
+        <div class="kpi"><div class="kpi-val">15 días</div><div class="kpi-label">Dashboard live</div></div>
+        <div class="kpi"><div class="kpi-val">30 días</div><div class="kpi-label">RRSS lanzadas</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend-bar">
+    <div class="legend-item"><span class="leg-dot" style="background:#5D6D7E"></span>Operaciones</div>
+    <div class="legend-item"><span class="leg-dot" style="background:#8E44AD"></span>Tecnología</div>
+    <div class="legend-item"><span class="leg-dot" style="background:#E67E22"></span>Marketing</div>
+    <div class="legend-item"><span class="leg-dot" style="background:#27AE60"></span>Ventas</div>
+    <div class="legend-item"><span class="leg-dot" style="background:#2980B9"></span>RRHH</div>
+    <div class="legend-item"><span class="leg-dot" style="background:#C9A84C"></span>Alianzas</div>
+    <div class="legend-item"><span class="leg-dot" style="background:#E74C3C"></span>BarberPilot</div>
+  </div>
+
+  <div class="weeks-grid">
+
+    <!-- SEMANA 1 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">S1</div>
+        <div class="week-sub">Semana 1</div>
+        <div class="week-days">Días 1–5</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Activación base operativa</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Día 1 AM:</strong> Presentación con equipo de barberos. Entregar protocolo de limpieza de áreas comunes con rotación semanal asignada: baño (rotación diaria entre barberos), cafetín/cocina (rotación semanal), zona de espera y counter (responsabilidad compartida al cierre de cada jornada). El piso entre clientes ya es práctica establecida — reforzar como estándar no negociable.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Día 1 PM:</strong> Retirar cartel "$10.990 Corte Express" de vitrina. Instalar señalética provisional con precios actualizados ($12.000 / $20.000) mientras se imprime la definitiva.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Día 1–2:</strong> Escribir a soporte Bewe para solicitar acceso a webhooks (facilitar URL del endpoint y token de acceso). Configurar agenda completa: servicios, precios, los 4 barberos, TPV y módulo de comisiones.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Día 2–3:</strong> Activar automatización WhatsApp en Bewe: confirmación de reserva, recordatorio 24h antes, mensaje post-servicio con link reseña Google.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Día 3 — CAPTURA DE BASE DE DATOS VÍA BEBIDA:</strong> Implementar el QR de bebida como mecanismo principal de captura. Cada puesto tiene un QR impreso en un porta-menú. Al sentarse, el barbero invita al cliente a escanear para pedir su bebida gratis. El QR abre directamente el WhatsApp Business del local con mensaje pre-completado: "Hola, me llamo [  ] y quiero un [  ]". Con esa acción el cliente entrega nombre, número y preferencia de bebida de forma completamente natural. La respuesta automática de WhatsApp confirma el pedido y queda el contacto capturado. Meta semana 1: 100% de los clientes atendidos pasan por el QR.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Día 4:</strong> Configurar WhatsApp Business con mensaje de bienvenida automático al recibir el primer mensaje: "¡Hola [nombre]! Tu [bebida] ya está en camino ☕ Bienvenido a la Barbería. Si quieres agendar tu próxima visita sin esperar: [link Bewe]". Con esa respuesta se captura el contacto Y se promueve la reserva online en el mismo flujo.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Día 3:</strong> Optimizar perfil Google My Business: fotos actualizadas, horario correcto (L–V 10–20, Sáb 10–15), descripción con keywords locales, link a Bewe.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Día 4:</strong> Crear perfiles de Instagram y TikTok de la barbería. Bio, foto de perfil, link a Bewe. Publicar las primeras 3 fotos del local y el equipo.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Día 5:</strong> Encomendar cartelería definitiva a imprenta. Adquirir aros de luz LED para cada puesto de trabajo — mejoran la calidad del corte y son esenciales para el contenido audiovisual de Instagram y TikTok. Gestionar número de WhatsApp exclusivo para la sede del centro y accesos a Instagram y TikTok del negocio.</span><span class="task-tag tag-ops">Ops</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SEMANA 2 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">S2</div>
+        <div class="week-sub">Semana 2</div>
+        <div class="week-days">Días 6–10</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Tecnología + primeras ventas</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Día 6–7:</strong> Instalar Camlytics en las cámaras existentes. Calibrar zonas de conteo por puesto. Verificar que el dashboard nativo de Bewe cubre las métricas necesarias — si es así, Looker Studio no será necesario. Evaluar integración Camlytics → Bewe vía webhook para que el conteo de personas alimente directamente la plataforma.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Día 7–8 — ARQUITECTURA TÉCNICA:</strong> Configurar el ecosistema de webhooks de Bewe. El evento `newClient` captura automáticamente nombre, teléfono y email de cada nuevo cliente. El evento `newTicket` registra cada pago con método, monto y barbero. El evento `newWork` confirma cada reserva. Todos estos datos fluyen en tiempo real y construyen la base de datos de clientes de forma automática sin intervención manual.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Día 7–10 — BARBERPILOT · Kick-off:</strong> Crear repositorio GitHub `barberpilot`. Definir arquitectura base replicando patrones de RestoPilot: FastAPI + GPT-4o + PostgreSQL Railway. Mapear los endpoints de Bewe API necesarios: `GET /employees`, `GET /agenda/available`, `POST /agenda/work`, `GET /clients`, `POST /clients`. Diseñar el diagrama de estados de conversación: GREETING → DRINK → BARBER_PREF → QUEUE_CHECK → CONFIRMED → POST_SERVICE → REVIEW.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Día 8:</strong> Capacitar a los 4 barberos en upselling: frase de oferta estándar para proponer combo corte + barba ($20.000). </span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Día 8–10:</strong> Publicar 4 piezas de contenido RRSS: antes/después de cortes, el equipo trabajando, el ambiente del local. Activar panel de redes en Bewe si está disponible.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Sem 3–4 (después de señalética instalada):</strong> Visita al Bar Nacional con la nueva señalética ya instalada. Presentar propuesta de alianza de referidos: tarjeta de descuento 10% para clientes en espera.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Día 10:</strong> Instalar cartelería definitiva en vitrina. Primer protocolo de cierre escrito y entregado al barbero de turno para las horas 18–20.</span><span class="task-tag tag-ops">Ops</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SEMANA 3 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">S3</div>
+        <div class="week-sub">Semana 3</div>
+        <div class="week-days">Días 11–15</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Fidelización + mejoras físicas</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Día 11–12:</strong> Activar módulo de suscripciones en Bewe. Crear plan "2 cortes/mes por $20.000" con cobro automático por tarjeta. Comunicar a clientes habituales por WhatsApp.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Día 11:</strong> Instalar iluminación LED focalizada por puesto (comenzar con los 4 puestos activos). Instalar parlante para música ambiente con playlist curada.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Día 12–13:</strong> Habilitar zona de espera con banquetas o sillones y mesita. En esa misma zona, a la altura de la vista, instalar la zona de ventas de productos capilares con dispensadores de muestra — los clientes que esperan son el público más captivo para conocer los productos. También instalar la tablet multifunción (AR + check-in + tienda). Evaluar opción de café: máquina automática (capuchino/mocachino) vs. café de grano con molino y émbolo — el grano impregna el local con olor único y exclusivo. Gestionar la decisión con Saúl Fino.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Día 13–14:</strong> Diseñar folleto/revista propia de productos — diseño propio, impreso en papel de calidad. 50–100 unidades iniciales. Disponible en la zona de espera y para entregar en la entrada de la escalera mecánica. Incluye: catálogo de servicios con precios, productos disponibles, QR de reserva Bewe y QR de redes sociales.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Día 13:</strong> Lanzar suscripción en RRSS (historia + post explicando el beneficio) y con flyers físicos disponibles en la zona de espera y en la entrada de la escalera mecánica para captar clientes que pasan. Objetivo semana 3: primeros 10 suscriptores.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Día 14:</strong> Verificar funcionamiento completo del dashboard Bewe. Enviar primer reporte semanal a Saúl Fino con los KPIs de las primeras 2 semanas.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Día 11–15 — BARBERPILOT · Desarrollo core:</strong> Construir el cliente Bewe API en Python (bewe.py). Implementar el webhook receiver de WhatsApp en FastAPI. Construir el motor de conversación con GPT-4o y el manejo de estados por sesión (número WhatsApp como key). Desarrollar el intent classifier para interpretar mensajes libres: "el de siempre" → historial, "cualquiera" → round-robin, "Juan" → búsqueda por nombre.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Día 15:</strong> Preparar propuesta formal de alianza corporativa para BCI, Santander y Banco de Chile. Documento de 1 página + link Bewe exclusivo por institución.</span><span class="task-tag tag-alianza">Alianza</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SEMANA 4 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">S4</div>
+        <div class="week-sub">Semana 4</div>
+        <div class="week-days">Días 16–26</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Canales digitales + cierre de mes</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Día 16–18:</strong> Activar tienda de productos capilares en Bewe (página web incluida en Beweone). Cargar catálogo inicial: 8–12 SKUs con fotos, precios detalle y mayorista.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Día 17:</strong> Crear página de Facebook del negocio. Activar Facebook Marketplace con los primeros 5 productos capilares, punto de entrega Metro U. de Chile. Fotos de calidad y descripción con keywords locales. La tienda Bewe ya está activa y con productos cargados — generar listado de precios mayoristas para distribución presencial en la galería.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Día 18–19:</strong> Crear cuenta en MercadoLibre. Configurar perfil de vendedor, publicar catálogo detalle y crear listados con precios mayorista por volumen.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Día 20–22:</strong> Visita puerta a puerta a salones de uñas y peluquerías de la galería. Presentar catálogo de precios mayoristas impreso. Pago al contado — sin crédito. Meta: 3 primeros clientes mayoristas en la primera semana de visitas.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-rrhh"></span><span class="task-text"><strong>Día 22–24:</strong> Publicar convocatoria para 2 primeros barberos nuevos: grupos de Instagram/WhatsApp de barberos en Santiago. Definir perfil técnico con Saúl Fino.</span><span class="task-tag tag-rrhh">RRHH</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Día 26:</strong> Instalar mural/vinilo de marca en pared del fondo. Primer reporte mensual completo a Saúl Fino: facturación, cortes, suscriptores, KPIs vs. baseline.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Día 20–26 — BARBERPILOT · Motor de cola + QR:</strong> Desarrollar el sistema de cola de walk-ins en PostgreSQL Railway (tabla `queue` con estado, barbero asignado, timestamp, preferencia de bebida). Implementar la notificación al barbero asignado vía WhatsApp. Generar el QR de cada puesto que abre WhatsApp con mensaje pre-completado. Testing end-to-end del flujo completo: QR → AV → Bewe → barbero notificado → cliente confirmado.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="milestone">
+    <div class="milestone-icon">🔑</div>
+    <div>
+      <div class="milestone-label">Hito Fase 1 · Fin Mes 1</div>
+      <div class="milestone-text">Bewe 100% operativo con webhooks activos · Dashboard Bewe configurado · Base de datos en captura activa (QR bebida) · RRSS activas · 10+ suscriptores · 3 clientes mayoristas · Alianza Bar Nacional confirmada · Convocatoria barberos abierta · Reporte mensual enviado · <strong style="color:#E74C3C">BarberPilot: flujo core completo en testing, QR de puestos generados.</strong></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ FASE 2 ════════════════ -->
+<section class="phase-section" id="fase2">
+  <div class="phase-header">
+    <div class="phase-number p2-num">2</div>
+    <div class="phase-meta">
+      <div class="phase-eyebrow p2-eye">Fase 2 · Meses 2–4 · Mediano Plazo</div>
+      <div class="phase-title">ESCALAR<br>LO QUE FUNCIONA</div>
+      <p class="phase-desc">Los cimientos están. Ahora se incorporan barberos nuevos, se consolidan los canales digitales, se activan las alianzas corporativas y la suscripción crece. La facturación empieza a moverse de $7,3M hacia $12M+.</p>
+      <div class="phase-kpis">
+        <div class="kpi"><div class="kpi-val">+2</div><div class="kpi-label">Barberos nuevos</div></div>
+        <div class="kpi"><div class="kpi-val">50</div><div class="kpi-label">Suscriptores meta</div></div>
+        <div class="kpi"><div class="kpi-val">3</div><div class="kpi-label">Alianzas corp.</div></div>
+        <div class="kpi"><div class="kpi-val">$12M+</div><div class="kpi-label">Facturación mes 3</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="weeks-grid">
+
+    <!-- MES 2 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">M2</div>
+        <div class="week-sub">Mes 2</div>
+        <div class="week-days">Sem 5–8</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Incorporación de equipo + alianzas corporativas</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-rrhh"></span><span class="task-text"><strong>Sem 5:</strong> Realizar pruebas técnicas a candidatos de barberos. Seleccionar los 2 primeros con Saúl Fino. Firmar contratos y configurarlos en Bewe.</span><span class="task-tag tag-rrhh">RRHH</span></li>
+          <li class="task"><span class="task-bullet t-rrhh"></span><span class="task-text"><strong>Sem 5–6:</strong> Inducción de los 2 barberos nuevos: protocolo de servicio, upselling, uso de Bewe y protocolo de limpieza entre clientes. Asignar puestos de trabajo.</span><span class="task-tag tag-rrhh">RRHH</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Sem 5–6:</strong> Presentar propuesta formal a RRHH de BCI, Santander y Banco de Chile. Seguimiento hasta confirmación. Meta: 1 banco aliado confirmado antes de fin de mes 2.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Sem 6:</strong> Lanzar servicio de corte a domicilio VIP con Shipday. Configurar la app, asignar barbero designado, crear flujo de reserva en Bewe. Precio: $28.000–$28.000.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Sem 6–7:</strong> Lanzar programa de referidos: comunicar por WhatsApp a base de clientes. "Trae un amigo nuevo → tu próximo corte a $8.000". Tracking en Bewe por código de referido.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Sem 7–8:</strong> Adquirir máquina de café automática. Implementar bebida de bienvenida a cada cliente: café en la mañana, refresco en la tarde. Comunicar en RRSS.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Sem 8:</strong> Expandir catálogo mayorista a 20–25 SKUs. Visitar 8–10 locales adicionales en la galería y alrededores. Ofrecer pago al contado a clientes recurrentes.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Sem 5–6 — BARBERPILOT · Deploy staging:</strong> Conectar repositorio GitHub a Railway. Configurar variables de entorno: `OPENAI_API_KEY`, `BEWE_API_KEY`, `WHATSAPP_TOKEN`, `DATABASE_URL`. Deploy automático desde rama `develop`. Testing en ambiente real con número de WhatsApp de prueba — simular el flujo completo desde el QR hasta la notificación al barbero.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Sem 7–8 — BARBERPILOT · Features avanzados:</strong> Implementar lista de espera inteligente con tiempo estimado y notificación de turno disponible (integración con alianza Bar Nacional). Desarrollar flujo post-servicio: encuesta de satisfacción automática, redirección a Google si valoración positiva. Implementar recordatorio de visita: trigger automático a los 21 días del último corte.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MES 3 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">M3</div>
+        <div class="week-sub">Mes 3</div>
+        <div class="week-days">Sem 9–12</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Consolidación de canales + primera revisión</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Sem 9:</strong> Meta de suscriptores: 50. Campaña de activación en RRSS y WhatsApp para alcanzar el hito. Los $1.000.000 de ingresos recurrentes de suscripciones ya están a la vista.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Sem 9–10:</strong> Con el primer banco aliado activo, lanzar el convenio formalmente: anuncio en RRSS, comunicado al banco para sus canales internos, link Bewe operativo.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Sem 10:</strong> Primer análisis de RRSS: qué contenido genera más reservas y seguidores. Ajustar calendario editorial en función de los datos. Evaluar si Bewe RRSS reemplaza completamente Meta Business Suite.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Sem 10–11:</strong> Con alianza Bar Nacional confirmada, avanzar a bancos (Santander / Banco de Chile) y universidades cercanas.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Sem 11:</strong> Activar app móvil personalizada de la barbería (incluida en Beweone). Comunicar a base de clientes para que la descarguen. Ofrecer descuento especial a primeros 50 usuarios de la app.</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Sem 11–12 — AGENTE IA DE AGENDA:</strong> Iniciar desarrollo del agente conversacional de gestión de agenda usando Python + LLM + webhooks de Bewe. El agente recibe eventos en tiempo real (nueva reserva, cancelación, cliente en espera) y responde por WhatsApp gestionando la agenda de forma autónoma. Alternativa a Linda AI a una fracción del costo (~$20–50 USD/mes en API calls vs. cientos en Linda AI).</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Sem 9–10 — BARBERPILOT · Deploy producción:</strong> Merge de `develop` a `main`. Deploy automático en Railway al número de WhatsApp Business real de la barbería. Activar los QR físicos en todos los puestos. Los primeros días de producción se monitorean de cerca: logs en Railway, respuestas del AV, registros en Bewe. Ajustar system prompt según comportamiento real de los clientes.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Sem 11–12 — BARBERPILOT · Upselling automático:</strong> Implementar el flujo de upselling en el AV: si el historial del cliente muestra solo cortes, el AV sugiere el combo con barba durante la asignación. Si el cliente acepta, actualiza el servicio en Bewe automáticamente. Analizar primeras 2 semanas de producción: tasa de uso del QR, preferencias de bebida más pedidas, barberos más solicitados.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Sem 12:</strong> Revisión formal del mes 3 con Saúl Fino: facturación, la facturación, KPIs de cada canal. Presentar propuesta de mejoras para el mes 4. Evaluar incorporar un tercer barbero nuevo.</span><span class="task-tag tag-ops">Ops</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MES 4 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">M4</div>
+        <div class="week-sub">Mes 4</div>
+        <div class="week-days">Sem 13–16</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Expansión de equipo + mayorista consolidado</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-rrhh"></span><span class="task-text"><strong>Sem 13:</strong> Incorporar tercer barbero nuevo si la ocupación lo justifica (>75% de los puestos activos llenos). Mismo proceso de inducción + configuración Bewe.</span><span class="task-tag tag-rrhh">RRHH</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Sem 13–14:</strong> Auditoría de MercadoLibre: qué productos venden más, ajustar precios, solicitar calificaciones. Evaluar publicidad pagada (ML Ads) con presupuesto pequeño ($30.000–$50.000 CLP).</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Sem 14:</strong> Contactar universidades del sector: U. de Chile, INACAP, DUOC UC. Proponer convenio de empleados + posibilidad de convenio con alumnos en horarios no peak.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Sem 15:</strong> Evaluar la vitrina de productos con 2 meses de data: cuáles rotan, cuáles no. Ajustar catálogo. Incorporar 2–3 productos nuevos por demanda de clientes o barberos.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Sem 15–16:</strong> Primer video con potencial viral para TikTok: timelapse de corte completo o transformación drástica. Boost orgánico usando el gancho de la ubicación (Metro + escalera mecánica).</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Sem 16:</strong> Revisión de KPIs con Saúl Fino: facturación meses 2–4, crecimiento por canal, estado del equipo. Trazar nuevas metas y plan de acción para la Fase 3.</span><span class="task-tag tag-ops">Ops</span></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="milestone">
+    <div class="milestone-icon">📈</div>
+    <div>
+      <div class="milestone-label">Hito Fase 2 · Fin Mes 4</div>
+      <div class="milestone-text">6–7 barberos activos · 50–70 suscriptores · 3 alianzas corporativas activas · Canal mayorista con 8–12 clientes estables · Tienda ML activa · App descargada por +100 clientes · Base de datos 200+ contactos con WhatsApp marketing activo · Facturación local proyectada $12M+ · <strong style="color:#E74C3C">BarberPilot en producción: 100% walk-ins gestionados por el AV, upselling automático activo, lista de espera inteligente con Bar Nacional integrada.</strong></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ FASE 3 ════════════════ -->
+<section class="phase-section" id="fase3">
+  <div class="phase-header">
+    <div class="phase-number p3-num">3</div>
+    <div class="phase-meta">
+      <div class="phase-eyebrow p3-eye">Fase 3 · Meses 5–12 · Largo Plazo</div>
+      <div class="phase-title">DOMINAR<br>EL TERRITORIO</div>
+      <p class="phase-desc">El local opera a capacidad plena o cerca de ella. Los canales digitales generan ventas pasivas. Las alianzas corporativas llenan los horarios bajos. La suscripción es el motor de ingresos recurrentes. La facturación supera consistentemente la meta.</p>
+      <div class="phase-kpis">
+        <div class="kpi"><div class="kpi-val">9</div><div class="kpi-label">Barberos plena cap.</div></div>
+        <div class="kpi"><div class="kpi-val">100+</div><div class="kpi-label">Suscriptores</div></div>
+        <div class="kpi"><div class="kpi-val">$22M+</div><div class="kpi-label">Facturación local</div></div>
+        <div class="kpi"><div class="kpi-val">5–8</div><div class="kpi-label">Alianzas activas</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="weeks-grid">
+
+    <!-- MES 5–6 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">M5<br>M6</div>
+        <div class="week-sub">Meses 5–6</div>
+        <div class="week-days">Sem 17–24</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Capacidad plena + revisión de acuerdo</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-rrhh"></span><span class="task-text"><strong>Mes 5:</strong> Completar la incorporación de barberos hasta llegar a 8–9 puestos activos según la demanda real. El ritmo de incorporación lo dictan las métricas de ocupación del dashboard.</span><span class="task-tag tag-rrhh">RRHH</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Mes 5:</strong> Meta 100 suscriptores activos = $2.000.000 CLP de ingresos recurrentes garantizados solo por suscripciones. Campaña especial de activación.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Mes 5–6:</strong> Consolidar 5–8 alianzas corporativas activas. Revisión trimestral de cada alianza: cuáles generan más flujo, reforzar y eliminar las que no funcionan.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Mes 6:</strong> Revisión formal del acuerdo con Saúl Fino a los 6 meses. Presentar métricas de crecimiento de facturación. Proponer ajuste del porcentaje si la facturación superó las proyecciones.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Mes 6:</strong> Evaluar primera campaña pagada en Instagram/TikTok ads con presupuesto pequeño ($50.000–$100.000 CLP) orientada a captación de suscriptores nuevos.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Mes 5–6 — BARBERPILOT · Optimización con data real:</strong> Con 2–3 meses de data de producción, analizar patrones: horarios de mayor demanda, barberos más solicitados, bebidas más pedidas, tasa de conversión del upselling automático. Ajustar el system prompt y los pesos del motor de asignación de turno según el comportamiento real. Implementar métricas de performance del AV en el dashboard de Bewe.</span><span class="task-tag tag-bp">BarberPilot</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MES 7–9 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">M7<br>M9</div>
+        <div class="week-sub">Meses 7–9</div>
+        <div class="week-days">Sem 25–36</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Optimización y nuevos servicios</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Mes 7:</strong> Evaluar incorporar nuevos servicios con mayor ticket: tratamientos capilares premium, coloración para hombres, alisado. Sondear demanda entre clientes actuales.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Mes 7–8:</strong> Desarrollar suscripción "Gold": 2 cortes + 1 servicio de barba al mes por $28.000. Ticket más alto para los clientes de mayor frecuencia.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-mkt"></span><span class="task-text"><strong>Mes 8:</strong> Análisis de reseñas acumuladas en Google: ¿qué mencionan más los clientes? Ajustar la propuesta de valor y el contenido de RRSS en función de lo que el mercado ya valida.</span><span class="task-tag tag-mkt">Mkt</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Mes 8–9:</strong> Explorar alianza con proveedores de productos capilares para obtener precio de distribuidor oficial. Volumen de compra de 3+ meses de operación mayorista como argumento.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-tech"></span><span class="task-text"><strong>Mes 9:</strong> Auditoría tecnológica completa: ¿Bewe cubre todo o hay módulos que conviene reemplazar? ¿Camlytics necesita ajuste de zonas con los nuevos puestos activos? ¿El dashboard refleja la operación real?</span><span class="task-tag tag-tech">Tech</span></li>
+          <li class="task"><span class="task-bullet t-bp"></span><span class="task-text"><strong>Mes 7–9 — BARBERPILOT · Visión de producto:</strong> Con el AV estable y probado en producción, evaluar BarberPilot como producto independiente replicable — otras barberías en Santiago podrían contratarlo como SaaS. Documentar la arquitectura, construir el onboarding </span><span class="task-tag tag-bp">BarberPilot</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MES 10–12 -->
+    <div class="week-block">
+      <div class="week-label">
+        <div class="week-num">M10<br>M12</div>
+        <div class="week-sub">Meses 10–12</div>
+        <div class="week-days">Sem 37–52</div>
+      </div>
+      <div class="week-content">
+        <div class="week-focus">Cierre de año + proyección año 2</div>
+        <ul class="tasks">
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Mes 10:</strong> Campaña de fin de año: combos especiales de regalo (tarjeta de regalo con suscripción de 1 mes), descuentos de temporada para empresas aliadas. El centro de Santiago tiene alto tráfico en noviembre/diciembre.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Mes 11:</strong> Black Friday / Cyber Monday para la tienda online: descuentos en productos capilares, impulsando el canal MercadoLibre y la tienda Bewe simultáneamente.</span><span class="task-tag tag-ventas">Ventas</span></li>
+          <li class="task"><span class="task-bullet t-alianza"></span><span class="task-text"><strong>Mes 11–12:</strong> Negociar renovación de alianzas corporativas para el año siguiente. Presentar datos de flujo generado durante el año como argumento de valor.</span><span class="task-tag tag-alianza">Alianza</span></li>
+          <li class="task"><span class="task-bullet t-ops"></span><span class="task-text"><strong>Mes 12:</strong> Reporte anual completo: facturación total del año vs. baseline de $7,3M, crecimiento de cada canal, ingreso total mío. Propuesta de plan para el año 2 con nuevos objetivos.</span><span class="task-tag tag-ops">Ops</span></li>
+          <li class="task"><span class="task-bullet t-ventas"></span><span class="task-text"><strong>Mes 12:</strong> Evaluar expansión: ¿segundo local? ¿franquicia del modelo? La reputación, los sistemas y los procesos construidos durante el año son la base para escalar más allá de Local 222.</span><span class="task-tag tag-ventas">Ventas</span></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="milestone">
+    <div class="milestone-icon">🏆</div>
+    <div>
+      <div class="milestone-label">Hito Fase 3 · Fin Año 1</div>
+      <div class="milestone-text">9 barberos activos · 100+ suscriptores · 5–8 alianzas corporativas · Facturación local $18M–$22M/mes · 500+ contactos segmentados con marketing automatizado · Plan año 2 presentado · <strong style="color:#E74C3C">BarberPilot: AV maduro con data de 6+ meses, arquitectura </strong></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ RUTINA DIARIA ════════════════ -->
+<section class="summary-section" id="rutina">
+  <div class="summary-title">RUTINA DIARIA</div>
+  <p style="font-size:15px;color:var(--cream-dim);margin-bottom:32px;font-style:italic;">Lunes a Viernes · 10:00–20:00 · Sábados 10:00–15:00 · Horario completo de operación</p>
+  <div class="routine-grid">
+    <div class="routine-block">
+      <div class="routine-time">10:00</div>
+      <div class="routine-title">Apertura & revisión</div>
+      <div class="routine-desc">Llegar antes que los clientes. Revisar dashboard Bewe: reservas del día, cortes anteriores, stock de productos. Verificar que el local esté impecable y el equipo listo.</div>
+    </div>
+    <div class="routine-block">
+      <div class="routine-time">10:30</div>
+      <div class="routine-title">Briefing de equipo</div>
+      <div class="routine-desc">5 minutos con el equipo: agenda del día, metas de upselling, novedades. Rápido, concreto, diario.</div>
+    </div>
+    <div class="routine-block">
+      <div class="routine-time">12:00</div>
+      <div class="routine-title">Gestión comercial AM</div>
+      <div class="routine-desc">Seguimiento de propuestas de alianzas, responder mensajes de Marketplace y MercadoLibre, gestión de pedidos mayoristas entrantes.</div>
+    </div>
+    <div class="routine-block">
+      <div class="routine-time">14:00</div>
+      <div class="routine-title">Contenido & digital</div>
+      <div class="routine-desc">30–45 min: foto/video del trabajo del día para RRSS, programar publicaciones en panel Bewe, revisar métricas de reservas y ocupación en tiempo real.</div>
+    </div>
+    <div class="routine-block">
+      <div class="routine-time">16:00</div>
+      <div class="routine-title">Gestión comercial PM</div>
+      <div class="routine-desc">Llamadas a alianzas corporativas, visitas a locales mayoristas de la galería, seguimiento de suscriptores y clientes en espera de confirmación.</div>
+    </div>
+    <div class="routine-block">
+      <div class="routine-time">19:00</div>
+      <div class="routine-title">Cierre operativo</div>
+      <div class="routine-desc">Cuadre de caja, revisión del dashboard del día, actualización de stock. Asegurarse de que todos los servicios estén registrados en Bewe antes del cierre a las 20:00.</div>
+    </div>
+  </div>
+  <div style="background:var(--white);border:1px solid var(--gold-line);padding:20px 24px;margin-top:20px;display:flex;gap:16px;align-items:center;">
+    <span style="font-size:24px;">🗓️</span>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">Lunes · Tarea Fija</div>
+      <div style="font-size:14px;color:var(--cream);">Antes de las 10:00 hrs, enviar reporte semanal a Saúl Fino: cortes realizados, facturación, KPIs, novedades y plan de la semana. Saúl Fino recibe su resumen ejecutivo antes de que abra el local.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ RESUMEN ════════════════ -->
+<section class="summary-section" id="resumen">
+  <div class="summary-title">RESUMEN EJECUTIVO</div>
+  <div class="summary-grid">
+    <div class="summary-col">
+      <div class="summary-col-header s-p1">Fase 1 · Mes 1</div>
+      <div class="summary-period">Semanas 1–4</div>
+      <div class="summary-income">Facturación base: $7,3M</div>
+      <ul class="summary-items">
+        <li>Bewe 100% configurado con webhooks</li>
+        <li>Camlytics instalado y calibrado</li>
+        <li>Dashboard Bewe verificado</li>
+        <li>RRSS lanzadas con contenido diario</li>
+        <li>Cartelería y precios actualizados</li>
+        <li>Zona de espera + iluminación focal</li>
+        <li>Base de datos en captura activa</li>
+        <li>Alianza Bar Nacional confirmada</li>
+        <li>10 primeros suscriptores</li>
+        <li>3 primeros clientes mayoristas</li>
+      </ul>
+    </div>
+    <div class="summary-col">
+      <div class="summary-col-header s-p2">Fase 2 · Meses 2–4</div>
+      <div class="summary-period">Semanas 5–16</div>
+      <div class="summary-income">Facturación: $12M+</div>
+      <ul class="summary-items">
+        <li>6–7 barberos activos</li>
+        <li>Servicio a domicilio con Shipday</li>
+        <li>3 alianzas corporativas (bancos)</li>
+        <li>50–70 suscriptores activos</li>
+        <li>App móvil personalizada activa</li>
+        <li>Canal mayorista: 8–12 clientes</li>
+        <li>MercadoLibre + Facebook Market.</li>
+        <li>Café de especialidad implementado</li>
+        <li>200+ contactos en base de datos</li>
+        <li>Agente IA de agenda en desarrollo</li>
+      </ul>
+    </div>
+    <div class="summary-col">
+      <div class="summary-col-header s-p3">Fase 3 · Meses 5–12</div>
+      <div class="summary-period">Semanas 17–52</div>
+      <div class="summary-income">Facturación: $18M–$22M</div>
+      <ul class="summary-items">
+        <li>9 barberos · capacidad plena</li>
+        <li>100+ suscriptores activos</li>
+        <li>5–8 alianzas corporativas</li>
+        <li>Agente IA de agenda operativo</li>
+        <li></li>
+        <li>500+ contactos segmentados</li>
+        <li>Suscripción "Gold" lanzada</li>
+        <li>Distribuidor oficial marca capilar</li>
+        <li>Campañas de fin de año</li>
+        <li>Reporte anual + plan año 2</li>
+        <li>Evaluación de segundo local</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  PLAN DE ATAQUE · BARBERÍA LOCAL 222 · GALERÍA SANTIAGO CENTRO · 2025
+</footer>
+
+</body>
+</html>

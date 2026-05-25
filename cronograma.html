@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronograma · Barbería Local 222</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAFAF7; --white:#FFFFFF; --ink:#191816; --ink2:#2A2420;
+  --muted:#4A4440; --rule:#E2DED8; --rule2:#F0EDE8; --gold:#96740A;
+  --gold-lt:#FBF5E2; --p1:#AD2D1E; --p2:#A06010; --p3:#1A6B44;
+  --c-ops:#2B6CB0; --c-tech:#6B3FA0; --c-mkt:#B84F10;
+  --c-ventas:#1A7048; --c-rrhh:#1A5A8A; --c-alianza:#96740A;
+  --c-bp:#AD2D1E; --c-rec:#5B5EA6;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:13px;}
+
+/* HEADER */
+.hdr{background:var(--white);border-bottom:2px solid var(--ink);padding:18px 24px 14px;
+  display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+.hdr h1{font-family:'Libre Baskerville',serif;font-size:clamp(20px,3.5vw,36px);
+  font-weight:700;color:var(--ink);line-height:1;}
+.hdr h1 em{font-style:italic;color:var(--gold);}
+.hdr-meta{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);margin-top:5px;}
+.chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.chip{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+  letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid;}
+.cs{border-color:var(--p1);color:var(--p1);background:#FEF0EE;}
+.ce{border-color:var(--p3);color:var(--p3);background:#EBF5F0;}
+.ct{border-color:var(--gold);color:var(--gold);background:var(--gold-lt);}
+
+/* ZOOM CONTROLS */
+.zoom-bar{background:var(--white);border-bottom:1px solid var(--rule);
+  padding:8px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.zoom-label{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);}
+.zoom-btns{display:flex;gap:4px;}
+.zb{padding:4px 12px;border:1px solid var(--rule);background:var(--white);
+  font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;
+  cursor:pointer;color:var(--ink2);transition:all .15s;text-transform:uppercase;}
+.zb:hover{border-color:var(--gold);color:var(--gold);}
+.zb.on{background:var(--gold);color:white;border-color:var(--gold);}
+.zoom-hint{font-size:12px;color:var(--muted);font-style:italic;}
+
+/* LEGEND */
+.leg{background:var(--white);border-bottom:1px solid var(--rule);
+  padding:8px 24px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+.li{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--ink2);font-weight:500;}
+.lsw{width:14px;height:6px;border-radius:1px;flex-shrink:0;}
+.lsp{width:1px;height:11px;background:var(--rule);}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:170px 1fr;}
+.sidebar{background:var(--white);border-right:1px solid var(--rule);
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:10px 0;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--rule);}
+.sb-ph{display:flex;align-items:center;gap:7px;padding:8px 12px;
+  cursor:pointer;border-left:3px solid transparent;transition:background .15s;
+  background:none;border-right:none;border-top:none;border-bottom:none;width:100%;text-align:left;}
+.sb-ph:hover{background:var(--paper);}
+.sb-ph.on{border-left-color:var(--gold);background:var(--gold-lt);}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sb-lbl{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;
+  text-transform:uppercase;font-weight:500;color:var(--ink2);}
+.sb-items{padding-left:26px;}
+.sb-it{display:block;width:100%;background:none;border:none;text-align:left;
+  cursor:pointer;padding:3px 12px 3px 0;font-family:'DM Mono',monospace;
+  font-size:7.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);transition:color .15s;}
+.sb-it:hover{color:var(--gold);}
+.sb-it.now{color:var(--p1);font-weight:500;}
+
+/* GANTT */
+.gw{overflow-x:auto;}
+.gs{position:relative;}
+
+/* TIME HEADER */
+.th{background:var(--white);border-bottom:2px solid var(--ink);
+  position:sticky;top:0;z-index:50;display:flex;height:44px;align-items:stretch;position:relative;}
+.t-cols{flex:1;display:flex;}
+.t-col{flex:1;display:flex;flex-direction:column;justify-content:center;
+  padding:0 5px;border-left:1px solid var(--rule);min-width:30px;}
+.t-col:first-child{border-left:none;}
+.t-col-m{font-size:9.5px;font-weight:600;color:var(--ink2);}
+.t-col-s{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px;}
+
+/* PHASE BLOCK */
+.pb{border-bottom:1px solid var(--rule);}
+.ph-hrow{display:flex;align-items:center;height:34px;background:var(--rule2);
+  border-bottom:1px solid var(--rule);position:relative;}
+.ph-ba{flex:1;position:relative;height:100%;display:flex;align-items:center;}
+.ph-band{position:absolute;height:4px;border-radius:1px;opacity:.18;}
+.ph-info{position:absolute;display:flex;align-items:center;gap:6px;padding:0 8px;}
+.ph-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.ph-name{font-family:'Libre Baskerville',serif;font-size:12px;font-weight:700;}
+.ph-per{font-family:'DM Mono',monospace;font-size:7.5px;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--muted);}
+
+/* SECTION */
+.sec{display:flex;align-items:center;height:24px;background:var(--rule2);
+  border-bottom:1px solid var(--rule);padding-left:8px;gap:7px;}
+.sec-d{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);
+  background:var(--gold-lt);border:1px solid var(--gold);padding:1px 6px;flex-shrink:0;}
+.sec-t{font-size:12px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--ink2);}
+
+/* RESOURCE ROW */
+.res-block{background:#F0EEF8;border-bottom:1px solid #D5D0EE;}
+.res-hrow{display:flex;align-items:center;height:28px;background:#E8E5F5;
+  border-bottom:1px solid #D5D0EE;padding-left:8px;gap:8px;}
+.res-icon{font-size:12px;}
+.res-ht{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--c-rec);}
+
+/* TRACK ROW */
+.tr{display:flex;align-items:center;min-height:34px;border-bottom:1px solid rgba(0,0,0,.04);
+  transition:background .1s;}
+.tr:hover{background:rgba(0,0,0,.015);}
+.tr-ba{flex:1;position:relative;height:34px;display:flex;align-items:center;}
+.vg{position:absolute;top:0;bottom:0;width:1px;background:var(--rule);pointer-events:none;}
+
+/* BARS */
+.bar{position:absolute;height:19px;border-radius:2px;display:flex;align-items:center;
+  padding:0 6px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;color:white;cursor:default;
+  transition:filter .15s,height .15s;box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.bar:hover{filter:brightness(.88);height:23px;z-index:10;}
+
+/* DATE MARKER on bar */
+.bar-date{position:absolute;bottom:-13px;font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--muted);white-space:nowrap;pointer-events:none;}
+
+/* SIDE LABEL */
+.sl{position:sticky;left:0;width:0;overflow:visible;pointer-events:none;z-index:4;}
+.si{position:absolute;left:3px;top:50%;transform:translateY(-50%);
+  background:rgba(250,250,247,.95);padding:1px 5px;font-size:7.5px;font-weight:600;
+  white-space:nowrap;max-width:155px;overflow:hidden;text-overflow:ellipsis;border-left:2px solid;}
+
+/* MILESTONE */
+.ms-row{position:relative;height:0;overflow:visible;z-index:20;}
+.ms-line{position:absolute;top:-9999px;bottom:-9999px;width:1.5px;
+  background:var(--gold);opacity:.3;pointer-events:none;}
+.ms-flag{position:absolute;top:-22px;transform:translateX(-50%);
+  background:var(--gold);color:white;font-family:'DM Mono',monospace;
+  font-size:10px;font-weight:500;letter-spacing:.8px;padding:2px 7px;
+  white-space:nowrap;border-radius:1px;cursor:default;z-index:30;}
+.ms-flag::after{content:'';position:absolute;bottom:-4px;left:50%;
+  transform:translateX(-50%);width:0;height:0;
+  border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:4px solid var(--gold);}
+.ms-sp{height:26px;}
+
+/* TODAY */
+.td-ln{position:absolute;top:0;bottom:0;width:2px;z-index:40;pointer-events:none;}
+.td-lb{position:absolute;top:4px;transform:translateX(-50%);
+  font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.8px;
+  padding:2px 5px;white-space:nowrap;border-radius:1px;z-index:45;color:white;}
+
+/* TOOLTIP */
+.tt{position:fixed;background:var(--ink);color:white;padding:9px 12px;
+  font-size:10.5px;line-height:1.6;pointer-events:none;z-index:999;
+  max-width:280px;border-radius:3px;box-shadow:0 4px 14px rgba(0,0,0,.2);display:none;}
+.tt-t{font-family:'Libre Baskerville',serif;font-size:11.5px;font-weight:700;
+  color:#E8C97A;margin-bottom:2px;}
+.tt-c{font-family:'DM Mono',monospace;font-size:7.5px;letter-spacing:1px;
+  text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:4px;}
+
+/* SCROLLBAR */
+.gw::-webkit-scrollbar{height:5px;}
+.gw::-webkit-scrollbar-track{background:var(--rule2);}
+.gw::-webkit-scrollbar-thumb{background:var(--rule);border-radius:2px;}
+
+@media(max-width:680px){
+  .shell{grid-template-columns:1fr;}.sidebar{display:none;}
+  .hdr{padding:14px 14px 12px;}.zoom-bar,.leg{padding:7px 14px;}
+}
+</style>
+</head>
+<body>
+
+<div class="tt" id="tt">
+  <div class="tt-t" id="tt-t"></div>
+  <div class="tt-c" id="tt-c"></div>
+  <div id="tt-b"></div>
+</div>
+
+<header class="hdr">
+  <div>
+    <h1>Plan de Trabajo &amp; <em>Cronograma</em></h1>
+    <div class="hdr-meta">Barbería · Local 222 · Galería Santiago Centro · Línea 1 Metro · 1 Mayo 2026 – 30 Abril 2027</div>
+  </div>
+  <div class="chips">
+    <div class="chip cs">Inicio: Vie 1 Mayo 2026</div>
+    <div class="chip ce">Cierre: 30 Abril 2027</div>
+    <div class="chip ct" id="chip-t">Hoy: ...</div>
+  </div>
+</header>
+
+<!-- ZOOM BAR -->
+<div class="zoom-bar">
+  <span class="zoom-label">Vista:</span>
+  <div class="zoom-btns">
+    <button class="zb on" id="zb-mes" onclick="setZoom('mes')">Por mes</button>
+    <button class="zb" id="zb-sem" onclick="setZoom('sem')">Por semana</button>
+    <button class="zb" id="zb-fase1" onclick="setZoom('fase1')">Zoom Fase 1</button>
+    <button class="zb" id="zb-fase2" onclick="setZoom('fase2')">Zoom Fase 2</button>
+    <button class="zb" id="zb-fase3" onclick="setZoom('fase3')">Zoom Fase 3</button>
+  </div>
+  <span class="zoom-hint">Pasa el mouse sobre las barras para ver los detalles</span>
+</div>
+
+<!-- LEGEND -->
+<div class="leg">
+  <div class="li"><span class="lsw" style="background:var(--c-ops)"></span>Operaciones</div>
+  <div class="lsp"></div>
+  <div class="li"><span class="lsw" style="background:var(--c-tech)"></span>Tecnología</div>
+  <div class="lsp"></div>
+  <div class="li"><span class="lsw" style="background:var(--c-mkt)"></span>Marketing</div>
+  <div class="lsp"></div>
+  <div class="li"><span class="lsw" style="background:var(--c-ventas)"></span>Ventas</div>
+  <div class="lsp"></div>
+  <div class="li"><span class="lsw" style="background:var(--c-rrhh)"></span>RRHH</div>
+  <div class="lsp"></div>
+  <div class="li"><span class="lsw" style="background:var(--c-alianza)"></span>Alianzas</div>
+  <div class="lsp"></div>
+  <div class="li"><span class="lsw" style="background:var(--c-bp)"></span>BarberPilot</div>
+  <div class="lsp"></div>
+  <div class="li"><span class="lsw" style="background:var(--c-rec)"></span>Recursos necesarios</div>
+  <div class="lsp"></div>
+  <div class="li"><span style="display:inline-block;width:14px;height:2px;background:var(--gold);opacity:.5"></span>&nbsp;Hito</div>
+  <div class="lsp"></div>
+  <div class="li"><span style="display:inline-block;width:2px;height:12px;background:var(--p1)"></span>&nbsp;Inicio / Hoy</div>
+</div>
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar">
+    <button class="sb-ph on" onclick="go('fase1',this)">
+      <span class="sb-dot" style="background:var(--p1)"></span>
+      <span class="sb-lbl" style="color:var(--p1)">Fase 1 · Mayo</span>
+    </button>
+    <div class="sb-items">
+      <button class="sb-it now" onclick="go('s1')">▸ 1–8 Mayo</button>
+      <button class="sb-it" onclick="go('s2')">▸ 8–15 Mayo</button>
+      <button class="sb-it" onclick="go('s3')">▸ 15–22 Mayo</button>
+      <button class="sb-it" onclick="go('s4')">▸ 22–31 Mayo</button>
+    </div>
+    <button class="sb-ph" onclick="go('fase2',this)">
+      <span class="sb-dot" style="background:var(--p2)"></span>
+      <span class="sb-lbl" style="color:var(--p2)">Fase 2 · Jun–Ago</span>
+    </button>
+    <div class="sb-items">
+      <button class="sb-it" onclick="go('m2')">▸ Junio 2026</button>
+      <button class="sb-it" onclick="go('m3')">▸ Julio 2026</button>
+      <button class="sb-it" onclick="go('m4')">▸ Agosto 2026</button>
+    </div>
+    <button class="sb-ph" onclick="go('fase3',this)">
+      <span class="sb-dot" style="background:var(--p3)"></span>
+      <span class="sb-lbl" style="color:var(--p3)">Fase 3 · Sep–Abr</span>
+    </button>
+    <div class="sb-items">
+      <button class="sb-it" onclick="go('m56')">▸ Sep–Oct 2026</button>
+      <button class="sb-it" onclick="go('m79')">▸ Nov 26–Ene 27</button>
+      <button class="sb-it" onclick="go('m1012')">▸ Feb–Abr 2027</button>
+    </div>
+  </nav>
+
+  <div class="gw" id="gw">
+    <div class="gs" id="gs">
+      <div class="th" id="th"><div class="t-cols" id="tc"></div></div>
+      <div id="gb"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── ZOOM CONFIGS ──────────────────────────────────────────
+// Each zoom defines: columns shown (start/end in fractional months 0-12),
+// col labels array, and minWidth per column
+const ZOOMS = {
+  mes: {
+    start:0, end:12,
+    cols: [
+      {m:'Mayo 2026',s:'1–31 May'},{m:'Jun 2026',s:'1–30 Jun'},
+      {m:'Jul 2026',s:'1–31 Jul'},{m:'Ago 2026',s:'1–31 Ago'},
+      {m:'Sep 2026',s:'1–30 Sep'},{m:'Oct 2026',s:'1–31 Oct'},
+      {m:'Nov 2026',s:'1–30 Nov'},{m:'Dic 2026',s:'1–31 Dic'},
+      {m:'Ene 2027',s:'1–31 Ene'},{m:'Feb 2027',s:'1–28 Feb'},
+      {m:'Mar 2027',s:'1–31 Mar'},{m:'Abr 2027',s:'1–30 Abr'},
+    ],
+    minColW: 60
+  },
+  sem: {
+    start:0, end:12,
+    cols: [
+      {m:'1–8 May',s:'S1'},{m:'8–15 May',s:'S2'},{m:'15–22 May',s:'S3'},{m:'22–31 May',s:'S4'},
+      {m:'1–8 Jun',s:'S5'},{m:'8–15 Jun',s:'S6'},{m:'15–22 Jun',s:'S7'},{m:'22–30 Jun',s:'S8'},
+      {m:'1–8 Jul',s:'S9'},{m:'8–15 Jul',s:'S10'},{m:'15–22 Jul',s:'S11'},{m:'22–31 Jul',s:'S12'},
+      {m:'1–8 Ago',s:'S13'},{m:'8–15 Ago',s:'S14'},{m:'15–22 Ago',s:'S15'},{m:'22–31 Ago',s:'S16'},
+      {m:'Sep',s:'S17'},{m:'Oct',s:'S21'},{m:'Nov',s:'S25'},
+      {m:'Dic',s:'S29'},{m:'Ene 27',s:'S33'},{m:'Feb 27',s:'S37'},
+      {m:'Mar 27',s:'S41'},{m:'Abr 27',s:'S45'},
+    ],
+    minColW: 50
+  },
+  fase1: {
+    start:0, end:1,
+    cols: [
+      {m:'Lun 4 May',s:'Sem 1 · Día 1'},{m:'Mar 5 May',s:'Sem 1 · Día 2'},
+      {m:'Mié 6 May',s:'Sem 1 · Día 3'},{m:'Jue 7 May',s:'Sem 1 · Día 4'},
+      {m:'Vie 8 May',s:'Sem 1 · Día 5'},
+      {m:'Lun 11 May',s:'Sem 2 · Día 6'},{m:'Mar 12 May',s:'Sem 2 · Día 7'},
+      {m:'Mié 13 May',s:'Sem 2 · Día 8'},{m:'Jue 14 May',s:'Sem 2 · Día 9'},
+      {m:'Vie 15 May',s:'Sem 2 · Día 10'},
+      {m:'Lun 18 May',s:'Sem 3 · Día 11'},{m:'Mar 19 May',s:'Sem 3 · Día 12'},
+      {m:'Mié 20 May',s:'Sem 3 · Día 13'},{m:'Jue 21 May',s:'Sem 3 · Día 14'},
+      {m:'Vie 22 May',s:'Sem 3 · Día 15'},
+      {m:'Lun 25 May',s:'Sem 4 · Día 16'},{m:'Mar 26 May',s:'Sem 4 · Día 17'},
+      {m:'Mié 27 May',s:'Sem 4 · Día 18'},{m:'Jue 28 May',s:'Sem 4 · Día 19'},
+      {m:'Vie 29 May',s:'Sem 4 · Día 20'},
+    ],
+    minColW: 68
+  },
+  fase2: {
+    start:1, end:4,
+    cols: [
+      {m:'1–8 Jun',s:'Sem 5'},{m:'8–15 Jun',s:'Sem 6'},{m:'15–22 Jun',s:'Sem 7'},{m:'22–30 Jun',s:'Sem 8'},
+      {m:'1–8 Jul',s:'Sem 9'},{m:'8–15 Jul',s:'Sem 10'},{m:'15–22 Jul',s:'Sem 11'},{m:'22–31 Jul',s:'Sem 12'},
+      {m:'1–8 Ago',s:'Sem 13'},{m:'8–15 Ago',s:'Sem 14'},{m:'15–22 Ago',s:'Sem 15'},{m:'22–31 Ago',s:'Sem 16'},
+    ],
+    minColW: 72
+  },
+  fase3: {
+    start:4, end:12,
+    cols: [
+      {m:'Sep 2026',s:'Sem 17–20'},{m:'Oct 2026',s:'Sem 21–24'},
+      {m:'Nov 2026',s:'Sem 25–28'},{m:'Dic 2026',s:'Sem 29–32'},
+      {m:'Ene 2027',s:'Sem 33–36'},{m:'Feb 2027',s:'Sem 37–40'},
+      {m:'Mar 2027',s:'Sem 41–44'},{m:'Abr 2027',s:'Sem 45–48'},
+    ],
+    minColW: 70
+  },
+};
+
+let currentZoom = 'mes';
+
+const C={
+  ops:'#2B6CB0',tech:'#6B3FA0',mkt:'#B84F10',ventas:'#1A7048',
+  rrhh:'#1A5A8A',alianza:'#96740A',bp:'#AD2D1E',rec:'#5B5EA6',
+  p1:'#AD2D1E',p2:'#A06010',p3:'#1A6B44',gold:'#96740A'
+};
+const START=new Date(2026,4,1), END=new Date(2027,3,30);
+const TOTAL=(END-START)/86400000;
+
+// Convert fractional month (0-12) to % within current zoom
+function toZoomPct(m){
+  const z=ZOOMS[currentZoom];
+  return (m-z.start)/(z.end-z.start)*100;
+}
+function pBar(startM,endM){
+  const z=ZOOMS[currentZoom];
+  const l=(startM-z.start)/(z.end-z.start)*100;
+  const w=(endM-startM)/(z.end-z.start)*100;
+  return {l:Math.max(0,l), w:Math.min(100-Math.max(0,l),w)};
+}
+
+// ── DATA ─────────────────────────────────────────────────
+// All positions in fractional months (0=1 May 2026, 12=30 Apr 2027)
+// Fase 1 = 0-1, Fase 2 = 1-4, Fase 3 = 4-12
+const DATA=[
+
+  // ════ RECURSOS NECESARIOS (PREVIO AL INICIO) ════
+  {type:'res-block', label:'🛒  RECURSOS A ADQUIRIR ANTES DEL ARRANQUE'},
+  {name:'Computador / Laptop',cat:'Recurso',color:C.rec,
+   startDate:'Antes del 1 Mayo',
+   bars:[{start:0,end:0.1,label:'Adquirir urgente · Día 1',tip:'CRÍTICO: sin computador no es posible configurar Bewe, crear las tiendas en Marketplace y MercadoLibre, instalar Camlytics ni desarrollar BarberPilot. Recomendación: laptop básica con Windows ($250.000–$450.000 CLP).'}]},
+  {name:'3 Sillas de barbería nuevas',cat:'Recurso',color:C.rec,
+   startDate:'1ª semana Mayo',
+   bars:[{start:0,end:0.15,label:'Comprar e instalar · Sem 1',tip:'Faltan puestos de trabajo para completar la capacidad planificada. Silla profesional de barbería: $80.000–$180.000 CLP c/u. 3 sillas = capacidad para llegar a 7 barberos.'}]},
+  {name:'3 Espejos con estación de barbero',cat:'Recurso',color:C.rec,
+   startDate:'1ª semana Mayo',
+   bars:[{start:0,end:0.2,label:'Instalar con los nuevos puestos · Sem 1–2',tip:'Cada puesto nuevo requiere su espejo y estación de trabajo. Espejo con marco + mueble de barbero: $60.000–$120.000 CLP c/u.'}]},
+  {name:'Máquina de café automática',cat:'Recurso',color:C.rec,
+   startDate:'Junio 2026',
+   bars:[{start:1.6,end:1.8,label:'Adquirir en Junio · Mes 2',tip:'Máquina automática de capuchino y mocachino. Inversión única: $150.000–$400.000 CLP. Costo por taza ~$300–400 CLP.'}]},
+  {name:'Iluminación LED por puesto (9 spots)',cat:'Recurso',color:C.rec,
+   startDate:'Semana 3 Mayo',
+   bars:[{start:0.55,end:0.85,label:'Instalar en Sem 3 · $15.000–40.000 c/u',tip:'Spot LED con brazo ajustable por puesto de trabajo. Mejora la calidad del corte y crea atmósfera premium visible desde la galería.'}]},
+  {name:'Sillones zona de espera + mesita',cat:'Recurso',color:C.rec,
+   startDate:'Semana 3 Mayo',
+   bars:[{start:0.55,end:0.85,label:'Habilitar zona de espera · Sem 3',tip:'2–4 sillones con identidad del local. Mesita con tablet para check-in en Bewe. El espacio central vacío se convierte en parte de la experiencia.'}]},
+  {name:'Parlante de música ambiente',cat:'Recurso',color:C.rec,
+   startDate:'Semana 3 Mayo',
+   bars:[{start:0.6,end:0.75,label:'Instalar · $50.000–$150.000 CLP',tip:'Parlante de calidad con playlist curada. Uno de los elementos más mencionados en reseñas positivas de barberías premium.'}]},
+  {name:'Señalética y cartelería premium',cat:'Recurso',color:C.rec,
+   startDate:'Día 1 Mayo',
+   bars:[{start:0,end:0.25,label:'Encargar Día 1 · Instalar Sem 1–2',tip:'Señalética con precios actualizados ($12.000 / $20.000), listado de servicios y código QR de Bewe. Reemplaza el cartel desactualizado de $10.990.'}]},
+  {name:'QR impreso por puesto (bebida + check-in)',cat:'Recurso',color:C.rec,
+   startDate:'3 Mayo 2026',
+   bars:[{start:0.06,end:0.15,label:'Generar e imprimir QR · Día 3',tip:'Un QR por puesto en porta-menú. Abre WhatsApp para pedir la bebida y entregar nombre + teléfono. La base de datos crece sola desde ese momento.'}]},
+  {name:'Licencia Camlytics (conteo cámaras)',cat:'Recurso',color:C.rec,
+   startDate:'8 Mayo 2026',
+   bars:[{start:0.25,end:0.5,label:'Comprar e instalar · Día 6–7 · ~$130.000 CLP',tip:'Licencia única sin mensualidad. Convierte las cámaras existentes en contadores automáticos de clientes. Compatible con Windows.'}]},
+
+  // ════ FASE 1 ════════════════════════════════════
+  {type:'phase',id:'fase1',name:'FASE 1 · Encender el Motor',
+   period:'Mayo 2026  ·  Semanas 1 a 4',color:C.p1,bs:0,be:1},
+
+  {type:'sec',id:'s1',date:'1–8 Mayo 2026',title:'Semana 1 — Activación base operativa'},
+
+  {name:'Retirar cartel $10.990 · Precio correcto',cat:'Operaciones',color:C.ops,
+   startDate:'1 Mayo 2026',
+   bars:[
+     {start:0,end:0.06,label:'Día 1 AM · Precios + Protocolo limpieza áreas comunes',tip:'Primer acto del día 1: retirar el cartel desactualizado de la vitrina y colocar precio provisional correcto ($12.000 / $20.000).'},
+     {start:0.07,end:0.25,label:'Señalética premium encargada e instalada',tip:'Encargar a imprenta señalética definitiva con precios, servicios y QR. Instalar al llegar (Día 6–8 aprox).'},
+   ]},
+  {name:'Bewe · Configuración completa + Webhooks',cat:'Tecnología',color:C.tech,
+   startDate:'1 Mayo 2026',
+   bars:[
+     {start:0,end:0.25,label:'Día 1–3 · Agenda · TPV · Barberos · Webhooks',tip:'Reunión con soporte Bewe. Configurar la agenda completa, el TPV, los 4 barberos, las comisiones y solicitar la habilitación de los webhooks (eventos newClient, newTicket, newWork).'},
+   ]},
+  {name:'QR Bebida → Captura base de datos',cat:'Ventas',color:C.ventas,
+   startDate:'3 Mayo 2026',
+   bars:[
+     {start:0.1,end:12,label:'Día 3 en adelante · Permanente todo el año',tip:'El cliente escanea el QR para pedir su bebida gratis. Escribe su nombre y bebida en WhatsApp. La base de datos crece sola con cada cliente atendido.'},
+   ]},
+  {name:'Protocolo limpieza entre clientes',cat:'Operaciones',color:C.ops,
+   startDate:'1 Mayo 2026',
+   bars:[
+     {start:0,end:12,label:'Día 1 · Protocolo permanente',tip:'Barrer cada puesto entre cliente y cliente (no al final del día). El piso limpio es la señal más directa de profesionalismo para quien pasa por la galería.'},
+   ]},
+  {name:'Google My Business · Optimización',cat:'Marketing',color:C.mkt,
+   startDate:'3 Mayo 2026',
+   bars:[
+     {start:0.1,end:0.25,label:'Día 3–5 · Fotos · Horarios · Precios · QR',tip:'Actualizar el perfil de Google con fotos nuevas del local, horarios correctos, precios actualizados y link a Bewe.'},
+   ]},
+  {name:'Instagram + TikTok · Lanzamiento',cat:'Marketing',color:C.mkt,
+   startDate:'4 Mayo 2026',
+   bars:[
+     {start:0.15,end:12,label:'Día 4 · Crear perfiles + 4–5 posts semanales todo el año · WhatsApp número exclusivo',tip:'Perfiles creados. Contenido: antes/después de cortes, equipo, ambiente, gancho de ubicación Metro U. de Chile.'},
+   ]},
+
+  {type:'sec',id:'s2',date:'8–15 Mayo 2026',title:'Semana 2 — Tecnología + BarberPilot Kick-off'},
+
+  {name:'Camlytics · Instalación y calibración',cat:'Tecnología',color:C.tech,
+   startDate:'8 Mayo 2026',
+   bars:[
+     {start:0.25,end:0.5,label:'Día 6–7 · Instalación y calibración',tip:'Instalar Camlytics sobre las cámaras existentes (requiere Windows). Calibrar zonas de conteo por puesto. Verificar que los datos se integran al dashboard de Bewe.'},
+     {start:0.5,end:12,label:'Conteo automático permanente',tip:'Cuenta automáticamente cada cliente en silla por barbero y hora.'},
+   ]},
+  {name:'Webhooks Bewe · BD automática',cat:'Tecnología',color:C.tech,
+   startDate:'8 Mayo 2026',
+   bars:[
+     {start:0.3,end:12,label:'Día 6 · newClient · newTicket · newWork activos',tip:'Los webhooks de Bewe capturan automáticamente cada nuevo cliente, pago y reserva. La base de datos se construye sola.'},
+   ]},
+  {name:'BarberPilot · Kick-off del proyecto',cat:'BarberPilot',color:C.bp,
+   startDate:'8 Mayo 2026',
+   bars:[
+     {start:0.3,end:0.75,label:'Día 7–10 · GitHub · Arquitectura · Endpoints Bewe',tip:'Crear repositorio en GitHub. Replicar la arquitectura de RestoPilot (FastAPI + GPT-4o + PostgreSQL Railway). Mapear endpoints de Bewe API y diseñar el diagrama de estados del Agente Virtual.'},
+   ]},
+  {name:'Alianza Bar Nacional · Piso de abajo',cat:'Alianzas',color:C.alianza,
+   startDate:'Sem 3 (después de señalética instalada)',
+   bars:[
+     {start:0.4,end:0.58,label:'Día 9 · Negociación presencial',tip:'Visita al Bar Nacional al pie de la escalera mecánica. Propuesta: descuento 10% a clientes en espera de la barbería a cambio de referidos cruzados. Sin costo para ninguno.'},
+     {start:0.58,end:12,label:'Alianza activa · Referidos cruzados',tip:'Tarjetas de referido en el counter. BarberPilot enviará automáticamente al cliente al bar cuando todos los barberos estén ocupados.'},
+   ]},
+
+  {type:'sec',id:'s3',date:'15–22 Mayo 2026',title:'Semana 3 — Fidelización + Mejoras físicas'},
+
+  {name:'Suscripción 2 cortes/mes · $20.000',cat:'Ventas',color:C.ventas,
+   startDate:'15 Mayo 2026',
+   bars:[
+     {start:0.6,end:0.75,label:'Día 11–12 · Activar en Bewe · RRSS + Flyers en escalera',tip:'Crear plan en Bewe con cobro automático mensual por tarjeta. Comunicar a clientes por WhatsApp. Meta: 10 suscriptores al cerrar mayo.'},
+     {start:0.75,end:12,label:'Suscriptores activos y creciendo',tip:'Meta acumulada: 10 (mayo) → 50 (julio) → 100 (septiembre).'},
+   ]},
+  {name:'Mejoras físicas · LED + Espera + Counter',cat:'Operaciones',color:C.ops,
+   startDate:'15 Mayo 2026',
+   bars:[
+     {start:0.55,end:0.85,label:'Día 11–13 · Instalar LED · Zona espera · Counter',tip:'Iluminación LED focalizada en cada puesto. Sillones en zona central. Counter de recepción con tablet Bewe.'},
+   ]},
+  {name:'Espacio ventas · Vitrina + probadores muestra',cat:'Operaciones',color:C.ops,
+   startDate:'15 Mayo 2026',
+   bars:[
+     {start:0.55,end:0.85,label:'Sem 3 · Mueble exhibidor + dispensadores',tip:'Mueble exhibidor iluminado con dispensadores de muestra. Espejo pequeño integrado. Etiquetas con QR de compra. Visible desde la galería. También sirve como showroom para clientes mayoristas.'},
+     {start:0.85,end:12,label:'Vitrina activa permanente',tip:'El Smart Mirror mostrará el producto destacado del día en el panel inferior cuando esté operativo.'},
+   ]},
+  {name:'BarberPilot · Desarrollo del núcleo',cat:'BarberPilot',color:C.bp,
+   startDate:'15 Mayo 2026',
+   bars:[
+     {start:0.55,end:0.85,label:'Día 11–15 · bewe.py · GPT-4o · Estados',tip:'Construir el cliente Python de la API de Bewe. Webhook receiver de WhatsApp en FastAPI. Motor conversacional con GPT-4o y manejo de estados por sesión.'},
+   ]},
+
+  {type:'sec',id:'s4',date:'22–31 Mayo 2026',title:'Semana 4 — Canales digitales + BarberPilot motor de cola'},
+
+  {name:'Facebook Marketplace · Entrega Metro',cat:'Marketing',color:C.mkt,
+   startDate:'26 Mayo 2026',
+   bars:[
+     {start:0.75,end:12,label:'Día 17 · 5+ productos · Entrega en Metro',tip:'Punto de entrega: acceso Metro Universidad de Chile. Sin costo de despacho. El comprador llega bajando una escalera.'},
+   ]},
+  {name:'MercadoLibre · Tienda detalle + mayorista',cat:'Marketing',color:C.mkt,
+   startDate:'27 Mayo 2026',
+   bars:[
+     {start:0.78,end:12,label:'Día 18 · Catálogo detalle + mayorista',tip:'Listados individuales con fotos y listados mayoristas con precios por volumen.'},
+   ]},
+  {name:'Canal mayorista · Salones galería',cat:'Alianzas',color:C.alianza,
+   startDate:'28 Mayo 2026',
+   bars:[
+     {start:0.8,end:0.92,label:'Día 20–22 · Visita puerta a puerta',tip:'Visitar salones de uñas, peluquerías y locales de belleza de la galería con catálogo mayorista.'},
+     {start:0.92,end:12,label:'3+ clientes mayoristas activos',tip:'Meta: 3 clientes (mayo) → 8–12 (agosto). Pago al contado.'},
+   ]},
+  {name:'Convocatoria 2 barberos nuevos',cat:'RRHH',color:C.rrhh,
+   startDate:'28 Mayo 2026',
+   bars:[
+     {start:0.85,end:1,label:'Día 22 · Publicar en grupos de barberos',tip:'Definir perfil técnico con Saúl Fino. Publicar en grupos de Instagram y WhatsApp de barberos de Santiago.'},
+   ]},
+  {name:'BarberPilot · Cola PostgreSQL + QR físicos',cat:'BarberPilot',color:C.bp,
+   startDate:'27 Mayo 2026',
+   bars:[
+     {start:0.8,end:1,label:'Día 20–26 · Cola · Notif. barbero · QR impresos',tip:'Tabla queue en Railway. Notificación al barbero asignado vía WhatsApp. Generar e imprimir QR definitivo para cada puesto. Testing end-to-end completo.'},
+   ]},
+
+  {type:'ms',pos:1/12,date:'31 Mayo 2026',label:'Cierre Fase 1',
+   detail:'Bewe activo con webhooks · RRSS lanzadas · BD creciendo · 10 suscriptores · 3 mayoristas · Alianza Bar Nacional · BarberPilot en testing · Vitrina de productos activa'},
+
+  // ════ FASE 2 ════════════════════════════════════
+  {type:'phase',id:'fase2',name:'FASE 2 · Escalar lo que funciona',
+   period:'Junio – Agosto 2026',color:C.p2,bs:1,be:4},
+
+  {type:'sec',id:'m2',date:'Junio 2026',title:'Mes 2 — Equipo + Alianzas + Smart Mirror piloto + AR'},
+
+  {name:'AR · Tablet zona espera (gratuita)',cat:'Tecnología',color:C.tech,
+   startDate:'1 Junio 2026',
+   bars:[
+     {start:1,end:12,label:'Jun · YouCam / Style My Hair · Sin costo',tip:'App de AR gratuita en tablet de la zona de espera. El cliente prueba estilos en su propio rostro mientras espera. Sin costo de desarrollo. En mes 6+ se evalúa SDK de Banuba personalizado con los estilos propios del local.'},
+   ]},
+  {name:'Smart Mirror DIY · Decoglass + Monitor bezel-less + RPi + LED RGB',cat:'Tecnología',color:C.tech,
+   startDate:'Mes 3 piloto → Mes 4 primer oficial',
+   bars:[
+     {start:2,end:2.5,label:'Jul · Piloto: cristal Decoglass + backing negro + RPi',tip:'Pedir sección pequeña de cristal antiespía 6mm a Decoglass (~$70.000 CLP). Aplicar pintura backing negra en las zonas fuera del monitor. Monitor bezel-less + Raspberry Pi 4. Probar en condiciones reales del local: luz ambiente, brillo, ventilación con cooler tipo laptop.'},
+     {start:2.5,end:12,label:'Ago → Expansión por productividad · Meta: 2 antes del Mundial',tip:'Primer Smart Mirror oficial en el puesto del barbero más productivo del mes. Cada unidad adicional sigue el mismo criterio — competencia sana entre el equipo. Meta: 2 puestos equipados antes del Mundial 2026 (junio). LED RGB dinámico: blanco cálido diario → colores según ocasión (Fiestas Patrias, Mundial, Día de la Mujer).'},
+   ]},
+
+  {name:'2 Barberos nuevos · Selección e inducción',cat:'RRHH',color:C.rrhh,
+   startDate:'1 Junio 2026',
+   bars:[
+     {start:1,end:1.25,label:'1–8 Jun · Pruebas técnicas y selección',tip:'Pruebas técnicas, selección final con Saúl Fino, contratos y configuración en Bewe.'},
+     {start:1.25,end:12,label:'6 barberos activos en el equipo',tip:'Inducción: protocolo de servicio, upselling de barba, uso de Bewe, limpieza entre clientes.'},
+   ]},
+  {name:'Alianzas BCI · Santander · Banco de Chile',cat:'Alianzas',color:C.alianza,
+   startDate:'1 Junio 2026',
+   bars:[
+     {start:1,end:1.5,label:'Jun · Propuesta formal a RRHH',tip:'Precio preferencial $10.000/corte con credencial del banco. Solo horarios de baja demanda. Link exclusivo de Bewe por institución.'},
+     {start:1.5,end:12,label:'Convenio activo',tip:'Meta: 1 banco en junio / 3 bancos en agosto.'},
+   ]},
+  {name:'Cortes a domicilio VIP · Shipday',cat:'Ventas',color:C.ventas,
+   startDate:'15 Junio 2026',
+   bars:[
+     {start:1.4,end:1.6,label:'15 Jun · Configurar Shipday',tip:'Asignar barbero VIP. Crear flujo de reserva en Bewe. Precio: $28.000–$28.000.'},
+     {start:1.6,end:12,label:'Servicio VIP activo',tip:'Tracking en tiempo real, notificación de llegada y review automático a Google.'},
+   ]},
+  {name:'Programa de referidos',cat:'Marketing',color:C.mkt,
+   startDate:'15 Junio 2026',
+   bars:[
+     {start:1.5,end:12,label:'15 Jun · Próximo corte a $8.000 por cada nuevo',tip:'Comunicar por WhatsApp masivo. Código de referido trackeado en Bewe.'},
+   ]},
+  {name:'Máquina de café operativa',cat:'Operaciones',color:C.ops,
+   startDate:'22 Junio 2026',
+   bars:[
+     {start:1.6,end:1.8,label:'22 Jun · Adquirir e instalar',tip:'Máquina automática capuchino/mocachino. $150.000–$400.000 CLP inversión única.'},
+     {start:1.8,end:12,label:'Café AM · Refresco PM',tip:'Costo por taza ~$300–400 CLP. Impacto directo en reseñas.'},
+   ]},
+  {name:'BarberPilot · Deploy en staging',cat:'BarberPilot',color:C.bp,
+   startDate:'1 Junio 2026',
+   bars:[
+     {start:1,end:1.5,label:'1–15 Jun · GitHub → Railway · .env',tip:'Conectar GitHub a Railway. Configurar OPENAI_API_KEY, BEWE_API_KEY, WHATSAPP_TOKEN, DATABASE_URL. Deploy automático desde rama develop.'},
+     {start:1.5,end:2,label:'15 Jun–Jul · Testing número real',tip:'Simular flujo completo con número de WhatsApp real. Ajustar system prompt.'},
+   ]},
+
+  {type:'sec',id:'m3',date:'Julio 2026',title:'Mes 3 — Consolidación + BarberPilot a producción'},
+
+  {name:'Meta 50 suscriptores',cat:'Ventas',color:C.ventas,
+   startDate:'1 Julio 2026',
+   bars:[
+     {start:2,end:2.25,label:'1 Jul · Campaña WhatsApp + RRSS',tip:'50 suscriptores = $1.000.000 CLP de ingresos recurrentes garantizados cada mes.'},
+   ]},
+  {name:'App móvil personalizada · Beweone',cat:'Tecnología',color:C.tech,
+   startDate:'15 Julio 2026',
+   bars:[
+     {start:2.5,end:2.75,label:'15 Jul · Activar y comunicar',tip:'Incluida en Beweone. Oferta especial a primeros 50 usuarios.'},
+     {start:2.75,end:12,label:'App activa',tip:'Notificaciones push, historial, agendamiento directo.'},
+   ]},
+  {name:'BarberPilot · Lanzamiento a PRODUCCIÓN',cat:'BarberPilot',color:C.bp,
+   startDate:'1 Julio 2026',
+   bars:[
+     {start:2,end:2.25,label:'1 Jul · Merge main → Deploy número oficial',tip:'Deploy automático al WhatsApp Business real. Activar QR físicos en todos los puestos. Monitoreo de logs en Railway.'},
+     {start:2.25,end:12,label:'Agente Virtual gestionando 100% walk-ins',tip:'El AV recibe, asigna barbero, confirma bebida y notifica al equipo automáticamente.'},
+   ]},
+  {name:'BarberPilot · Upselling automático activo',cat:'BarberPilot',color:C.bp,
+   startDate:'15 Julio 2026',
+   bars:[
+     {start:2.5,end:12,label:'15 Jul · Sugiere barba si historial es solo corte',tip:'El AV revisa el historial en Bewe y sugiere el combo al momento de asignar turno.'},
+   ]},
+
+  {type:'sec',id:'m4',date:'Agosto 2026',title:'Mes 4 — Expansión + Cierre primer trimestre'},
+
+  {name:'3er barbero (si ocupación >75%)',cat:'RRHH',color:C.rrhh,
+   startDate:'1 Agosto 2026',
+   bars:[
+     {start:3,end:3.25,label:'1 Ago · Incorporación condicional',tip:'Solo si el dashboard de Bewe muestra ocupación promedio superior al 75%.'},
+   ]},
+  {name:'Convenio universidades y ministerios',cat:'Alianzas',color:C.alianza,
+   startDate:'8 Agosto 2026',
+   bars:[
+     {start:3.25,end:3.6,label:'8 Ago · Propuesta institucional',tip:'INACAP, DUOC UC, U. de Chile, ministerios cercanos. Precio preferencial para empleados.'},
+   ]},
+  {name:'Primer video viral TikTok',cat:'Marketing',color:C.mkt,
+   startDate:'22 Agosto 2026',
+   bars:[
+     {start:3.5,end:4,label:'22 Ago · Timelapse · Transformación · Metro',tip:'¿Pasas por Metro U. de Chile? Estamos acá. Alto potencial orgánico sin presupuesto.'},
+   ]},
+
+  {type:'ms',pos:4/12,date:'31 Agosto 2026',label:'Cierre Fase 2',
+   detail:'6–7 barberos · 50+ suscriptores · 3 alianzas bancos · 8–12 mayoristas · App activa · 200 contactos · BarberPilot en producción'},
+
+  // ════ FASE 3 ════════════════════════════════════
+  {type:'phase',id:'fase3',name:'FASE 3 · Dominar el territorio',
+   period:'Septiembre 2026 – Abril 2027',color:C.p3,bs:4,be:12},
+
+  {type:'sec',id:'m56',date:'Sep–Oct 2026',title:'Meses 5–6 — Capacidad plena + Revisión del acuerdo'},
+
+  {name:'Smart Mirror · Mundial 2026 · Modo transmisión',cat:'Tecnología',color:C.tech,
+   startDate:'1 Sep 2026',
+   bars:[
+     {start:4,end:4.5,label:'Sep · Activar modo transmisión en espejos',tip:'El Mundial 2026 comienza en junio. Los Smart Mirrors muestran los partidos. El cliente ve el juego en el espejo mientras le cortan, con auriculares Bluetooth sanitizados. Diferenciador único en Santiago.'},
+   ]},
+  {name:'Smart Mirror · Expansión a 9 puestos',cat:'Tecnología',color:C.tech,
+   startDate:'1 Sep 2026',
+   bars:[
+     {start:4,end:5.5,label:'Sep–Oct · Instalar en todos los puestos',tip:'Con el piloto validado en julio, construir e instalar Smart Mirror en todos los puestos. Integración con BarberPilot: el espejo saluda al cliente por nombre cuando se sienta.'},
+     {start:5.5,end:12,label:'9 Smart Mirrors activos e integrados',tip:'Cada espejo muestra: bienvenida personalizada, producto del día, catálogo de estilos y contenido de entretenimiento según el horario.'},
+   ]},
+  {name:'AR · SDK Banuba personalizado en BarberPilot',cat:'Tecnología',color:C.tech,
+   startDate:'1 Oct 2026',
+   bars:[
+     {start:5,end:7,label:'Oct–Nov · Integración SDK AR con estilos propios',tip:'Integrar el SDK de Banuba o ModiFace en BarberPilot. El cliente prueba los estilos propios del local con el branding de la barbería. El look virtual puede compartirse en RRSS con el nombre del local.'},
+     {start:7,end:12,label:'AR personalizada activa',tip:'Catálogo AR con los estilos del local. Contenido de marketing generado automáticamente cuando los clientes comparten sus looks virtuales.'},
+   ]},
+
+  {name:'9 Barberos · Capacidad plena del local',cat:'RRHH',color:C.rrhh,
+   startDate:'1 Sep 2026',
+   bars:[
+     {start:4,end:5,label:'Sep · Incorporaciones hasta 9 puestos',tip:'Completar los puestos según demanda real del dashboard.'},
+     {start:5,end:12,label:'Equipo completo activo',tip:'9 barberos = capacidad máxima. Facturación de servicios más que duplicada.'},
+   ]},
+  {name:'Meta 100 suscriptores',cat:'Ventas',color:C.ventas,
+   startDate:'1 Sep 2026',
+   bars:[
+     {start:4,end:4.5,label:'Sep · Campaña especial',tip:'100 suscriptores = $2.000.000 CLP recurrentes garantizados por mes.'},
+     {start:4.5,end:12,label:'Base de suscriptores consolidada',tip:'El ingreso recurrente se convierte en el piso estable del negocio.'},
+   ]},
+  {name:'Revisión formal del acuerdo · Oct 2026',cat:'Operaciones',color:C.ops,
+   startDate:'1 Oct 2026',
+   bars:[
+     {start:5,end:5.25,label:'Oct · Presentar métricas · Evaluar ajustes',tip:'Reunión de revisión formal. Presentar crecimiento vs. baseline $7,3M. Evaluar ajustes al esquema de trabajo.'},
+   ]},
+  {name:'BP · Optimización con data real de producción',cat:'BarberPilot',color:C.bp,
+   startDate:'1 Sep 2026',
+   bars:[
+     {start:4,end:6,label:'Sep–Oct · Análisis de 2–3 meses en producción',tip:'Patrones reales: horarios peak, barberos solicitados, bebidas top, tasa de conversión upselling. Ajustar motor de asignación.'},
+   ]},
+
+  {type:'sec',id:'m79',date:'Nov 2026–Ene 2027',title:'Meses 7–9 — Nuevos servicios + BarberPilot como producto'},
+
+  {name:'Suscripción Gold · 2 cortes + 1 barba',cat:'Ventas',color:C.ventas,
+   startDate:'1 Nov 2026',
+   bars:[
+     {start:6,end:7,label:'Nov · Diseñar y lanzar plan Gold',tip:'2 cortes + 1 barba al mes por $28.000. Para el segmento de mayor frecuencia.'},
+     {start:7,end:12,label:'Plan Gold activo',tip:'Ticket más alto para el segmento más fiel.'},
+   ]},
+  {name:'Distribuidor oficial de productos capilares',cat:'Alianzas',color:C.alianza,
+   startDate:'1 Dic 2026',
+   bars:[
+     {start:7,end:8.5,label:'Dic–Ene · Negociar con proveedor',tip:'Con historial de volumen mayorista como argumento. Precio de distribuidor mejora el margen.'},
+   ]},
+  {name:'BarberPilot · Optimización con datos reales',cat:'BarberPilot',color:C.bp,
+   startDate:'1 Nov 2026',
+   bars:[
+     {start:6,end:9,label:'Nov–Ene · Ajuste con datos reales de producción',tip:'Con datos reales de producción, ajustar el motor de asignación de turnos, analizar patrones de demanda y mejorar la tasa de conversión del upselling automático.'},
+   ]},
+
+  {type:'sec',id:'m1012',date:'Feb–Abr 2027',title:'Meses 10–12 — Cierre de año + Plan Año 2'},
+
+  {name:'Campaña de fin de año',cat:'Marketing',color:C.mkt,
+   startDate:'1 Feb 2027',
+   bars:[
+     {start:9,end:11,label:'Feb–Mar · Tarjetas regalo · Cyber',tip:'Combos de regalo + suscripción. Descuentos en tienda online. Alto tráfico en el centro de Santiago.'},
+   ]},
+  {name:'Renovar alianzas corporativas · Año 2',cat:'Alianzas',color:C.alianza,
+   startDate:'1 Mar 2027',
+   bars:[
+     {start:10,end:12,label:'Mar–Abr · Presentar datos · Negociar',tip:'Usar los datos del año como argumento para renovar y mejorar las condiciones de cada alianza.'},
+   ]},
+  {name:'Reporte anual + Plan Año 2',cat:'Operaciones',color:C.ops,
+   startDate:'1 Abr 2027',
+   bars:[
+     {start:11,end:12,label:'Abr 2027 · Evaluación y proyección',tip:'Comparar facturación vs. baseline $7,3M. Propuesta: ¿segundo local? ¿franquicia del modelo operativo?'},
+   ]},
+  {name:'BarberPilot · Optimización año 2 y nuevas funcionalidades',cat:'BarberPilot',color:C.bp,
+   startDate:'1 Feb 2027',
+   bars:[
+     {start:9,end:12,label:'Feb–Abr · Ajuste y nuevas funcionalidades para año 2',tip:'Con 6 o más meses de datos reales, ajustar el agente virtual, implementar nuevas funcionalidades según el comportamiento real de los clientes y preparar el sistema para el año 2.'},
+   ]},
+
+  {type:'ms',pos:11.9/12,date:'30 Abril 2027',label:'Cierre Año 1',
+   detail:'9 barberos · 100 suscriptores · 5–8 alianzas · 500 contactos · Reporte anual entregado al equipo y plan año 2 presentado a Saúl Fino'},
+];
+
+// ── RENDER ───────────────────────────────────────────────
+function go(id,btn){
+  const el=document.getElementById(id);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  if(btn){document.querySelectorAll('.sb-ph').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+}
+
+function tip(e,t,c,b){
+  const tt=document.getElementById('tt');
+  document.getElementById('tt-t').textContent=t;
+  document.getElementById('tt-c').textContent=c;
+  document.getElementById('tt-b').textContent=b;
+  tt.style.display='block';
+}
+function hideTip(){document.getElementById('tt').style.display='none';}
+document.addEventListener('mousemove',e=>{
+  const tt=document.getElementById('tt');
+  if(tt.style.display==='block'){tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY+14)+'px';}
+});
+
+function vgrid(el,n){
+  for(let i=0;i<n;i++){
+    const v=document.createElement('div');v.className='vg';
+    v.style.left=(i/n*100)+'%';el.appendChild(v);
+  }
+}
+
+let curPhase=null;
+
+function buildGantt(){
+  const gb=document.getElementById('gb');
+  gb.innerHTML='';curPhase=null;
+  const z=ZOOMS[currentZoom];
+  const n=z.cols.length;
+
+  DATA.forEach(item=>{
+
+    if(item.type==='res-block'){
+      const rb=document.createElement('div');rb.className='res-block';
+      const rh=document.createElement('div');rh.className='res-hrow';
+      rh.innerHTML=`<span class="res-icon">${item.label.split('  ')[0]}</span>
+        <span class="res-ht">${item.label.split('  ')[1]||item.label}</span>`;
+      rb.appendChild(rh);
+      gb.appendChild(rb);curPhase=rb;return;
+    }
+
+    if(item.type==='phase'){
+      const b=document.createElement('div');b.className='pb';b.id=item.id;
+      const hr=document.createElement('div');hr.className='ph-hrow';
+      const ba=document.createElement('div');ba.className='ph-ba';
+      vgrid(ba,n);
+      const {l,w}=pBar(item.bs,item.be);
+      if(w>0){
+        const band=document.createElement('div');band.className='ph-band';
+        band.style.left=l+'%';band.style.width=w+'%';band.style.background=item.color;
+        ba.appendChild(band);
+        const info=document.createElement('div');info.className='ph-info';
+        info.style.left=l+'%';
+        info.innerHTML=`<span class="ph-dot" style="background:${item.color}"></span>
+          <span class="ph-name" style="color:${item.color}">${item.name}</span>
+          <span class="ph-per">${item.period}</span>`;
+        ba.appendChild(info);
+      }
+      hr.appendChild(ba);b.appendChild(hr);gb.appendChild(b);curPhase=b;return;
+    }
+
+    if(item.type==='sec'){
+      const r=document.createElement('div');r.className='sec';r.id=item.id;
+      r.innerHTML=`<span class="sec-d">${item.date}</span><span class="sec-t">${item.title}</span>`;
+      (curPhase||gb).appendChild(r);return;
+    }
+
+    if(item.type==='ms'){
+      const {l}=pBar(item.pos,item.pos);
+      if(l<0||l>100)return;
+      const mr=document.createElement('div');mr.className='ms-row';
+      const ml=document.createElement('div');ml.className='ms-line';ml.style.left=l+'%';mr.appendChild(ml);
+      const mf=document.createElement('div');mf.className='ms-flag';mf.style.left=l+'%';
+      mf.textContent=`${item.date}  —  ${item.label}`;
+      mf.addEventListener('mousemove',e=>tip(e,item.label,'Hito de cierre de etapa',item.detail));
+      mf.addEventListener('mouseleave',hideTip);mr.appendChild(mf);
+      (curPhase||gb).appendChild(mr);
+      const sp=document.createElement('div');sp.className='ms-sp';
+      (curPhase||gb).appendChild(sp);return;
+    }
+
+    // Track row — only show if any bar is visible in current zoom
+    const anyVisible=item.bars.some(b=>{
+      const {l,w}=pBar(b.start,b.end);
+      return l<100&&(l+w)>0;
+    });
+    if(!anyVisible)return;
+
+    const row=document.createElement('div');row.className='tr';
+    const ba=document.createElement('div');ba.className='tr-ba';
+    vgrid(ba,n);
+
+    // Side label
+    const sl=document.createElement('div');sl.className='sl';
+    const si=document.createElement('div');si.className='si';
+    si.style.borderLeftColor=item.color;si.style.color=item.color;
+    si.textContent=item.name;sl.appendChild(si);ba.appendChild(sl);
+
+    item.bars.forEach(b=>{
+      const {l,w}=pBar(b.start,b.end);
+      if(w<=0||l>=100||(l+w)<=0)return;
+      const bar=document.createElement('div');bar.className='bar';
+      bar.style.left=Math.max(0,l)+'%';
+      bar.style.width=Math.min(100-Math.max(0,l),w)+'%';
+      bar.style.background=item.color;
+      bar.textContent=b.label;
+      if(b.tip){
+        bar.addEventListener('mousemove',e=>tip(e,item.name,item.cat,b.tip));
+        bar.addEventListener('mouseleave',hideTip);
+      }
+      ba.appendChild(bar);
+    });
+
+    // Show start date if in zoom
+    if(item.startDate){
+      const sd=document.createElement('div');sd.className='bar-date';
+      sd.style.left='2px';
+      sd.textContent='⊙ '+item.startDate;
+      ba.appendChild(sd);
+    }
+
+    row.appendChild(ba);(curPhase||gb).appendChild(row);
+  });
+}
+
+function buildHeader(){
+  const tc=document.getElementById('tc');
+  tc.innerHTML='';
+  const z=ZOOMS[currentZoom];
+  z.cols.forEach(c=>{
+    const d=document.createElement('div');d.className='t-col';
+    d.style.minWidth=z.minColW+'px';
+    d.innerHTML=`<div class="t-col-m">${c.m}</div><div class="t-col-s">${c.s}</div>`;
+    tc.appendChild(d);
+  });
+}
+
+function buildTodayLine(){
+  const existing=document.getElementById('td-line');
+  if(existing)existing.remove();
+  const existing2=document.getElementById('td-label');
+  if(existing2)existing2.remove();
+  const existing3=document.getElementById('td-body');
+  if(existing3)existing3.remove();
+
+  const today=new Date();
+  document.getElementById('chip-t').textContent=
+    'Hoy: '+today.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'});
+  const elapsed=(today-START)/86400000;
+  const fracMonth=elapsed/(TOTAL/12);
+  const {l}=pBar(fracMonth,fracMonth);
+  if(l<0||l>100)return;
+
+  const isBefore=today<START;
+  const color=isBefore?'var(--gold)':'var(--p1)';
+  const lbl=isBefore?'INICIO: 1 MAY 2026':
+    'HOY '+today.toLocaleDateString('es-CL',{day:'2-digit',month:'short'}).toUpperCase();
+
+  setTimeout(()=>{
+    const th=document.getElementById('th');
+    const tc=document.getElementById('tc');
+    const gs=document.getElementById('gs');
+    const tcR=tc.getBoundingClientRect();
+    const thR=th.getBoundingClientRect();
+    const gsR=gs.getBoundingClientRect();
+    const leftH=tcR.left-thR.left+l/100*tcR.width;
+    const leftG=tcR.left-gsR.left+l/100*tcR.width;
+
+    const hl=document.createElement('div');hl.id='td-line';hl.className='td-ln';
+    hl.style.left=leftH+'px';hl.style.background=color;hl.style.height='100%';
+    const ht=document.createElement('div');ht.id='td-label';ht.className='td-lb';
+    ht.style.left=leftH+'px';ht.style.background=color;ht.textContent=lbl;
+    th.style.position='relative';th.appendChild(hl);th.appendChild(ht);
+
+    const bl=document.createElement('div');bl.id='td-body';
+    bl.style.cssText=`position:absolute;top:0;bottom:0;left:${leftG}px;
+      width:2px;background:${color};opacity:.15;pointer-events:none;z-index:5;`;
+    gs.style.position='relative';gs.appendChild(bl);
+  },80);
+}
+
+function setZoom(z){
+  currentZoom=z;
+  document.querySelectorAll('.zb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('zb-'+z).classList.add('on');
+  buildHeader();buildGantt();buildTodayLine();
+}
+
+// INIT
+buildHeader();buildGantt();buildTodayLine();
+</script>
+</body>
+</html>

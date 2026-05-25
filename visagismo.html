@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía de Visagismo · Salon Men Saúl Fino</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:   #0D1B2A;
+  --navy2:  #162033;
+  --navy3:  #1E2E42;
+  --red:    #C0392B;
+  --red2:   #E74C3C;
+  --gold:   #C49A28;
+  --white:  #F5F2EC;
+  --dim:    #8A9AAA;
+  --green:  #27AE60;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+  background: #E8E4DC;
+  font-family: 'Barlow', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* ── CARD ── */
+.card {
+  width: 900px;
+  background: var(--navy);
+  color: var(--white);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--navy2);
+  padding: 18px 28px 14px;
+  border-bottom: 3px solid var(--gold);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.header-left {}
+.header-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 3px;
+  color: var(--white);
+  line-height: 1;
+}
+.header-title span { color: var(--gold); }
+.header-sub {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 4px;
+}
+.header-badge {
+  background: var(--red);
+  padding: 8px 18px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: white;
+  white-space: nowrap;
+}
+.header-scissors {
+  font-size: 20px;
+  color: var(--gold);
+}
+
+/* ── TIPS BANNER ── */
+.tips-banner {
+  background: var(--gold);
+  padding: 8px 28px;
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tip-item {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11.5px;
+  color: var(--navy);
+  font-weight: 600;
+  letter-spacing: .3px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tip-item::before { content: '★'; font-size: 9px; }
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) repeat(2, 1fr);
+  gap: 0;
+}
+/* 3 columnas izquierda + separador visual implícito + 2 columnas derecha mas grandes */
+/* Override: 7 items = 3+4 o 4+3 layout */
+.grid {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: auto auto;
+}
+
+/* ── FACE CARD ── */
+.fc {
+  background: var(--navy2);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+.fc:nth-child(odd) { background: var(--navy2); }
+.fc:nth-child(even) { background: var(--navy3); }
+
+/* row 1: 4 cards */
+/* row 2: 3 cards centradas */
+.fc:nth-child(5) { grid-column: 1; }
+.fc:nth-child(6) { grid-column: 2; }
+.fc:nth-child(7) { grid-column: 3; }
+
+/* ── CARD HEADER ── */
+.fc-num {
+  position: absolute;
+  top: 10px; right: 12px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  color: rgba(255,255,255,0.06);
+  line-height: 1;
+}
+
+.fc-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* SVG Face */
+.face-svg {
+  width: 52px;
+  height: 62px;
+  flex-shrink: 0;
+}
+
+.fc-info {}
+.fc-type {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 1px;
+}
+.fc-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.fc-name.red    { color: var(--red2); }
+.fc-name.gold   { color: var(--gold); }
+.fc-name.blue   { color: #5DADE2; }
+.fc-name.green  { color: #2ECC71; }
+.fc-name.purple { color: #BB8FCE; }
+.fc-name.teal   { color: #48C9B0; }
+.fc-name.orange { color: #F0A500; }
+
+.fc-chars {
+  font-size: 10.5px;
+  color: var(--dim);
+  line-height: 1.5;
+  padding-left: 2px;
+  font-style: italic;
+}
+
+/* ── LISTS ── */
+.fc-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.list-block {}
+.list-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 6px;
+  margin-bottom: 4px;
+  border-radius: 1px;
+}
+.list-label.good { background: var(--green); color: white; }
+.list-label.bad  { background: var(--red);   color: white; }
+
+.list-items { list-style: none; }
+.list-items li {
+  font-size: 10.5px;
+  color: rgba(245,242,236,0.85);
+  padding: 2px 0 2px 14px;
+  position: relative;
+  line-height: 1.35;
+}
+.list-items.good li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-size: 9px;
+  top: 3px;
+}
+.list-items.bad li::before {
+  content: '✗';
+  position: absolute;
+  left: 0;
+  color: var(--red2);
+  font-size: 9px;
+  top: 3px;
+}
+
+/* ── DIVIDER ── */
+.row-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: .3;
+}
+
+/* ── FOOTER ── */
+.footer {
+  background: var(--navy2);
+  border-top: 2px solid rgba(255,255,255,0.06);
+  padding: 10px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--gold);
+}
+.footer-note {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+@media print {
+  body { background: white; padding: 0; }
+  .card { box-shadow: none; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-title">✂ GUÍA DE <span>VISAGISMO</span></div>
+      <div class="header-sub">Asesoría de imagen masculina · Los 7 tipos de rostro</div>
+    </div>
+    <div class="header-badge">Uso interno del equipo</div>
+  </div>
+
+  <!-- TIPS BANNER -->
+  <div class="tips-banner">
+    <div class="tip-item">Regla de los tercios: frente — nariz — mentón en proporciones iguales</div>
+    <div class="tip-item">Antes de mojar, observa hacia dónde nace el cabello (remolinos)</div>
+    <div class="tip-item">Siempre preguntar por lunares y verrugas antes de usar navaja</div>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid">
+
+    <!-- 1. REDONDO -->
+    <div class="fc">
+      <div class="fc-num">1</div>
+      <div class="fc-top">
+        <svg class="face-svg" viewBox="0 0 52 62" fill="none">
+          <!-- Rostro redondo -->
+          <ellipse cx="26" cy="32" rx="18" ry="20" fill="#2A3E55" stroke="#5DADE2" stroke-width="1.2"/>
+          <!-- orejas -->
+          <ellipse cx="8" cy="32" rx="3" ry="5" fill="#2A3E55" stroke="#5DADE2" stroke-width="1"/>
+          <ellipse cx="44" cy="32" rx="3" ry="5" fill="#2A3E55" stroke="#5DADE2" stroke-width="1"/>
+          <!-- cabello -->
+          <path d="M10 20 Q26 8 42 20" stroke="#C49A28" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- ojos -->
+          <ellipse cx="20" cy="27" rx="3" ry="2" fill="#5DADE2"/>
+          <ellipse cx="32" cy="27" rx="3" ry="2" fill="#5DADE2"/>
+          <!-- nariz -->
+          <path d="M24 32 Q26 36 28 32" stroke="#8A9AAA" stroke-width="1" fill="none"/>
+          <!-- boca -->
+          <path d="M20 40 Q26 44 32 40" stroke="#8A9AAA" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="fc-info">
+          <div class="fc-type">Tipo 1</div>
+          <div class="fc-name red">Redondo</div>
+          <div class="fc-chars">Ancho ≈ Largo · Pómulos amplios · Sin ángulos marcados</div>
+        </div>
+      </div>
+      <div class="fc-lists">
+        <div class="list-block">
+          <div class="list-label good">✓ Favorece</div>
+          <ul class="list-items good">
+            <li>Volumen en la cima</li>
+            <li>Degradado lateral</li>
+            <li>Textura despeinada</li>
+            <li>Pompadour</li>
+          </ul>
+        </div>
+        <div class="list-block">
+          <div class="list-label bad">✗ Evitar</div>
+          <ul class="list-items bad">
+            <li>Volumen en los lados</li>
+            <li>Flequillos muy largos</li>
+            <li>Cortes muy redondos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. CUADRADO -->
+    <div class="fc">
+      <div class="fc-num">2</div>
+      <div class="fc-top">
+        <svg class="face-svg" viewBox="0 0 52 62" fill="none">
+          <!-- Rostro cuadrado -->
+          <rect x="9" y="10" width="34" height="44" rx="5" fill="#2A3E55" stroke="#F0A500" stroke-width="1.2"/>
+          <!-- orejas -->
+          <rect x="5" y="26" width="5" height="10" rx="2" fill="#2A3E55" stroke="#F0A500" stroke-width="1"/>
+          <rect x="42" y="26" width="5" height="10" rx="2" fill="#2A3E55" stroke="#F0A500" stroke-width="1"/>
+          <!-- cabello recto -->
+          <rect x="9" y="10" width="34" height="8" rx="3" fill="#C49A28"/>
+          <!-- ojos -->
+          <ellipse cx="20" cy="27" rx="3" ry="2" fill="#F0A500"/>
+          <ellipse cx="32" cy="27" rx="3" ry="2" fill="#F0A500"/>
+          <!-- nariz -->
+          <path d="M24 33 Q26 37 28 33" stroke="#8A9AAA" stroke-width="1" fill="none"/>
+          <!-- boca -->
+          <path d="M19 43 Q26 47 33 43" stroke="#8A9AAA" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <!-- mandíbula línea -->
+          <line x1="9" y1="48" x2="43" y2="48" stroke="#F0A500" stroke-width="0.8" stroke-dasharray="2,2"/>
+        </svg>
+        <div class="fc-info">
+          <div class="fc-type">Tipo 2</div>
+          <div class="fc-name orange">Cuadrado</div>
+          <div class="fc-chars">Ancho ≈ Largo · Mandíbula marcada · Frente ancha</div>
+        </div>
+      </div>
+      <div class="fc-lists">
+        <div class="list-block">
+          <div class="list-label good">✓ Favorece</div>
+          <ul class="list-items good">
+            <li>Volumen en la cima</li>
+            <li>Textura despeinada</li>
+            <li>Flequillo lateral</li>
+            <li>Fade suave</li>
+          </ul>
+        </div>
+        <div class="list-block">
+          <div class="list-label bad">✗ Evitar</div>
+          <ul class="list-items bad">
+            <li>Volumen en los lados</li>
+            <li>Cortes muy rectos</li>
+            <li>Flequillos muy largos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. OVALADO -->
+    <div class="fc">
+      <div class="fc-num">3</div>
+      <div class="fc-top">
+        <svg class="face-svg" viewBox="0 0 52 62" fill="none">
+          <!-- Rostro ovalado — ideal -->
+          <ellipse cx="26" cy="32" rx="16" ry="22" fill="#2A3E55" stroke="#2ECC71" stroke-width="1.2"/>
+          <!-- orejas -->
+          <ellipse cx="10" cy="32" rx="3" ry="5" fill="#2A3E55" stroke="#2ECC71" stroke-width="1"/>
+          <ellipse cx="42" cy="32" rx="3" ry="5" fill="#2A3E55" stroke="#2ECC71" stroke-width="1"/>
+          <!-- cabello -->
+          <path d="M11 18 Q26 8 41 18" stroke="#C49A28" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- ojos -->
+          <ellipse cx="20" cy="27" rx="3" ry="2" fill="#2ECC71"/>
+          <ellipse cx="32" cy="27" rx="3" ry="2" fill="#2ECC71"/>
+          <!-- nariz -->
+          <path d="M24 32 Q26 36 28 32" stroke="#8A9AAA" stroke-width="1" fill="none"/>
+          <!-- boca -->
+          <path d="M20 42 Q26 46 32 42" stroke="#8A9AAA" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <!-- corona dorada (ideal) -->
+          <path d="M18 12 L20 8 L26 10 L32 8 L34 12" stroke="#C49A28" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="fc-info">
+          <div class="fc-type">Tipo 3 · Ideal</div>
+          <div class="fc-name green">Ovalado</div>
+          <div class="fc-chars">Largo > Ancho · Pómulos amplios · Proporciones equilibradas</div>
+        </div>
+      </div>
+      <div class="fc-lists">
+        <div class="list-block">
+          <div class="list-label good">✓ Favorece</div>
+          <ul class="list-items good">
+            <li>Cualquier estilo</li>
+            <li>Volumen lateral</li>
+            <li>Fade o degradado</li>
+            <li>Clásico o moderno</li>
+          </ul>
+        </div>
+        <div class="list-block">
+          <div class="list-label bad">✗ Evitar</div>
+          <ul class="list-items bad">
+            <li>Flequillos muy largos</li>
+            <li>Peinados hacia un lado muy marcados</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. RECTANGULAR -->
+    <div class="fc">
+      <div class="fc-num">4</div>
+      <div class="fc-top">
+        <svg class="face-svg" viewBox="0 0 52 62" fill="none">
+          <!-- Rostro rectangular -->
+          <rect x="11" y="6" width="30" height="50" rx="6" fill="#2A3E55" stroke="#BB8FCE" stroke-width="1.2"/>
+          <!-- orejas -->
+          <rect x="6" y="24" width="6" height="12" rx="2" fill="#2A3E55" stroke="#BB8FCE" stroke-width="1"/>
+          <rect x="40" y="24" width="6" height="12" rx="2" fill="#2A3E55" stroke="#BB8FCE" stroke-width="1"/>
+          <!-- cabello -->
+          <rect x="11" y="6" width="30" height="7" rx="3" fill="#C49A28"/>
+          <!-- ojos -->
+          <ellipse cx="20" cy="25" rx="3" ry="2" fill="#BB8FCE"/>
+          <ellipse cx="32" cy="25" rx="3" ry="2" fill="#BB8FCE"/>
+          <!-- nariz -->
+          <path d="M24 32 Q26 36 28 32" stroke="#8A9AAA" stroke-width="1" fill="none"/>
+          <!-- boca -->
+          <path d="M19 44 Q26 48 33 44" stroke="#8A9AAA" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="fc-info">
+          <div class="fc-type">Tipo 4</div>
+          <div class="fc-name purple">Rectangular</div>
+          <div class="fc-chars">Largo > Ancho · Pómulos amplios · Frente y mandíbula similares</div>
+        </div>
+      </div>
+      <div class="fc-lists">
+        <div class="list-block">
+          <div class="list-label good">✓ Favorece</div>
+          <ul class="list-items good">
+            <li>Volumen lateral</li>
+            <li>Flequillos largos</li>
+            <li>Pompadour alto</li>
+            <li>Flequillo estilo</li>
+          </ul>
+        </div>
+        <div class="list-block">
+          <div class="list-label bad">✗ Evitar</div>
+          <ul class="list-items bad">
+            <li>Cortes muy cortos arriba</li>
+            <li>Cortes muy rectos en mandíbula</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. DIAMANTE -->
+    <div class="fc">
+      <div class="fc-num">5</div>
+      <div class="fc-top">
+        <svg class="face-svg" viewBox="0 0 52 62" fill="none">
+          <!-- Rostro diamante -->
+          <polygon points="26,6 42,28 26,56 10,28" fill="#2A3E55" stroke="#5DADE2" stroke-width="1.2"/>
+          <!-- redondear visual -->
+          <ellipse cx="26" cy="30" rx="16" ry="24" fill="#2A3E55" stroke="#5DADE2" stroke-width="1.2"/>
+          <!-- pómulos amplios -->
+          <ellipse cx="8" cy="30" rx="4" ry="6" fill="#2A3E55" stroke="#5DADE2" stroke-width="0.8"/>
+          <ellipse cx="44" cy="30" rx="4" ry="6" fill="#2A3E55" stroke="#5DADE2" stroke-width="0.8"/>
+          <!-- cabello angosto arriba -->
+          <path d="M18 12 Q26 6 34 12" stroke="#C49A28" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- ojos -->
+          <ellipse cx="20" cy="27" rx="3" ry="2" fill="#5DADE2"/>
+          <ellipse cx="32" cy="27" rx="3" ry="2" fill="#5DADE2"/>
+          <!-- nariz -->
+          <path d="M24 33 Q26 37 28 33" stroke="#8A9AAA" stroke-width="1" fill="none"/>
+          <!-- boca / barbilla en punta -->
+          <path d="M20 42 Q26 46 32 42" stroke="#8A9AAA" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <path d="M24 48 L26 54 L28 48" stroke="#5DADE2" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="fc-info">
+          <div class="fc-type">Tipo 5</div>
+          <div class="fc-name blue">Diamante</div>
+          <div class="fc-chars">Pómulos muy anchos · Frente estrecha · Barbilla en punta</div>
+        </div>
+      </div>
+      <div class="fc-lists">
+        <div class="list-block">
+          <div class="list-label good">✓ Favorece</div>
+          <ul class="list-items good">
+            <li>Volumen lateral</li>
+            <li>Cortes muy cortos</li>
+            <li>Flequillo largo</li>
+          </ul>
+        </div>
+        <div class="list-block">
+          <div class="list-label bad">✗ Evitar</div>
+          <ul class="list-items bad">
+            <li>Cortes muy rectos</li>
+            <li>Pompadour muy alto</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. TRIANGULAR -->
+    <div class="fc">
+      <div class="fc-num">6</div>
+      <div class="fc-top">
+        <svg class="face-svg" viewBox="0 0 52 62" fill="none">
+          <!-- Rostro triangular — ancho abajo, estrecho arriba -->
+          <path d="M26 6 Q36 6 42 16 Q46 28 44 42 Q40 56 26 58 Q12 56 8 42 Q6 28 10 16 Q16 6 26 6Z" fill="#2A3E55" stroke="#48C9B0" stroke-width="1.2"/>
+          <!-- frente estrecha -->
+          <path d="M19 10 Q26 7 33 10" stroke="#C49A28" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- orejas -->
+          <ellipse cx="7" cy="32" rx="3" ry="5" fill="#2A3E55" stroke="#48C9B0" stroke-width="0.8"/>
+          <ellipse cx="45" cy="32" rx="3" ry="5" fill="#2A3E55" stroke="#48C9B0" stroke-width="0.8"/>
+          <!-- ojos -->
+          <ellipse cx="21" cy="24" rx="3" ry="2" fill="#48C9B0"/>
+          <ellipse cx="31" cy="24" rx="3" ry="2" fill="#48C9B0"/>
+          <!-- nariz -->
+          <path d="M24 32 Q26 36 28 32" stroke="#8A9AAA" stroke-width="1" fill="none"/>
+          <!-- boca / mandíbula ancha -->
+          <path d="M17 44 Q26 49 35 44" stroke="#8A9AAA" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <!-- mandíbula marcada -->
+          <path d="M10 42 Q26 54 42 42" stroke="#48C9B0" stroke-width="0.8" fill="none" stroke-dasharray="2,2"/>
+        </svg>
+        <div class="fc-info">
+          <div class="fc-type">Tipo 6</div>
+          <div class="fc-name teal">Triangular</div>
+          <div class="fc-chars">Frente estrecha · Mandíbula ancha · Se ensancha hacia abajo</div>
+        </div>
+      </div>
+      <div class="fc-lists">
+        <div class="list-block">
+          <div class="list-label good">✓ Favorece</div>
+          <ul class="list-items good">
+            <li>Volumen en la cima</li>
+            <li>Flequillos</li>
+            <li>Peinados hacia un lado</li>
+          </ul>
+        </div>
+        <div class="list-block">
+          <div class="list-label bad">✗ Evitar</div>
+          <ul class="list-items bad">
+            <li>Cortes rectos en mandíbula</li>
+            <li>Cortes muy cortos arriba</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. CORAZÓN -->
+    <div class="fc">
+      <div class="fc-num">7</div>
+      <div class="fc-top">
+        <svg class="face-svg" viewBox="0 0 52 62" fill="none">
+          <!-- Rostro corazón — ancho arriba, estrecho abajo -->
+          <path d="M26 58 Q12 46 8 32 Q6 18 12 12 Q18 8 26 9 Q34 8 40 12 Q46 18 44 32 Q40 46 26 58Z" fill="#2A3E55" stroke="#E74C3C" stroke-width="1.2"/>
+          <!-- frente ancha -->
+          <path d="M12 14 Q26 8 40 14" stroke="#C49A28" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- orejas -->
+          <ellipse cx="7" cy="26" rx="3" ry="5" fill="#2A3E55" stroke="#E74C3C" stroke-width="0.8"/>
+          <ellipse cx="45" cy="26" rx="3" ry="5" fill="#2A3E55" stroke="#E74C3C" stroke-width="0.8"/>
+          <!-- ojos -->
+          <ellipse cx="20" cy="24" rx="3" ry="2" fill="#E74C3C"/>
+          <ellipse cx="32" cy="24" rx="3" ry="2" fill="#E74C3C"/>
+          <!-- nariz -->
+          <path d="M24 31 Q26 35 28 31" stroke="#8A9AAA" stroke-width="1" fill="none"/>
+          <!-- boca pequeña / barbilla en punta -->
+          <path d="M21 40 Q26 44 31 40" stroke="#8A9AAA" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <path d="M23 50 L26 56 L29 50" stroke="#E74C3C" stroke-width="1" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="fc-info">
+          <div class="fc-type">Tipo 7</div>
+          <div class="fc-name red">Corazón</div>
+          <div class="fc-chars">Frente ancha · Pómulos prominentes · Barbilla en punta</div>
+        </div>
+      </div>
+      <div class="fc-lists">
+        <div class="list-block">
+          <div class="list-label good">✓ Favorece</div>
+          <ul class="list-items good">
+            <li>Volumen lateral</li>
+            <li>Flequillos largos</li>
+            <li>Peinados hacia un lado</li>
+          </ul>
+        </div>
+        <div class="list-block">
+          <div class="list-label bad">✗ Evitar</div>
+          <ul class="list-items bad">
+            <li>Cortes muy cortos arriba</li>
+            <li>Cortes muy cortos en general</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /grid -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-name">✂ Salon Men Saúl Fino</div>
+    <div class="footer-note">Galería Santiago Centro · Línea 1 Metro · Guía de uso interno</div>
+  </div>
+
+</div>
+
+</body>
+</html>

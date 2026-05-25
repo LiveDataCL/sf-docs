@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Facturación · Barbería Local 222</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --paper:#FAFAF7; --white:#FFFFFF; --ink:#191816; --ink2:#2A2420;
+  --muted:#4A4440; --rule:#E2DED8; --rule2:#F0EDE8;
+  --gold:#96740A; --gold-lt:#FBF5E2;
+  --c-servicios: #1A5A8A;
+  --c-arriendo:  #6B3FA0;
+  --c-productos: #1A7048;
+  --c-mayorista: #A06010;
+  --c-total:     #191816;
+  --up:#1A7048; --down:#AD2D1E; --neu:#96740A;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:13px;}
+.hdr{background:var(--white);border-bottom:2px solid var(--ink);padding:18px 24px 14px;
+  display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+.hdr h1{font-family:'Libre Baskerville',serif;font-size:clamp(18px,3vw,32px);
+  font-weight:700;color:var(--ink);line-height:1;}
+.hdr h1 em{font-style:italic;color:var(--gold);}
+.hdr-sub{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);margin-top:5px;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+  letter-spacing:1px;text-transform:uppercase;padding:4px 8px;border:1px solid;}
+.ch-s{border-color:var(--c-servicios);color:var(--c-servicios);background:#EEF4FA;}
+.ch-a{border-color:var(--c-arriendo);color:var(--c-arriendo);background:#F4EEF9;}
+.ch-p{border-color:var(--c-productos);color:var(--c-productos);background:#EEF7F2;}
+.ch-m{border-color:var(--c-mayorista);color:var(--c-mayorista);background:#FBF5E8;}
+.ch-t{border-color:var(--c-total);color:var(--c-total);background:#F2F0EC;}
+.baseline{background:var(--gold-lt);border-bottom:1px solid #D8C580;
+  padding:8px 24px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;}
+.bl-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);}
+.bl-label{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--gold);}
+.bl-val{font-weight:600;color:var(--ink);}
+.bl-sep{width:1px;height:16px;background:rgba(150,116,10,0.3);}
+.tab-nav{background:var(--white);border-bottom:1px solid var(--rule);
+  display:flex;padding:0 24px;gap:0;overflow-x:auto;}
+.tab{padding:10px 16px;font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  border-bottom:2px solid transparent;color:var(--muted);transition:all .2s;
+  white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;}
+.tab:hover{color:var(--ink);}
+.tab.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:500;}
+.main{padding:20px 24px;max-width:1300px;margin:0 auto;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:20px;}
+.kpi{background:var(--white);padding:14px 16px;}
+.kpi-top{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.kpi-swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.kpi-canal{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);}
+.kpi-val{font-family:'Libre Baskerville',serif;font-size:20px;font-weight:700;
+  color:var(--ink);line-height:1;}
+.kpi-plan{font-size:12px;color:var(--muted);margin-top:3px;}
+.kpi-diff{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;margin-top:3px;}
+.up{color:var(--up);} .dn{color:var(--down);} .neu{color:var(--neu);}
+.chart-card{background:var(--white);border:1px solid var(--rule);padding:18px;margin-bottom:20px;}
+.cc-title{font-family:'Libre Baskerville',serif;font-size:14px;font-weight:700;color:var(--ink);}
+.cc-sub{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);margin-top:3px;margin-bottom:14px;}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;}
+.cl{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink2);font-weight:500;}
+.cls{width:16px;height:3px;border-radius:2px;flex-shrink:0;}
+.chart-wrap{position:relative;height:320px;}
+.input-section{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;margin-bottom:20px;}
+.input-card{background:var(--white);border:1px solid var(--rule);overflow:hidden;}
+.ic-header{padding:12px 16px;border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:8px;}
+.ic-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ic-title{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;font-weight:500;}
+.ic-note{font-size:12px;color:var(--muted);padding:6px 16px 8px;
+  border-bottom:1px solid var(--rule2);font-style:italic;}
+.it{width:100%;border-collapse:collapse;}
+.it th{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--muted);text-align:left;
+  padding:7px 10px;border-bottom:1px solid var(--rule);background:var(--paper);}
+.it td{padding:5px 8px;border-bottom:1px solid var(--rule2);}
+.it tr:last-child td{border-bottom:none;}
+.it tr.cur td{background:var(--gold-lt);}
+.it tr.fut td{opacity:.45;}
+.td-mes{font-size:12px;color:var(--ink2);font-weight:500;white-space:nowrap;}
+.td-plan{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;white-space:nowrap;}
+.td-inp input{width:100%;border:1px solid var(--rule);background:var(--paper);
+  padding:3px 5px;font-family:'DM Mono',monospace;font-size:12px;
+  font-weight:500;text-align:right;color:var(--up);}
+.td-inp input:focus{outline:none;border-color:var(--up);background:white;}
+.td-inp input:disabled{color:var(--muted);background:transparent;border-color:transparent;}
+.td-diff{font-family:'DM Mono',monospace;font-size:12px;text-align:right;white-space:nowrap;}
+.btn-update{width:100%;padding:9px;background:var(--ink);color:white;
+  border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:2px;text-transform:uppercase;transition:background .15s;}
+.btn-update:hover{background:var(--gold);}
+.btn-wrap{padding:10px 16px 14px;}
+.detail-card{background:var(--white);border:1px solid var(--rule);padding:18px;margin-bottom:20px;}
+.dc-title{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+.dt{width:100%;border-collapse:collapse;font-size:12px;}
+.dt th{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--muted);text-align:left;
+  padding:8px 8px;border-bottom:2px solid var(--rule);}
+.dt th.r{text-align:right;}
+.dt td{padding:7px 8px;border-bottom:1px solid var(--rule2);}
+.dt td.r{text-align:right;font-family:'DM Mono',monospace;font-size:12px;}
+.dt tr.cur-row td{background:var(--gold-lt);}
+.bar-cell{width:80px;}
+.mini{height:5px;background:var(--rule2);border-radius:2px;overflow:hidden;}
+.mini-f{height:100%;border-radius:2px;}
+.alert{border-left:3px solid var(--gold);background:var(--gold-lt);
+  padding:12px 16px;margin-top:12px;font-size:12px;color:var(--ink2);line-height:1.65;}
+.alert strong{color:var(--gold);}
+@media(max-width:700px){
+  .hdr{padding:14px 16px 12px;}
+  .main{padding:14px 14px;}
+  .input-section{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div>
+    <h1>Dashboard de <em>Facturación</em></h1>
+    <div class="hdr-sub">Barbería · Local 222 · Galería Santiago Centro · 4 canales independientes · Mayo 2026 – Abril 2027</div>
+  </div>
+  <div class="chips">
+    <div class="chip ch-s">Servicios barbería</div>
+    <div class="chip ch-a">Spa Caballeros</div>
+    <div class="chip ch-p">Productos detalle</div>
+    <div class="chip ch-m">Mayorista</div>
+    <div class="chip ch-t">Total</div>
+  </div>
+</header>
+
+<div class="baseline">
+  <div class="bl-item">
+    <span class="bl-label">Baseline servicios</span>
+    <span class="bl-val">$6.500.000 / mes</span>
+  </div>
+  <div class="bl-sep"></div>
+  <div class="bl-item">
+    <span class="bl-label">Spa Caballeros</span>
+    <span class="bl-val">$0 hoy → activo desde Jul 2026</span>
+  </div>
+  <div class="bl-sep"></div>
+  <div class="bl-item">
+    <span class="bl-label">Baseline total actual</span>
+    <span class="bl-val" style="color:var(--down)">$6.500.000 / mes — Sin arriendo spa</span>
+  </div>
+  <div class="bl-sep"></div>
+  <div class="bl-item">
+    <span class="bl-label">Ticket promedio</span>
+    <span class="bl-val" id="blTicket">Cargando…</span>
+  </div>
+  <div class="bl-sep"></div>
+  <!-- FIX 1: Equipo actualizado con los 4 barberos reales -->
+  <div class="bl-item">
+    <span class="bl-label">Equipo actual</span>
+    <span class="bl-val">Didian · Emerson · Samuel · David</span>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab on" onclick="setTab('resumen')">Resumen general</button>
+  <button class="tab" onclick="setTab('servicios')">Servicios barbería</button>
+  <button class="tab" onclick="setTab('arriendo')">Arriendo spa</button>
+  <button class="tab" onclick="setTab('productos')">Productos detalle</button>
+  <button class="tab" onclick="setTab('mayorista')">Mayorista</button>
+  <button class="tab" onclick="setTab('ingreso')">Ingresar datos reales</button>
+</div>
+
+<div class="main" id="mainContent"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const MONTHS = [
+  'Mayo 2026','Jun 2026','Jul 2026','Ago 2026',
+  'Sep 2026','Oct 2026','Nov 2026','Dic 2026',
+  'Ene 2027','Feb 2027','Mar 2027','Abr 2027'
+];
+const SHORT = ['May','Jun','Jul','Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr'];
+const CUR = (() => {
+  const now = new Date(), start = new Date(2026,4,1);
+  return Math.max(0, Math.min(11, Math.floor((now - start)/(30.44*24*3600*1000))));
+})();
+
+const PLAN_S = [
+  6500000,8000000,9500000,11500000,13500000,15500000,
+  17000000,19000000,17000000,18500000,20000000,21500000,
+];
+const PLAN_A = [
+  0,0,200000,500000,900000,1400000,1800000,2200000,1500000,1800000,2100000,2500000,
+];
+const PLAN_P = [
+  0,150000,350000,600000,900000,1200000,1500000,2000000,1200000,1400000,1600000,1800000,
+];
+const PLAN_M = [
+  0,200000,500000,900000,1300000,1700000,2000000,2300000,1800000,2000000,2200000,2500000,
+];
+
+let REAL_S = new Array(12).fill(null);
+let REAL_A = new Array(12).fill(null);
+let REAL_P = new Array(12).fill(null);
+let REAL_M = new Array(12).fill(null);
+
+const API_URL_FACT = 'https://barberpilot-api-production.up.railway.app';
+const PLAN_BASE    = { year: 2026, month: 4 };
+
+function mesIdx(year, month){
+  return (year - PLAN_BASE.year) * 12 + (month - PLAN_BASE.month);
+}
+
+let _jornadasReales = [];
+
+// ─── FIX 2: Normalización de fechas desde la API ─────────────────────────────
+// La API puede devolver fechas en formato 'DD/MM/YYYY' (chileno) o 'YYYY-MM-DD' (ISO)
+// Esta función normaliza cualquier formato a 'YYYY-MM-DD' para comparación correcta
+function normalizarFecha(f){
+  if(!f) return '';
+  // Ya es ISO: YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}/.test(f)) return f.substring(0,10);
+  // Formato chileno: DD/MM/YYYY
+  if(/^\d{2}\/\d{2}\/\d{4}/.test(f)){
+    const [d,m,y] = f.split('/');
+    return `${y}-${m}-${d}`;
+  }
+  // Formato DD-MM-YYYY
+  if(/^\d{2}-\d{2}-\d{4}/.test(f)){
+    const [d,m,y] = f.split('-');
+    return `${y}-${m}-${d}`;
+  }
+  return f.substring(0,10);
+}
+
+function cargarRealDesdeApi(){
+  _jornadasReales = [];
+  const periodos = [];
+  for(let delta = 0; delta < 12; delta++){
+    const d = new Date(2026, 4 + delta, 1);
+    periodos.push({
+      periodo: d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'),
+      idx: mesIdx(d.getFullYear(), d.getMonth())
+    });
+  }
+
+  const promesas = periodos
+    .filter(p => p.idx >= 0 && p.idx < 12)
+    .map(p =>
+      fetch(API_URL_FACT + '/stats/mes/' + p.periodo)
+        .then(r => r.json())
+        .then(json => {
+          if(!json.ok || !json.datos || json.datos.length === 0) return;
+          // FIX: normalizar fecha antes de filtrar
+          const fechasValidas = json.datos.filter(r => {
+            const f = normalizarFecha(r.fecha || '');
+            return f >= '2026-05-01' && f <= '2027-04-30';
+          });
+          const facturado = fechasValidas.reduce((a,r) => a + (r.facturado||0), 0);
+          if(facturado > 0){
+            REAL_S[p.idx] = facturado;
+            if(p.periodo === periodoActual()){
+              // Solo incluir días con actividad real (excluye domingos y días sin apertura)
+              _jornadasReales = fechasValidas
+                .filter(r => (r.facturado || 0) > 0)
+                .map(r => ({
+                  fecha: normalizarFecha(r.fecha),
+                  servicios: r.servicios || 0,
+                  facturacion: r.facturado || 0
+                }));
+            }
+          }
+        })
+        .catch(() => {})
+    );
+
+  Promise.all(promesas).then(() => {
+    render();
+    renderProyeccion();
+    actualizarTicketPromedio();
+    actualizarKpiProy();
+    actualizarBadgeApi(true);
+  }).catch(() => actualizarBadgeApi(false));
+}
+
+// ─── FIX 3: Cálculo correcto de svc/día ──────────────────────────────────────
+// Usa días laborables transcurridos del mes actual (L-S excluyendo domingos)
+// en lugar del .length de jornadas retornadas por la API (que puede incluir
+// días sin servicios o tener distinto formato)
+function diasLaborablesTranscurridos(){
+  const hoy   = new Date();
+  const anio  = hoy.getFullYear();
+  const mes   = hoy.getMonth();     // 0-based
+  const diaHoy = hoy.getDate();
+  let count = 0;
+  for(let d = 1; d <= diaHoy; d++){
+    const dow = new Date(anio, mes, d).getDay(); // 0=dom, 6=sab
+    if(dow !== 0) count++; // lunes a sábado = día laboral del salón
+  }
+  return count;
+}
+
+function actualizarTicketPromedio(){
+  const el = document.getElementById('blTicket');
+  if(!el) return;
+  if(_jornadasReales.length === 0){ el.textContent = 'Sin datos'; return; }
+
+  const totSvc  = _jornadasReales.reduce((a,j) => a + j.servicios,   0);
+  const totFact = _jornadasReales.reduce((a,j) => a + j.facturacion, 0);
+  const tk = totSvc > 0 ? Math.round(totFact / totSvc) : 0;
+
+  // Días que el salón operó realmente: filas de la BD con al menos 1 servicio.
+  // Más preciso que el calendario porque refleja feriados, días libres, etc.
+  const diasOperados = _jornadasReales.filter(j => j.servicios > 0).length;
+  const svcDia = diasOperados > 0 ? (totSvc / diasOperados).toFixed(1) : 0;
+
+  el.textContent = '$' + tk.toLocaleString('es-CL') + ' · ' + svcDia + ' svc/día · ' + totSvc + ' svc totales';
+  el.style.color = tk >= 15000 ? 'var(--up)' : tk >= 12000 ? 'inherit' : 'var(--down)';
+}
+
+function calcProyeccionRealista(){
+  const dias = _jornadasReales.length;
+  if(dias === 0) return null;
+  const DIAS_MES = 26;
+  let jornadas = [..._jornadasReales].sort((a,b) => a.facturacion - b.facturacion);
+  if(dias >= 5) jornadas = jornadas.slice(1, -1);
+  const factProm = jornadas.reduce((a,j)=>a+j.facturacion,0) / jornadas.length;
+  const totReal  = _jornadasReales.reduce((a,j)=>a+j.facturacion,0);
+  const diasLab  = diasLaborablesTranscurridos();
+  const diasRest = Math.max(0, DIAS_MES - diasLab);
+  const proy     = Math.round(totReal + factProm * diasRest);
+  return { proy, totReal, factProm, dias: diasLab, diasRest, DIAS_MES };
+}
+
+function actualizarKpiProy(){
+  const elVal = document.getElementById('kpiProy');
+  const elSub = document.getElementById('kpiProySub');
+  if(!elVal || !elSub) return;
+  const p = calcProyeccionRealista();
+  if(!p){ elVal.textContent = '—'; return; }
+  const META  = 6500000;
+  const color = p.proy >= META ? 'var(--up)' : p.proy >= META*0.85 ? '#8b5e00' : 'var(--down)';
+  elVal.innerHTML = '<span style="color:'+color+'">'+fmtM(p.proy)+'</span>';
+  const pct = Math.round(p.proy/META*100);
+  elSub.innerHTML = pct+'% de la meta · '+p.diasRest+' días restantes · '
+    +'$'+Math.round(Math.max(0,META-p.totReal)/Math.max(1,p.diasRest)/1000)+'K/día necesario';
+}
+
+function periodoActual(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function renderProyeccion(){
+  const el = document.getElementById('proyeccionBox');
+  if(!el) return;
+
+  const diasLab = diasLaborablesTranscurridos();
+  if(diasLab === 0 || _jornadasReales.length === 0){
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Sin datos reales cargados — sincroniza con la BD</div>';
+    return;
+  }
+
+  const totSvc  = _jornadasReales.reduce((a,j) => a + j.servicios, 0);
+  const totFact = _jornadasReales.reduce((a,j) => a + j.facturacion, 0);
+  const factProm = totFact / diasLab;    // promedio por día laboral real
+  const tkProm   = totSvc > 0 ? Math.round(totFact / totSvc) : 0;
+  const svcDia   = (totSvc / diasLab).toFixed(1);
+
+  const diasMesTotal  = 26;
+  const diasRestantes = Math.max(0, diasMesTotal - diasLab);
+
+  const proyFact_A = Math.round(factProm * diasMesTotal);
+  const jorNorm = _jornadasReales.filter(j => j.servicios < 35);
+  const factNorm = jorNorm.length > 0 ? jorNorm.reduce((a,j)=>a+j.facturacion,0)/jorNorm.length : factProm;
+  const proyFact_B = Math.round(factNorm * diasMesTotal);
+
+  const metaMayo = 6500000;
+  const avancePct = Math.round(totFact / metaMayo * 100);
+  const barColor = avancePct >= 100 ? '#1a6b3a' : avancePct >= 70 ? '#c9a84c' : '#c0392b';
+  const _fmtM = v => v >= 1000000 ? '$' + (v/1000000).toFixed(2) + 'M' : '$' + Math.round(v/1000) + 'K';
+
+  el.innerHTML = `
+    <div style="padding:16px 20px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px">
+        📊 Proyección Mayo 2026 · ${diasLab} de ${diasMesTotal} días operados · ${svcDia} svc/día promedio
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        ${[
+          {l:'Real acumulado', v:_fmtM(totFact), s:totSvc+' servicios', c:'var(--ink)'},
+          {l:'Ticket promedio', v:'$'+tkProm.toLocaleString('es-CL'), s:'por servicio', c:'#8b5e00'},
+          {l:'Proyección A', v:_fmtM(proyFact_A), s:'ritmo actual · '+Math.round(proyFact_A/metaMayo*100)+'% meta', c: proyFact_A>=metaMayo?'#1a6b3a':'#c0392b'},
+          {l:'Proyección B', v:_fmtM(proyFact_B), s:'sin días VIP · '+Math.round(proyFact_B/metaMayo*100)+'% meta', c: proyFact_B>=metaMayo?'#1a6b3a':'#8b5e00'},
+        ].map(k=>`
+          <div style="background:#fff;border:1px solid var(--rule);border-radius:6px;padding:12px">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${k.l}</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${k.c}">${k.v}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">${k.s}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px">
+        <span>Avance vs meta mayo ($6.500.000)</span>
+        <span style="font-family:'DM Mono',monospace;font-weight:700;color:${barColor}">${_fmtM(totFact)} / $6.500.000 · ${avancePct}%</span>
+      </div>
+      <div style="height:10px;background:var(--rule);border-radius:5px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${Math.min(100,avancePct)}%;background:${barColor};border-radius:5px;transition:width .6s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">
+        Faltan <strong style="color:var(--ink)">$${Math.max(0,metaMayo-totFact).toLocaleString('es-CL')}</strong>
+        en ${diasRestantes} días hábiles →
+        necesitan <strong style="color:var(--ink)">$${diasRestantes>0?Math.round(Math.max(0,metaMayo-totFact)/diasRestantes).toLocaleString('es-CL'):0}/día</strong>
+        · equivale a <strong style="color:var(--ink)">${diasRestantes>0&&tkProm>0?Math.ceil(Math.max(0,metaMayo-totFact)/diasRestantes/tkProm):0} svc/día</strong>
+      </div>
+    </div>
+  `;
+}
+
+function actualizarBadgeApi(ok){
+  const el = document.getElementById('apiBadge');
+  if(!el) return;
+  el.textContent = ok ? '☁ BD conectada' : '⚠ Sin conexión';
+  el.style.background = ok ? '#e6f4ea' : '#fcebeb';
+  el.style.color = ok ? '#1a6b3a' : '#c0392b';
+}
+
+const PLAN_T = PLAN_S.map((v,i) => v + PLAN_A[i] + PLAN_P[i] + PLAN_M[i]);
+const realTotal = (i) => {
+  const s = REAL_S[i], a = REAL_A[i], p = REAL_P[i], m = REAL_M[i];
+  if(s===null&&a===null&&p===null&&m===null) return null;
+  return (s||0)+(a||0)+(p||0)+(m||0);
+};
+
+const CANALES = [
+  { key:'s', label:'Servicios barbería', color:'#1A5A8A', plan:PLAN_S, real:()=>REAL_S,
+    nota:'Cortes ($12.000) y combos con barba ($20.000). Crece con barberos nuevos, suscripciones y upselling de servicios adicionales. Este canal debe compensar los $780.000 del arriendo que ya no existe.' },
+  { key:'a', label:'Spa Caballeros',     color:'#6B3FA0', plan:PLAN_A, real:()=>REAL_A,
+    nota:'Servicios propios en el espacio trasero acondicionado: Black Mask ($10.000), Masaje craneal ($8.000), Facial carbón, Tratamiento capilar y más. Empieza en julio 2026 y crece con el catálogo.' },
+  { key:'p', label:'Productos detalle',  color:'#1A7048', plan:PLAN_P, real:()=>REAL_P,
+    nota:'Tienda Bewe + MercadoLibre + Marketplace FB. Empieza en junio y crece con el canal digital.' },
+  { key:'m', label:'Mayorista',          color:'#A06010', plan:PLAN_M, real:()=>REAL_M,
+    nota:'Distribución a salones de la galería y alrededores. Pago al contado, sin crédito.' },
+];
+
+function fmt(n){
+  if(n===null||n===undefined) return '—';
+  return '$'+Math.round(n).toLocaleString('es-CL');
+}
+function fmtM(n){ return n===null?'—':'$'+(n/1000000).toFixed(2)+'M'; }
+function diffClass(d){ return d===null?'neu':d>=0?'up':'dn'; }
+
+let currentTab = 'resumen';
+let mainChart = null;
+
+function setTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(b=>{
+    b.classList.toggle('on', b.textContent.toLowerCase().includes(
+      tab==='resumen'?'resumen':tab==='servicios'?'servici':
+      tab==='arriendo'?'arriendo':tab==='productos'?'producto':
+      tab==='mayorista'?'mayorista':'ingresar'
+    ));
+  });
+  render();
+}
+
+function render(){
+  const el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  if(mainChart){ mainChart.destroy(); mainChart=null; }
+  if(currentTab==='resumen') renderResumen(el);
+  else if(currentTab==='ingreso') renderIngreso(el);
+  else {
+    const c = CANALES.find(x=>x.key===currentTab[0])||
+              CANALES.find(x=>currentTab.includes(x.key));
+    if(c) renderCanal(el, c);
+  }
+}
+
+// ─── RESUMEN ─────────────────────────────────────────────────────────────────
+function renderResumen(el){
+  const kpiGrid = document.createElement('div');
+  kpiGrid.className = 'kpi-grid';
+
+  const allCanales = [...CANALES, {
+    key:'t', label:'Total general', color:'#191816',
+    plan:PLAN_T, real:()=>({[0]:realTotal(0),[1]:realTotal(1),[2]:realTotal(2),[3]:realTotal(3),
+      [4]:realTotal(4),[5]:realTotal(5),[6]:realTotal(6),[7]:realTotal(7),
+      [8]:realTotal(8),[9]:realTotal(9),[10]:realTotal(10),[11]:realTotal(11)})
+  }];
+
+  allCanales.forEach(c=>{
+    const realArr = c.key==='t'
+      ? MONTHS.map((_,i)=>realTotal(i))
+      : c.real();
+    const lastRealIdx = [...Array(CUR+1).keys()].reverse().find(i=>realArr[i]!==null);
+    const lastReal = lastRealIdx!==undefined ? realArr[lastRealIdx] : null;
+    const lastPlan = c.plan[lastRealIdx!==undefined?lastRealIdx:CUR];
+    const diff = lastReal!==null ? lastReal-lastPlan : null;
+    const dClass = diffClass(diff);
+
+    let proyHtml = '';
+    if((c.key === 's' || c.key === 't') && lastReal > 0){
+      const META      = 6500000;
+      const diasLab   = diasLaborablesTranscurridos();
+      const diasMes   = 26;
+      const diasRest  = Math.max(0, diasMes - diasLab);
+      const proy      = diasLab > 0 ? Math.round(lastReal / diasLab * diasMes) : 0;
+      const pctProy   = Math.round(proy  / META * 100);
+      const pctReal   = Math.round(lastReal / META * 100);
+      const color     = proy >= META ? 'var(--up)' : proy >= META*0.8 ? '#8b5e00' : 'var(--down)';
+      proyHtml = `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Proyectado a fin de mes</div>
+        <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${color}">${fmtM(proy)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${pctProy}% de la meta · ${diasRest} días restantes</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px">Acumulado: ${fmtM(lastReal)} · ${pctReal}% de la meta</div>
+      </div>`;
+    }
+
+    const kpi = document.createElement('div');
+    kpi.className = 'kpi';
+    kpi.innerHTML = `
+      <div class="kpi-top">
+        <span class="kpi-swatch" style="background:${c.color}"></span>
+        <span class="kpi-canal">${c.label}</span>
+      </div>
+      <div class="kpi-val">${lastReal!==null?fmtM(lastReal):'Sin datos'}</div>
+      <div class="kpi-plan">Plan ${lastRealIdx!==undefined?SHORT[lastRealIdx]:'actual'}: ${fmtM(lastPlan)}</div>
+      ${diff!==null?`<div class="kpi-diff ${dClass}">${diff>=0?'▲':'▼'} ${fmt(Math.abs(diff))}</div>`:''}
+      ${proyHtml}
+    `;
+    kpiGrid.appendChild(kpi);
+  });
+  el.appendChild(kpiGrid);
+
+  const chartCard = document.createElement('div');
+  chartCard.className = 'chart-card';
+  const legendHtml = CANALES.map(c=>`
+    <div class="cl"><div class="cls" style="background:${c.color};opacity:.35"></div><span style="color:${c.color}">${c.label} (plan)</span></div>
+    <div class="cl"><div class="cls" style="background:${c.color}"></div><span style="color:${c.color}">${c.label} (real)</span></div>
+  `).join('');
+  chartCard.innerHTML = `
+    <div class="cc-title">Facturación por canal — Plan vs. Real</div>
+    <div class="cc-sub">4 canales independientes · Mayo 2026 – Abril 2027</div>
+    <div class="chart-legend" style="gap:10px;flex-wrap:wrap;">${legendHtml}
+      <div class="cl"><div class="cls" style="background:#191816;opacity:.5"></div><span>Total plan</span></div>
+      <div class="cl"><div class="cls" style="background:#191816"></div><span>Total real</span></div>
+    </div>
+    <div class="chart-wrap"><canvas id="mainChartCanvas"></canvas></div>
+    <div class="alert" style="margin-top:12px;">
+      <strong>Clave de lectura:</strong> El arriendo del spa ya no existe — el nuevo canal "Spa Caballeros" son servicios propios que arrancan en julio 2026. El baseline real de mayo es $6.500.000 (solo servicios). Cada canal se mide de forma independiente.
+    </div>
+  `;
+  el.appendChild(chartCard);
+
+  setTimeout(()=>{
+    const ctx = document.getElementById('mainChartCanvas').getContext('2d');
+    const datasets = [];
+    CANALES.forEach(c=>{
+      const realArr = c.real();
+      datasets.push({label:c.label+' plan',data:c.plan,borderColor:c.color,borderWidth:1.5,
+        borderDash:[5,3],pointRadius:0,fill:false,tension:0.3,type:'line',order:3});
+      datasets.push({label:c.label+' real',data:Object.values({...new Array(12).fill(null),...realArr}),
+        backgroundColor:c.color+'BB',borderColor:c.color,borderWidth:1,borderRadius:2,type:'bar',order:2});
+    });
+    datasets.push({label:'Total plan',data:PLAN_T,borderColor:'#191816',borderWidth:2,
+      borderDash:[6,3],pointRadius:3,pointBackgroundColor:'#191816',fill:false,tension:0.2,type:'line',order:1});
+    datasets.push({label:'Total real',data:MONTHS.map((_,i)=>realTotal(i)),borderColor:'#191816',
+      borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#191816',fill:false,tension:0.2,type:'line',order:0});
+    mainChart = new Chart(ctx, {
+      type:'bar', data:{labels:SHORT,datasets},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#191816',titleColor:'#E8C97A',
+          bodyColor:'rgba(255,255,255,0.85)',padding:10,cornerRadius:3,
+          callbacks:{label(ctx){const v=ctx.raw;if(v===null||v===undefined)return null;return`${ctx.dataset.label}: ${fmt(v)}`;}}
+        }},
+        scales:{
+          x:{stacked:false,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:'DM Mono,monospace',size:9},color:'#4A4440'}},
+          y:{stacked:false,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:'DM Mono,monospace',size:9},color:'#4A4440',
+            callback:v=>v>=1000000?'$'+(v/1000000).toFixed(0)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v}}
+        }
+      }
+    });
+  }, 50);
+
+  renderSummaryTable(el);
+}
+
+// ─── CANAL DETAIL ─────────────────────────────────────────────────────────────
+function renderCanal(el, c){
+  const realArr = c.real();
+  const kpiGrid = document.createElement('div');
+  kpiGrid.className = 'kpi-grid';
+  kpiGrid.style.gridTemplateColumns = 'repeat(auto-fit,minmax(180px,1fr))';
+  const totalPlan = c.plan.reduce((a,b)=>a+b,0);
+  const totalReal = Object.values(realArr).filter(v=>v!==null).reduce((a,b)=>a+b,0);
+  const doneMonths = Object.values(realArr).filter(v=>v!==null).length;
+  const planToDate = c.plan.slice(0,doneMonths).reduce((a,b)=>a+b,0);
+  const lastRealIdx = [...Array(CUR+1).keys()].reverse().find(i=>realArr[i]!==null);
+  const lastReal = lastRealIdx!==undefined?realArr[lastRealIdx]:null;
+  const lastPlan = lastRealIdx!==undefined?c.plan[lastRealIdx]:c.plan[CUR];
+  const kpis = [
+    {lbl:'Último mes registrado',val:fmtM(lastReal),sub:`Plan: ${fmtM(lastPlan)}`,diff:lastReal!==null?lastReal-lastPlan:null},
+    {lbl:'Acumulado real',val:fmtM(totalReal||null),sub:`Plan acumulado: ${fmtM(planToDate)}`,diff:totalReal>0?totalReal-planToDate:null},
+    {lbl:'Meses con datos',val:doneMonths+'/12',sub:`${((doneMonths/12)*100).toFixed(0)}% del año registrado`,diff:null},
+    {lbl:'Meta anual proyectada',val:fmtM(totalPlan),sub:'Suma de los 12 meses planificados',diff:null},
+    {lbl:'Real acumulado total',val:fmtM(REAL_S.reduce((a,v)=>a+(v||0),0)),sub:'Barbería · cargado desde BD',diff:null},
+    {lbl:'Proyectado cierre mayo',val:'<span id="kpiProy">—</span>',sub:'<span id="kpiProySub">según ritmo real</span>',diff:null},
+  ];
+  kpis.forEach(k=>{
+    const kpi=document.createElement('div');kpi.className='kpi';
+    const dc=diffClass(k.diff);
+    kpi.innerHTML=`
+      <div class="kpi-top"><span class="kpi-swatch" style="background:${c.color}"></span>
+        <span class="kpi-canal">${k.lbl}</span></div>
+      <div class="kpi-val">${k.val||'—'}</div>
+      <div class="kpi-plan">${k.sub}</div>
+      ${k.diff!==null?`<div class="kpi-diff ${dc}">${k.diff>=0?'▲':'▼'} ${fmt(Math.abs(k.diff))}</div>`:''}
+    `;
+    kpiGrid.appendChild(kpi);
+  });
+  el.appendChild(kpiGrid);
+
+  // Proyección box
+  const proyBox = document.createElement('div');
+  proyBox.id = 'proyeccionBox';
+  proyBox.style.cssText = 'background:var(--white);border:1px solid var(--rule);margin-bottom:20px;';
+  proyBox.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Calculando proyección…</div>';
+  el.appendChild(proyBox);
+  setTimeout(renderProyeccion, 100);
+
+  const note=document.createElement('div');note.className='alert';note.style.marginBottom='16px';
+  note.innerHTML=`<strong>${c.label}:</strong> ${c.nota}`;el.appendChild(note);
+
+  const chartCard=document.createElement('div');chartCard.className='chart-card';
+  chartCard.innerHTML=`
+    <div class="cc-title">${c.label} — Plan vs. Real</div>
+    <div class="cc-sub">${MONTHS[0]} – ${MONTHS[11]}</div>
+    <div class="chart-legend">
+      <div class="cl"><div class="cls" style="background:${c.color};opacity:.35"></div><span style="color:${c.color}">Plan</span></div>
+      <div class="cl"><div class="cls" style="background:${c.color}"></div><span style="color:${c.color}">Real</span></div>
+    </div>
+    <div class="chart-wrap"><canvas id="canalChart"></canvas></div>
+  `;
+  el.appendChild(chartCard);
+
+  setTimeout(()=>{
+    const ctx=document.getElementById('canalChart').getContext('2d');
+    mainChart=new Chart(ctx,{type:'bar',
+      data:{labels:SHORT,datasets:[
+        {label:'Plan',data:c.plan,backgroundColor:c.color+'25',borderColor:c.color+'80',borderWidth:1.5,borderRadius:2,order:2},
+        {label:'Real',data:Object.values({...new Array(12).fill(null),...realArr}),backgroundColor:c.color+'CC',borderColor:c.color,borderWidth:1,borderRadius:2,order:1},
+        {label:'Plan (línea)',data:c.plan,type:'line',borderColor:c.color,borderWidth:1.5,borderDash:[5,3],pointRadius:0,fill:false,tension:0.3,order:0},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#191816',titleColor:'#E8C97A',
+          bodyColor:'rgba(255,255,255,0.85)',padding:10,cornerRadius:3,
+          callbacks:{
+            label(ctx){const v=ctx.raw;if(v===null||v===undefined)return null;return`${ctx.dataset.label}: ${fmt(v)}`;},
+            afterBody(items){const i=items[0]?.dataIndex;const plan=c.plan[i];const real=realArr[i];
+              if(real!==null&&real!==undefined){const d=real-plan;return[`Diferencia: ${d>=0?'+':''}${fmt(d)} (${((d/plan)*100).toFixed(1)}%)`];}return[];}
+          }
+        }},
+        scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:'DM Mono,monospace',size:9},color:'#4A4440'}},
+          y:{grid:{color:'rgba(0,0,0,0.04)'},beginAtZero:true,ticks:{font:{family:'DM Mono,monospace',size:9},color:'#4A4440',
+            callback:v=>v>=1000000?'$'+(v/1000000).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v}}}
+      }
+    });
+  },50);
+
+  const detail=document.createElement('div');detail.className='detail-card';
+  const maxPlan=Math.max(...c.plan);
+  let rows='';
+  MONTHS.forEach((m,i)=>{
+    const plan=c.plan[i],real=realArr[i],diff=real!==null?real-plan:null;
+    const pct=diff!==null?(diff/plan*100):null;
+    const isCur=i===CUR&&real===null;
+    const barW=(plan/maxPlan*100).toFixed(0);
+    const realW=real!==null?Math.min((real/maxPlan*100),100).toFixed(0):0;
+    rows+=`<tr class="${isCur?'cur-row':''}">
+      <td class="td-mes">${m}${isCur?' ◀':''}</td>
+      <td class="r" style="color:${c.color};font-weight:600">${fmt(plan)}</td>
+      <td class="r">${real!==null?`<span style="color:${c.color};font-weight:600">${fmt(real)}</span>`:'<span style="color:var(--muted)">'+(i<=CUR?'Sin datos':'—')+'</span>'}</td>
+      <td class="r ${diffClass(diff)}">${diff!==null?(diff>=0?'+':'')+fmt(diff):'—'}</td>
+      <td class="r ${diffClass(diff)}">${pct!==null?(pct>=0?'+':'')+pct.toFixed(1)+'%':'—'}</td>
+      <td class="bar-cell">
+        <div class="mini"><div class="mini-f" style="width:${barW}%;background:${c.color}25"></div></div>
+        ${real!==null?`<div class="mini" style="margin-top:2px"><div class="mini-f" style="width:${realW}%;background:${c.color}"></div></div>`:''}
+      </td>
+    </tr>`;
+  });
+  detail.innerHTML=`
+    <div class="dc-title">${c.label} · Detalle mensual</div>
+    <table class="dt">
+      <thead><tr>
+        <th>Mes</th><th class="r">Plan</th><th class="r">Real</th>
+        <th class="r">Diferencia</th><th class="r">% vs Plan</th><th class="r">Barra</th>
+      </tr></thead><tbody>${rows}</tbody>
+    </table>
+  `;
+  el.appendChild(detail);
+}
+
+// ─── INGRESO DE DATOS ─────────────────────────────────────────────────────────
+function renderIngreso(el){
+  const infoBox=document.createElement('div');infoBox.className='alert';infoBox.style.marginBottom='16px';
+  infoBox.innerHTML='<strong>Instrucciones:</strong> Ingresa los datos reales de cada canal al cerrar el mes. Solo los meses transcurridos están habilitados.';
+  el.appendChild(infoBox);
+  const grid=document.createElement('div');grid.className='input-section';
+  CANALES.forEach(c=>{
+    const realArr=c.real();const card=document.createElement('div');card.className='input-card';
+    let rows='';
+    MONTHS.forEach((m,i)=>{
+      const isFut=i>CUR,isCur=i===CUR,realVal=realArr[i];
+      const diff=realVal!==null?realVal-c.plan[i]:null;const dc=diffClass(diff);
+      rows+=`<tr class="${isCur?'cur':''}${isFut?' fut':''}">
+        <td class="td-mes">${SHORT[i]}${isCur?' ◀':''}</td>
+        <td class="td-plan" style="color:${c.color}">${fmt(c.plan[i])}</td>
+        <td class="td-inp"><input type="number" id="${c.key}_${i}" placeholder="${isFut?'—':'0'}"
+          ${isFut?'disabled':''} value="${realVal!==null?realVal:''}"
+          onchange="saveReal('${c.key}',${i},this.value)"></td>
+        <td class="td-diff ${dc}">${diff!==null?(diff>=0?'+':'')+fmt(diff):'—'}</td>
+      </tr>`;
+    });
+    card.innerHTML=`
+      <div class="ic-header">
+        <span class="ic-dot" style="background:${c.color}"></span>
+        <span class="ic-title" style="color:${c.color}">${c.label}</span>
+      </div>
+      <div class="ic-note">${c.nota}</div>
+      <table class="it"><thead><tr><th>Mes</th><th>Plan</th><th>Real (CLP)</th><th>Dif.</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <div class="btn-wrap"><button class="btn-update" onclick="updateAll()">Actualizar gráficos</button></div>
+    `;
+    grid.appendChild(card);
+  });
+  el.appendChild(grid);
+}
+
+// ─── SUMMARY TABLE ────────────────────────────────────────────────────────────
+function renderSummaryTable(el){
+  const card=document.createElement('div');card.className='detail-card';
+  const maxTotal=Math.max(...PLAN_T);
+  let rows='';
+  MONTHS.forEach((m,i)=>{
+    const ps=PLAN_S[i],pa=PLAN_A[i],pp=PLAN_P[i],pm=PLAN_M[i],pt=PLAN_T[i];
+    const rs=REAL_S[i],ra=REAL_A[i],rp=REAL_P[i],rm=REAL_M[i];
+    const rt=realTotal(i);
+    const isCur=i===CUR&&rt===null;
+    const diffT=rt!==null?rt-pt:null;
+    const bW=(pt/maxTotal*100).toFixed(0);
+    const rW=rt!==null?Math.min((rt/maxTotal*100),100).toFixed(0):0;
+    const hasHidden=rt!==null&&((rs!==null&&rs<ps)||(ra!==null&&ra<pa)||(rp!==null&&rp<pp)||(rm!==null&&rm<pm));
+    rows+=`<tr class="${isCur?'cur-row':''}">
+      <td class="td-mes">${m}${isCur?' ◀':''}${hasHidden?` <span style="color:var(--down);font-size:9px" title="Algún canal por debajo del plan">⚠</span>`:''}</td>
+      <td class="r"><span style="color:var(--c-servicios);font-size:9px">${rs!==null?fmt(rs):(i<=CUR?'?':'—')}</span></td>
+      <td class="r"><span style="color:var(--c-arriendo);font-size:9px">${ra!==null?fmt(ra):(i<=CUR?'?':'—')}</span></td>
+      <td class="r"><span style="color:var(--c-productos);font-size:9px">${rp!==null?fmt(rp):(i<=CUR?'?':'—')}</span></td>
+      <td class="r"><span style="color:var(--c-mayorista);font-size:9px">${rm!==null?fmt(rm):(i<=CUR?'?':'—')}</span></td>
+      <td class="r" style="font-weight:700">${rt!==null?fmt(rt):fmt(pt)+' (plan)'}</td>
+      <td class="r ${diffClass(diffT)}">${diffT!==null?(diffT>=0?'+':'')+fmt(diffT):'—'}</td>
+      <td class="bar-cell">
+        <div class="mini"><div class="mini-f" style="width:${bW}%;background:#19181620"></div></div>
+        ${rt!==null?`<div class="mini" style="margin-top:2px"><div class="mini-f" style="width:${rW}%;background:#191816"></div></div>`:''}
+      </td>
+    </tr>`;
+  });
+  card.innerHTML=`
+    <div class="dc-title">Resumen mensual por canal — Plan y Real</div>
+    <table class="dt">
+      <thead>
+        <tr>
+          <th>Mes</th>
+          <th class="r" style="color:var(--c-servicios)">Servicios</th>
+          <th class="r" style="color:var(--c-arriendo)">Arriendo</th>
+          <th class="r" style="color:var(--c-productos)">Productos</th>
+          <th class="r" style="color:var(--c-mayorista)">Mayorista</th>
+          <th class="r">Total</th><th class="r">Dif. total</th><th class="r">Barra</th>
+        </tr>
+        <tr style="background:var(--rule2)">
+          <th style="font-size:7.5px;color:var(--muted)">PLANES →</th>
+          <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-servicios)">${fmtM(PLAN_S[CUR])}</th>
+          <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-arriendo)">${fmtM(PLAN_A[CUR])}</th>
+          <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-productos)">${fmtM(PLAN_P[CUR])}</th>
+          <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-mayorista)">${fmtM(PLAN_M[CUR])}</th>
+          <th class="r" style="font-family:'DM Mono';font-size:7.5px">${fmtM(PLAN_T[CUR])}</th>
+          <th colspan="2"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="alert" style="margin-top:12px;">
+      <strong>⚠ Alerta de canal:</strong> El símbolo ⚠ indica que aunque el total esté en línea, al menos un canal individual está por debajo de su plan.
+    </div>
+  `;
+  el.appendChild(card);
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+function saveReal(canal, i, val){
+  const n=parseFloat(val),v=isNaN(n)||val===''?null:n;
+  if(canal==='s') REAL_S[i]=v;
+  else if(canal==='a') REAL_A[i]=v;
+  else if(canal==='p') REAL_P[i]=v;
+  else if(canal==='m') REAL_M[i]=v;
+}
+
+function updateAll(){
+  CANALES.forEach(c=>{
+    for(let i=0;i<=CUR;i++){
+      const el=document.getElementById(`${c.key}_${i}`);
+      if(el){
+        const v=parseFloat(el.value),n=isNaN(v)||el.value===''?null:v;
+        if(c.key==='s') REAL_S[i]=n;
+        else if(c.key==='a') REAL_A[i]=n;
+        else if(c.key==='p') REAL_P[i]=n;
+        else if(c.key==='m') REAL_M[i]=n;
+      }
+    }
+  });
+  if(mainChart){mainChart.destroy();mainChart=null;}
+  render();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+render();
+setTimeout(cargarRealDesdeApi, 800);
+</script>
+</body>
+</html>
