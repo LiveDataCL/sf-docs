@@ -266,19 +266,25 @@ function cargarRealDesdeApi(){
             const f = normalizarFecha(r.fecha || '');
             return f >= '2026-05-01' && f <= '2027-04-30';
           });
-          const facturado = fechasValidas.reduce((a,r) => a + (r.facturado||0), 0);
-          if(facturado > 0){
-            REAL_S[p.idx] = facturado;
+          // Split barbería services vs product sales (sid LIKE 'p%')
+          // Fallback to r.facturado when API is pre-split (backwards compat)
+          const facturadoSvc  = fechasValidas.reduce((a,r) => a + (r.facturado_servicios ?? r.facturado ?? 0), 0);
+          const facturadoProd = fechasValidas.reduce((a,r) => a + (r.facturado_productos || 0), 0);
+          if(facturadoSvc > 0){
+            REAL_S[p.idx] = facturadoSvc;
             if(p.periodo === periodoActual()){
-              // Solo incluir días con actividad real (excluye domingos y días sin apertura)
+              // Solo incluir filas con servicios de barbería (excluye filas solo-producto)
               _jornadasReales = fechasValidas
-                .filter(r => (r.facturado || 0) > 0)
+                .filter(r => (r.facturado_servicios ?? r.facturado ?? 0) > 0)
                 .map(r => ({
                   fecha: normalizarFecha(r.fecha),
-                  servicios: r.servicios || 0,
-                  facturacion: r.facturado || 0
+                  servicios: r.servicios_reales ?? r.servicios ?? 0,
+                  facturacion: r.facturado_servicios ?? r.facturado ?? 0
                 }));
             }
+          }
+          if(facturadoProd > 0){
+            REAL_P[p.idx] = facturadoProd;
           }
         })
         .catch(() => {})
@@ -447,7 +453,7 @@ const CANALES = [
   { key:'a', label:'Spa Caballeros',     color:'#6B3FA0', plan:PLAN_A, real:()=>REAL_A,
     nota:'Servicios propios en el espacio trasero acondicionado: Black Mask ($10.000), Masaje craneal ($8.000), Facial carbón, Tratamiento capilar y más. Empieza en julio 2026 y crece con el catálogo.' },
   { key:'p', label:'Productos detalle',  color:'#1A7048', plan:PLAN_P, real:()=>REAL_P,
-    nota:'Tienda Bewe + MercadoLibre + Marketplace FB. Empieza en junio y crece con el canal digital.' },
+    nota:'Venta directa en local (Ceras Modeladoras Media y Fuerte · $8.500 c/u) + Tienda Bewe + MercadoLibre + Marketplace FB. Las ventas de ceras registradas en el Sistema de Control se contabilizan aquí automáticamente.' },
   { key:'m', label:'Mayorista',          color:'#A06010', plan:PLAN_M, real:()=>REAL_M,
     nota:'Distribución a salones de la galería y alrededores. Pago al contado, sin crédito.' },
 ];
