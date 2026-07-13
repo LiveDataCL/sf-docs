@@ -143,7 +143,7 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
 <div class="baseline">
   <div class="bl-item">
     <span class="bl-label">Baseline servicios</span>
-    <span class="bl-val">$6.500.000 / mes</span>
+    <span class="bl-val" id="blMetaServicios">—</span>
   </div>
   <div class="bl-sep"></div>
   <div class="bl-item">
@@ -153,7 +153,7 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
   <div class="bl-sep"></div>
   <div class="bl-item">
     <span class="bl-label">Baseline total actual</span>
-    <span class="bl-val" style="color:var(--down)">$6.500.000 / mes — sin Academia de Barberos (aún no confirmada)</span>
+    <span class="bl-val" id="blMetaTotal" style="color:var(--down)">—</span>
   </div>
   <div class="bl-sep"></div>
   <div class="bl-item">
@@ -303,14 +303,25 @@ function cargarRealDesdeApi(){
           if(facturadoSvc > 0){
             REAL_S[p.idx] = facturadoSvc;
             if(p.periodo === periodoActual()){
-              // Solo incluir filas con servicios de barbería (excluye filas solo-producto)
-              _jornadasReales = fechasValidas
+              // ─── FIX: agrupar por fecha única antes de armar _jornadasReales ───
+              // GET /stats/mes/:periodo agrupa por (fecha, bid, bnom, pago) — cada
+              // día real tiene VARIAS filas (un barbero con dos formas de pago en
+              // el mismo día ya genera 2 filas), no una. Contar filas como si
+              // fueran días inflaba diasOperados brutalmente (confirmado contra
+              // producción: 100 filas para solo 11 fechas únicas en julio 2026),
+              // lo que hacía svc/día colapsar a ~2.6 en vez de ~24. Se agrupa y
+              // suma servicios/facturación por fecha real antes de construir
+              // _jornadasReales, para que cada entrada sea un día real completo.
+              const porFecha = {};
+              fechasValidas
                 .filter(r => (r.facturado_servicios ?? r.facturado ?? 0) > 0)
-                .map(r => ({
-                  fecha: normalizarFecha(r.fecha),
-                  servicios: r.servicios_reales ?? r.servicios ?? 0,
-                  facturacion: r.facturado_servicios ?? r.facturado ?? 0
-                }));
+                .forEach(r => {
+                  const f = normalizarFecha(r.fecha);
+                  if(!porFecha[f]) porFecha[f] = { fecha: f, servicios: 0, facturacion: 0 };
+                  porFecha[f].servicios   += (r.servicios_reales ?? r.servicios ?? 0);
+                  porFecha[f].facturacion += (r.facturado_servicios ?? r.facturado ?? 0);
+                });
+              _jornadasReales = Object.values(porFecha);
             }
           }
           if(facturadoProd > 0){
@@ -532,7 +543,20 @@ function setTab(tab){
   render();
 }
 
+// ─── FIX: baseline del header ya no era texto estático ───────────────────────
+// "Baseline servicios" y "Baseline total actual" quedaron como literal
+// "$6.500.000 / mes" — el 4to lugar hardcodeado, que se cayó al "3 places" de
+// la ronda 1. Ahora se actualiza cada vez que PLAN_S/PLAN_T se recalculan,
+// igual que el resto de los elementos dinámicos de esta página.
+function actualizarBaselineHeader(){
+  const elS = document.getElementById('blMetaServicios');
+  const elT = document.getElementById('blMetaTotal');
+  if(elS) elS.textContent = fmt(PLAN_S[CUR]) + ' / mes';
+  if(elT) elT.textContent = fmt(PLAN_T[CUR]) + ' / mes — sin Academia de Barberos (aún no confirmada)';
+}
+
 function render(){
+  actualizarBaselineHeader();
   const el = document.getElementById('mainContent');
   el.innerHTML = '';
   if(mainChart){ mainChart.destroy(); mainChart=null; }
