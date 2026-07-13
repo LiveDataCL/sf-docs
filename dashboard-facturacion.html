@@ -14,7 +14,6 @@
   --c-servicios: #1A5A8A;
   --c-arriendo:  #6B3FA0;
   --c-productos: #1A7048;
-  --c-mayorista: #A06010;
   --c-total:     #191816;
   --up:#1A7048; --down:#AD2D1E; --neu:#96740A;
 }
@@ -34,7 +33,6 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
 .ch-s{border-color:var(--c-servicios);color:var(--c-servicios);background:#EEF4FA;}
 .ch-a{border-color:var(--c-arriendo);color:var(--c-arriendo);background:#F4EEF9;}
 .ch-p{border-color:var(--c-productos);color:var(--c-productos);background:#EEF7F2;}
-.ch-m{border-color:var(--c-mayorista);color:var(--c-mayorista);background:#FBF5E8;}
 .ch-t{border-color:var(--c-total);color:var(--c-total);background:#F2F0EC;}
 .baseline{background:var(--gold-lt);border-bottom:1px solid #D8C580;
   padding:8px 24px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;}
@@ -132,13 +130,12 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
 <header class="hdr">
   <div>
     <h1>Dashboard de <em>Facturación</em></h1>
-    <div class="hdr-sub">Barbería · Local 222 · Galería Santiago Centro · 4 canales independientes · Mayo 2026 – Abril 2027</div>
+    <div class="hdr-sub">Barbería · Local 222 · Galería Santiago Centro · 3 canales independientes · Mayo 2026 – Abril 2027</div>
   </div>
   <div class="chips">
     <div class="chip ch-s">Servicios barbería</div>
-    <div class="chip ch-a">Spa Caballeros</div>
+    <div class="chip ch-a">Academia de Barberos (futuro)</div>
     <div class="chip ch-p">Productos detalle</div>
-    <div class="chip ch-m">Mayorista</div>
     <div class="chip ch-t">Total</div>
   </div>
 </header>
@@ -150,13 +147,13 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
   </div>
   <div class="bl-sep"></div>
   <div class="bl-item">
-    <span class="bl-label">Spa Caballeros</span>
-    <span class="bl-val">$0 hoy → activo desde Jul 2026</span>
+    <span class="bl-label">Academia de Barberos (futuro)</span>
+    <span class="bl-val" style="color:var(--muted)">$0 — canal futuro, sin fecha de inicio confirmada</span>
   </div>
   <div class="bl-sep"></div>
   <div class="bl-item">
     <span class="bl-label">Baseline total actual</span>
-    <span class="bl-val" style="color:var(--down)">$6.500.000 / mes — Sin arriendo spa</span>
+    <span class="bl-val" style="color:var(--down)">$6.500.000 / mes — sin Academia de Barberos (aún no confirmada)</span>
   </div>
   <div class="bl-sep"></div>
   <div class="bl-item">
@@ -164,19 +161,18 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
     <span class="bl-val" id="blTicket">Cargando…</span>
   </div>
   <div class="bl-sep"></div>
-  <!-- FIX 1: Equipo actualizado con los 4 barberos reales -->
+  <!-- FIX: Equipo actualizado con los 4 barberos reales (incluye Steven, faltaba pese al comentario previo) -->
   <div class="bl-item">
     <span class="bl-label">Equipo actual</span>
-    <span class="bl-val">Didian · Emerson · Samuel</span>
+    <span class="bl-val">Didian · Emerson · Samuel · Steven</span>
   </div>
 </div>
 
 <div class="tab-nav">
   <button class="tab on" onclick="setTab('resumen')">Resumen general</button>
   <button class="tab" onclick="setTab('servicios')">Servicios barbería</button>
-  <button class="tab" onclick="setTab('arriendo')">Arriendo spa</button>
+  <button class="tab" onclick="setTab('arriendo')">Academia de Barberos</button>
   <button class="tab" onclick="setTab('productos')">Productos detalle</button>
-  <button class="tab" onclick="setTab('mayorista')">Mayorista</button>
   <button class="tab" onclick="setTab('ingreso')">Ingresar datos reales</button>
 </div>
 
@@ -195,24 +191,58 @@ const CUR = (() => {
   return Math.max(0, Math.min(11, Math.floor((now - start)/(30.44*24*3600*1000))));
 })();
 
-const PLAN_S = [
-  6500000,8000000,9500000,11500000,13500000,15500000,
-  17000000,19000000,17000000,18500000,20000000,21500000,
-];
-const PLAN_A = [
-  0,0,200000,500000,900000,1400000,1800000,2200000,1500000,1800000,2100000,2500000,
-];
-const PLAN_P = [
-  0,150000,350000,600000,900000,1200000,1500000,2000000,1200000,1400000,1600000,1800000,
-];
-const PLAN_M = [
-  0,200000,500000,900000,1300000,1700000,2000000,2300000,1800000,2000000,2200000,2500000,
-];
+// ─── FIX: meta dinámica +10% MoM, reemplaza la curva optimista hardcodeada ────
+// Antes: 12 valores tipeados a mano escalando hasta $21.500.000 (irreal, nunca
+// validado contra desempeño real). Ahora: se genera desde el baseline
+// confirmado de mayo ($6.500.000) creciendo 10% mes a mes — una meta de
+// crecimiento sostenido, no una proyección de "mejor caso".
+//
+// FIX (2026-07-13, corrección de César): la meta de cada mes es +10% sobre el
+// ÚLTIMO MES QUE EFECTIVAMENTE CUMPLIÓ su propia meta — no sobre el mes
+// inmediatamente anterior sin condición. Un mes fallido no baja las metas
+// futuras, pero tampoco compone una penalización extra encima del
+// crecimiento perdido: el ancla simplemente no avanza ese mes, y el mes
+// siguiente repite la misma meta hasta que un mes real la alcance.
+//
+// PLAN_S se MUTA en el mismo array (asignación por índice dentro de
+// actualizarMetaS()), nunca se reasigna — CANALES guarda una referencia
+// directa a este array, y reasignarlo rompería esa referencia en silencio.
+// actualizarMetaS() debe volver a llamarse (junto con actualizarPlanT())
+// cada vez que REAL_S cambia: ver cargarRealDesdeApi() y updateAll().
+const META_FLOOR            = 6500000; // piso base pre-mayo — ancla inicial
+const TASA_CRECIMIENTO_META = 0.10;
+const PLAN_S = new Array(12).fill(0);
+
+function actualizarMetaS(){
+  let ancla = META_FLOOR;
+  for(let i=0;i<12;i++){
+    const meta = Math.round(ancla*(1+TASA_CRECIMIENTO_META));
+    PLAN_S[i] = meta;
+    if(REAL_S[i]!==null && REAL_S[i]>=meta) ancla = REAL_S[i];
+  }
+}
+
+// Academia de Barberos (futuro): canal aún no confirmado por César — sin
+// fecha de inicio ni plan numérico comprometido. Cero en todos los meses
+// hasta que haya una decisión concreta (antes: "Spa Caballeros", con un plan
+// optimista ya tipeado para un canal que ni siquiera había arrancado).
+const PLAN_A = new Array(12).fill(0);
+
+// Productos (minoreo): César confirmó explícitamente que permanece en $0
+// hasta activar la tienda — sin meta comprometida todavía. REAL_P sigue
+// auto-poblándose desde la API en vivo sin cambios; solo el lado PLAN va a
+// cero (antes tenía una rampa optimista hasta $1.800.000/mes sin confirmar).
+const PLAN_P = new Array(12).fill(0);
+
+// Mayorista eliminado por completo (2026-07-13, a pedido de César) — no solo
+// puesto en cero. Ver sf-docs/TECH_DEBT.md / git log de este archivo si se
+// necesita recuperar la lógica original (PLAN_M, REAL_M, CANALES key 'm').
 
 let REAL_S = new Array(12).fill(null);
 let REAL_A = new Array(12).fill(null);
 let REAL_P = new Array(12).fill(null);
-let REAL_M = new Array(12).fill(null);
+
+actualizarMetaS(); // llamada inicial — con REAL_S aún todo null, es la curva +10% pura desde META_FLOOR
 
 const API_URL_FACT = 'https://barberpilot-api-production.up.railway.app';
 const PLAN_BASE    = { year: 2026, month: 4 };
@@ -223,7 +253,7 @@ function mesIdx(year, month){
 
 let _jornadasReales = [];
 
-// ─── FIX 2: Normalización de fechas desde la API ─────────────────────────────
+// ─── Normalización de fechas desde la API ────────────────────────────────────
 // La API puede devolver fechas en formato 'DD/MM/YYYY' (chileno) o 'YYYY-MM-DD' (ISO)
 // Esta función normaliza cualquier formato a 'YYYY-MM-DD' para comparación correcta
 function normalizarFecha(f){
@@ -261,7 +291,7 @@ function cargarRealDesdeApi(){
         .then(r => r.json())
         .then(json => {
           if(!json.ok || !json.datos || json.datos.length === 0) return;
-          // FIX: normalizar fecha antes de filtrar
+          // Normalizar fecha antes de filtrar
           const fechasValidas = json.datos.filter(r => {
             const f = normalizarFecha(r.fecha || '');
             return f >= '2026-05-01' && f <= '2027-04-30';
@@ -291,6 +321,10 @@ function cargarRealDesdeApi(){
     );
 
   Promise.all(promesas).then(() => {
+    // REAL_S acaba de cambiar (recién llenado desde la API) — recalcular la
+    // meta adaptativa y el total antes de renderizar con los nuevos datos.
+    actualizarMetaS();
+    actualizarPlanT();
     render();
     renderProyeccion();
     actualizarTicketPromedio();
@@ -299,21 +333,32 @@ function cargarRealDesdeApi(){
   }).catch(() => actualizarBadgeApi(false));
 }
 
-// ─── FIX 3: Cálculo correcto de svc/día ──────────────────────────────────────
-// Usa días laborables transcurridos del mes actual (L-S excluyendo domingos)
-// en lugar del .length de jornadas retornadas por la API (que puede incluir
-// días sin servicios o tener distinto formato)
-function diasLaborablesTranscurridos(){
-  const hoy   = new Date();
-  const anio  = hoy.getFullYear();
-  const mes   = hoy.getMonth();     // 0-based
-  const diaHoy = hoy.getDate();
-  let count = 0;
-  for(let d = 1; d <= diaHoy; d++){
+// ─── FIX: coeficiente real de sábado (0.536) reemplaza el supuesto de "26
+// días" fijo por mes ────────────────────────────────────────────────────────
+// Domingo sigue cerrado (peso 0); el resto de los días pesa 1.0; sábado pesa
+// 0.536 — cifra empírica confirmada contra el desempeño real (3.92 vs 7.31
+// servicios/barbero-activo), la misma que ya usa tenant_calendar_config en
+// barberpilot-api. Se habla de "jornadas equivalentes" en vez de "días" para
+// que el total del mes de referencia dependa de cuántos sábados caen ese mes
+// en particular, en vez de un "26" fijo aplicado por igual a todos los meses.
+const SAT_COEF = 0.536;
+function jornadasEquivalentes(anio, mes, hastaDia){
+  const diasEnMes = new Date(anio, mes+1, 0).getDate();
+  const limite = hastaDia || diasEnMes;
+  let total = 0;
+  for(let d = 1; d <= limite; d++){
     const dow = new Date(anio, mes, d).getDay(); // 0=dom, 6=sab
-    if(dow !== 0) count++; // lunes a sábado = día laboral del salón
+    if(dow === 0) continue;                       // domingo cerrado
+    total += (dow === 6) ? SAT_COEF : 1.0;
   }
-  return count;
+  return total;
+}
+function diasLaborablesTranscurridos(){
+  const hoy = new Date();
+  return jornadasEquivalentes(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+}
+function jornadasEquivalentesDelMes(anio, mes){
+  return jornadasEquivalentes(anio, mes);
 }
 
 function actualizarTicketPromedio(){
@@ -337,7 +382,8 @@ function actualizarTicketPromedio(){
 function calcProyeccionRealista(){
   const dias = _jornadasReales.length;
   if(dias === 0) return null;
-  const DIAS_MES = 26;
+  const hoy = new Date();
+  const DIAS_MES = jornadasEquivalentesDelMes(hoy.getFullYear(), hoy.getMonth());
   let jornadas = [..._jornadasReales].sort((a,b) => a.facturacion - b.facturacion);
   if(dias >= 5) jornadas = jornadas.slice(1, -1);
   const factProm = jornadas.reduce((a,j)=>a+j.facturacion,0) / jornadas.length;
@@ -354,11 +400,11 @@ function actualizarKpiProy(){
   if(!elVal || !elSub) return;
   const p = calcProyeccionRealista();
   if(!p){ elVal.textContent = '—'; return; }
-  const META  = 6500000;
+  const META  = PLAN_S[CUR];
   const color = p.proy >= META ? 'var(--up)' : p.proy >= META*0.85 ? '#8b5e00' : 'var(--down)';
   elVal.innerHTML = '<span style="color:'+color+'">'+fmtM(p.proy)+'</span>';
   const pct = Math.round(p.proy/META*100);
-  elSub.innerHTML = pct+'% de la meta · '+p.diasRest+' días restantes · '
+  elSub.innerHTML = pct+'% de la meta · '+p.diasRest.toFixed(1)+' jornadas restantes · '
     +'$'+Math.round(Math.max(0,META-p.totReal)/Math.max(1,p.diasRest)/1000)+'K/día necesario';
 }
 
@@ -379,11 +425,12 @@ function renderProyeccion(){
 
   const totSvc  = _jornadasReales.reduce((a,j) => a + j.servicios, 0);
   const totFact = _jornadasReales.reduce((a,j) => a + j.facturacion, 0);
-  const factProm = totFact / diasLab;    // promedio por día laboral real
+  const factProm = totFact / diasLab;    // promedio por jornada equivalente real
   const tkProm   = totSvc > 0 ? Math.round(totFact / totSvc) : 0;
   const svcDia   = (totSvc / diasLab).toFixed(1);
 
-  const diasMesTotal  = 26;
+  const hoy = new Date();
+  const diasMesTotal  = jornadasEquivalentesDelMes(hoy.getFullYear(), hoy.getMonth());
   const diasRestantes = Math.max(0, diasMesTotal - diasLab);
 
   const proyFact_A = Math.round(factProm * diasMesTotal);
@@ -391,22 +438,22 @@ function renderProyeccion(){
   const factNorm = jorNorm.length > 0 ? jorNorm.reduce((a,j)=>a+j.facturacion,0)/jorNorm.length : factProm;
   const proyFact_B = Math.round(factNorm * diasMesTotal);
 
-  const metaMayo = 6500000;
-  const avancePct = Math.round(totFact / metaMayo * 100);
+  const metaMes = PLAN_S[CUR];
+  const avancePct = Math.round(totFact / metaMes * 100);
   const barColor = avancePct >= 100 ? '#1a6b3a' : avancePct >= 70 ? '#c9a84c' : '#c0392b';
   const _fmtM = v => v >= 1000000 ? '$' + (v/1000000).toFixed(2) + 'M' : '$' + Math.round(v/1000) + 'K';
 
   el.innerHTML = `
     <div style="padding:16px 20px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px">
-        📊 Proyección Mayo 2026 · ${diasLab} de ${diasMesTotal} días operados · ${svcDia} svc/día promedio
+        📊 Proyección ${MONTHS[CUR]} · ${diasLab.toFixed(1)} de ${diasMesTotal.toFixed(1)} jornadas equivalentes · ${svcDia} svc/día promedio
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
         ${[
           {l:'Real acumulado', v:_fmtM(totFact), s:totSvc+' servicios', c:'var(--ink)'},
           {l:'Ticket promedio', v:'$'+tkProm.toLocaleString('es-CL'), s:'por servicio', c:'#8b5e00'},
-          {l:'Proyección A', v:_fmtM(proyFact_A), s:'ritmo actual · '+Math.round(proyFact_A/metaMayo*100)+'% meta', c: proyFact_A>=metaMayo?'#1a6b3a':'#c0392b'},
-          {l:'Proyección B', v:_fmtM(proyFact_B), s:'sin días VIP · '+Math.round(proyFact_B/metaMayo*100)+'% meta', c: proyFact_B>=metaMayo?'#1a6b3a':'#8b5e00'},
+          {l:'Proyección A', v:_fmtM(proyFact_A), s:'ritmo actual · '+Math.round(proyFact_A/metaMes*100)+'% meta', c: proyFact_A>=metaMes?'#1a6b3a':'#c0392b'},
+          {l:'Proyección B', v:_fmtM(proyFact_B), s:'sin días VIP · '+Math.round(proyFact_B/metaMes*100)+'% meta', c: proyFact_B>=metaMes?'#1a6b3a':'#8b5e00'},
         ].map(k=>`
           <div style="background:#fff;border:1px solid var(--rule);border-radius:6px;padding:12px">
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${k.l}</div>
@@ -416,17 +463,17 @@ function renderProyeccion(){
         `).join('')}
       </div>
       <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px">
-        <span>Avance vs meta mayo ($6.500.000)</span>
-        <span style="font-family:'DM Mono',monospace;font-weight:700;color:${barColor}">${_fmtM(totFact)} / $6.500.000 · ${avancePct}%</span>
+        <span>Avance vs meta ${MONTHS[CUR]} (${fmt(metaMes)})</span>
+        <span style="font-family:'DM Mono',monospace;font-weight:700;color:${barColor}">${_fmtM(totFact)} / ${fmt(metaMes)} · ${avancePct}%</span>
       </div>
       <div style="height:10px;background:var(--rule);border-radius:5px;overflow:hidden;margin-bottom:8px">
         <div style="height:100%;width:${Math.min(100,avancePct)}%;background:${barColor};border-radius:5px;transition:width .6s"></div>
       </div>
       <div style="font-size:11px;color:var(--muted)">
-        Faltan <strong style="color:var(--ink)">$${Math.max(0,metaMayo-totFact).toLocaleString('es-CL')}</strong>
-        en ${diasRestantes} días hábiles →
-        necesitan <strong style="color:var(--ink)">$${diasRestantes>0?Math.round(Math.max(0,metaMayo-totFact)/diasRestantes).toLocaleString('es-CL'):0}/día</strong>
-        · equivale a <strong style="color:var(--ink)">${diasRestantes>0&&tkProm>0?Math.ceil(Math.max(0,metaMayo-totFact)/diasRestantes/tkProm):0} svc/día</strong>
+        Faltan <strong style="color:var(--ink)">$${Math.max(0,metaMes-totFact).toLocaleString('es-CL')}</strong>
+        en ${diasRestantes.toFixed(1)} jornadas equivalentes restantes →
+        necesitan <strong style="color:var(--ink)">$${diasRestantes>0?Math.round(Math.max(0,metaMes-totFact)/diasRestantes).toLocaleString('es-CL'):0}/día</strong>
+        · equivale a <strong style="color:var(--ink)">${diasRestantes>0&&tkProm>0?Math.ceil(Math.max(0,metaMes-totFact)/diasRestantes/tkProm):0} svc/día</strong>
       </div>
     </div>
   `;
@@ -440,22 +487,27 @@ function actualizarBadgeApi(ok){
   el.style.color = ok ? '#1a6b3a' : '#c0392b';
 }
 
-const PLAN_T = PLAN_S.map((v,i) => v + PLAN_A[i] + PLAN_P[i] + PLAN_M[i]);
+let PLAN_T = PLAN_S.map((v,i) => v + PLAN_A[i] + PLAN_P[i]);
+// PLAN_T sí se puede REASIGNAR (no solo mutar) porque nada lo captura por
+// referencia anticipada — todo lo que lo usa (allCanales en renderResumen,
+// renderSummaryTable, el chart) lo lee por su nombre en el momento del
+// render, no una copia guardada de antemano.
+function actualizarPlanT(){
+  PLAN_T = PLAN_S.map((v,i) => v + PLAN_A[i] + PLAN_P[i]);
+}
 const realTotal = (i) => {
-  const s = REAL_S[i], a = REAL_A[i], p = REAL_P[i], m = REAL_M[i];
-  if(s===null&&a===null&&p===null&&m===null) return null;
-  return (s||0)+(a||0)+(p||0)+(m||0);
+  const s = REAL_S[i], a = REAL_A[i], p = REAL_P[i];
+  if(s===null&&a===null&&p===null) return null;
+  return (s||0)+(a||0)+(p||0);
 };
 
 const CANALES = [
   { key:'s', label:'Servicios barbería', color:'#1A5A8A', plan:PLAN_S, real:()=>REAL_S,
     nota:'Cortes ($12.000) y combos con barba ($20.000). Crece con barberos nuevos, suscripciones y upselling de servicios adicionales. Este canal debe compensar los $780.000 del arriendo que ya no existe.' },
-  { key:'a', label:'Spa Caballeros',     color:'#6B3FA0', plan:PLAN_A, real:()=>REAL_A,
-    nota:'Servicios propios en el espacio trasero acondicionado: Black Mask ($10.000), Masaje craneal ($8.000), Facial carbón, Tratamiento capilar y más. Empieza en julio 2026 y crece con el catálogo.' },
+  { key:'a', label:'Academia de Barberos (futuro)', color:'#6B3FA0', plan:PLAN_A, real:()=>REAL_A,
+    nota:'Canal futuro, aún sin confirmar: sin fecha de inicio ni plan numérico comprometido. Se muestra en $0 hasta que haya una decisión concreta — no forma parte de la meta actual.' },
   { key:'p', label:'Productos detalle',  color:'#1A7048', plan:PLAN_P, real:()=>REAL_P,
     nota:'Venta directa en local (Ceras Modeladoras Media y Fuerte · $8.500 c/u) + Tienda Bewe + MercadoLibre + Marketplace FB. Las ventas de ceras registradas en el Sistema de Control se contabilizan aquí automáticamente.' },
-  { key:'m', label:'Mayorista',          color:'#A06010', plan:PLAN_M, real:()=>REAL_M,
-    nota:'Distribución a salones de la galería y alrededores. Pago al contado, sin crédito.' },
 ];
 
 function fmt(n){
@@ -473,8 +525,8 @@ function setTab(tab){
   document.querySelectorAll('.tab').forEach(b=>{
     b.classList.toggle('on', b.textContent.toLowerCase().includes(
       tab==='resumen'?'resumen':tab==='servicios'?'servici':
-      tab==='arriendo'?'arriendo':tab==='productos'?'producto':
-      tab==='mayorista'?'mayorista':'ingresar'
+      tab==='arriendo'?'academia':tab==='productos'?'producto':
+      'ingresar'
     ));
   });
   render();
@@ -517,9 +569,10 @@ function renderResumen(el){
 
     let proyHtml = '';
     if((c.key === 's' || c.key === 't') && lastReal > 0){
-      const META      = 6500000;
+      const META      = PLAN_S[CUR];
       const diasLab   = diasLaborablesTranscurridos();
-      const diasMes   = 26;
+      const hoyR      = new Date();
+      const diasMes   = jornadasEquivalentesDelMes(hoyR.getFullYear(), hoyR.getMonth());
       const diasRest  = Math.max(0, diasMes - diasLab);
       const proy      = diasLab > 0 ? Math.round(lastReal / diasLab * diasMes) : 0;
       const pctProy   = Math.round(proy  / META * 100);
@@ -528,7 +581,7 @@ function renderResumen(el){
       proyHtml = `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Proyectado a fin de mes</div>
         <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${color}">${fmtM(proy)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">${pctProy}% de la meta · ${diasRest} días restantes</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${pctProy}% de la meta · ${diasRest.toFixed(1)} jornadas restantes</div>
         <div style="font-size:11px;color:var(--muted);margin-top:1px">Acumulado: ${fmtM(lastReal)} · ${pctReal}% de la meta</div>
       </div>`;
     }
@@ -557,14 +610,14 @@ function renderResumen(el){
   `).join('');
   chartCard.innerHTML = `
     <div class="cc-title">Facturación por canal — Plan vs. Real</div>
-    <div class="cc-sub">4 canales independientes · Mayo 2026 – Abril 2027</div>
+    <div class="cc-sub">3 canales independientes · Mayo 2026 – Abril 2027</div>
     <div class="chart-legend" style="gap:10px;flex-wrap:wrap;">${legendHtml}
       <div class="cl"><div class="cls" style="background:#191816;opacity:.5"></div><span>Total plan</span></div>
       <div class="cl"><div class="cls" style="background:#191816"></div><span>Total real</span></div>
     </div>
     <div class="chart-wrap"><canvas id="mainChartCanvas"></canvas></div>
     <div class="alert" style="margin-top:12px;">
-      <strong>Clave de lectura:</strong> El arriendo del spa ya no existe — el nuevo canal "Spa Caballeros" son servicios propios que arrancan en julio 2026. El baseline real de mayo es $6.500.000 (solo servicios). Cada canal se mide de forma independiente.
+      <strong>Clave de lectura:</strong> El canal "Academia de Barberos" es un proyecto futuro aún sin fecha de inicio confirmada — no forma parte de la meta actual. La meta mensual de Servicios crece ${(TASA_CRECIMIENTO_META*100).toFixed(0)}% sobre el último mes que efectivamente cumplió su propia meta (piso base: $6.500.000) — un mes fallido no baja las metas futuras, pero tampoco compone una penalización extra encima del crecimiento perdido. Cada canal se mide de forma independiente.
     </div>
   `;
   el.appendChild(chartCard);
@@ -722,6 +775,16 @@ function renderIngreso(el){
   const infoBox=document.createElement('div');infoBox.className='alert';infoBox.style.marginBottom='16px';
   infoBox.innerHTML='<strong>Instrucciones:</strong> Ingresa los datos reales de cada canal al cerrar el mes. Solo los meses transcurridos están habilitados.';
   el.appendChild(infoBox);
+
+  // ─── FIX: advertencia de no-persistencia ────────────────────────────────
+  // Antes esta pestaña no avisaba que nada de lo escrito aquí se guarda en
+  // ningún lado — saveReal()/updateAll() solo mutan arrays JS en memoria, sin
+  // fetch ni localStorage. Se pierde todo al recargar la página.
+  const warnBox=document.createElement('div');warnBox.className='alert';
+  warnBox.style.cssText='margin-bottom:16px;border-left-color:var(--down);background:#FBEEEE;';
+  warnBox.innerHTML='<strong style="color:var(--down)">⚠ Estos valores NO se guardan.</strong> Esta pestaña es solo una simulación visual en este navegador — no hay conexión a ningún servidor ni base de datos aquí. Si recargas la página, todo lo que escribas se pierde. Los datos reales de Servicios y Productos se cargan automáticamente desde la base de datos (ver "Ticket promedio" arriba y las pestañas de cada canal, que sí reflejan datos reales).';
+  el.appendChild(warnBox);
+
   const grid=document.createElement('div');grid.className='input-section';
   CANALES.forEach(c=>{
     const realArr=c.real();const card=document.createElement('div');card.className='input-card';
@@ -759,20 +822,19 @@ function renderSummaryTable(el){
   const maxTotal=Math.max(...PLAN_T);
   let rows='';
   MONTHS.forEach((m,i)=>{
-    const ps=PLAN_S[i],pa=PLAN_A[i],pp=PLAN_P[i],pm=PLAN_M[i],pt=PLAN_T[i];
-    const rs=REAL_S[i],ra=REAL_A[i],rp=REAL_P[i],rm=REAL_M[i];
+    const ps=PLAN_S[i],pa=PLAN_A[i],pp=PLAN_P[i],pt=PLAN_T[i];
+    const rs=REAL_S[i],ra=REAL_A[i],rp=REAL_P[i];
     const rt=realTotal(i);
     const isCur=i===CUR&&rt===null;
     const diffT=rt!==null?rt-pt:null;
     const bW=(pt/maxTotal*100).toFixed(0);
     const rW=rt!==null?Math.min((rt/maxTotal*100),100).toFixed(0):0;
-    const hasHidden=rt!==null&&((rs!==null&&rs<ps)||(ra!==null&&ra<pa)||(rp!==null&&rp<pp)||(rm!==null&&rm<pm));
+    const hasHidden=rt!==null&&((rs!==null&&rs<ps)||(ra!==null&&ra<pa)||(rp!==null&&rp<pp));
     rows+=`<tr class="${isCur?'cur-row':''}">
       <td class="td-mes">${m}${isCur?' ◀':''}${hasHidden?` <span style="color:var(--down);font-size:9px" title="Algún canal por debajo del plan">⚠</span>`:''}</td>
       <td class="r"><span style="color:var(--c-servicios);font-size:9px">${rs!==null?fmt(rs):(i<=CUR?'?':'—')}</span></td>
       <td class="r"><span style="color:var(--c-arriendo);font-size:9px">${ra!==null?fmt(ra):(i<=CUR?'?':'—')}</span></td>
       <td class="r"><span style="color:var(--c-productos);font-size:9px">${rp!==null?fmt(rp):(i<=CUR?'?':'—')}</span></td>
-      <td class="r"><span style="color:var(--c-mayorista);font-size:9px">${rm!==null?fmt(rm):(i<=CUR?'?':'—')}</span></td>
       <td class="r" style="font-weight:700">${rt!==null?fmt(rt):fmt(pt)+' (plan)'}</td>
       <td class="r ${diffClass(diffT)}">${diffT!==null?(diffT>=0?'+':'')+fmt(diffT):'—'}</td>
       <td class="bar-cell">
@@ -788,9 +850,8 @@ function renderSummaryTable(el){
         <tr>
           <th>Mes</th>
           <th class="r" style="color:var(--c-servicios)">Servicios</th>
-          <th class="r" style="color:var(--c-arriendo)">Arriendo</th>
+          <th class="r" style="color:var(--c-arriendo)">Academia</th>
           <th class="r" style="color:var(--c-productos)">Productos</th>
-          <th class="r" style="color:var(--c-mayorista)">Mayorista</th>
           <th class="r">Total</th><th class="r">Dif. total</th><th class="r">Barra</th>
         </tr>
         <tr style="background:var(--rule2)">
@@ -798,7 +859,6 @@ function renderSummaryTable(el){
           <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-servicios)">${fmtM(PLAN_S[CUR])}</th>
           <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-arriendo)">${fmtM(PLAN_A[CUR])}</th>
           <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-productos)">${fmtM(PLAN_P[CUR])}</th>
-          <th class="r" style="font-family:'DM Mono';font-size:7.5px;color:var(--c-mayorista)">${fmtM(PLAN_M[CUR])}</th>
           <th class="r" style="font-family:'DM Mono';font-size:7.5px">${fmtM(PLAN_T[CUR])}</th>
           <th colspan="2"></th>
         </tr>
@@ -818,7 +878,6 @@ function saveReal(canal, i, val){
   if(canal==='s') REAL_S[i]=v;
   else if(canal==='a') REAL_A[i]=v;
   else if(canal==='p') REAL_P[i]=v;
-  else if(canal==='m') REAL_M[i]=v;
 }
 
 function updateAll(){
@@ -830,10 +889,13 @@ function updateAll(){
         if(c.key==='s') REAL_S[i]=n;
         else if(c.key==='a') REAL_A[i]=n;
         else if(c.key==='p') REAL_P[i]=n;
-        else if(c.key==='m') REAL_M[i]=n;
       }
     }
   });
+  // REAL_S puede haber cambiado con la edición manual — recalcular la meta
+  // adaptativa y el total antes de re-renderizar.
+  actualizarMetaS();
+  actualizarPlanT();
   if(mainChart){mainChart.destroy();mainChart=null;}
   render();
 }
