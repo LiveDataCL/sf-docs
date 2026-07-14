@@ -1191,19 +1191,37 @@ function fetchMetaDelServidor(){
   .catch(() => {});
 }
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ─── HOTFIX (2026-07-13, urgente): el login ya NO bloquea el renderizado.
+// Regresión encontrada minutos después del deploy: con el gate anterior,
+// render()/cargarRealDesdeApi() NUNCA corrían sin sesión — cualquier visita
+// sin token activo (primera visita, pestaña nueva, sesión expirada; sessionStorage
+// no persiste entre reinicios de navegador ni pestañas nuevas) mostraba el
+// dashboard completamente vacío, "como desconectado de cualquier fuente de
+// datos". Reproducido y confirmado antes de este fix.
+//
+// Corrección: render()/cargarRealDesdeApi() corren SIEMPRE, con o sin sesión
+// — exactamente el comportamiento de antes de esta semana para los datos
+// reales (que nunca requirieron auth, vienen de GET /stats/mes/:periodo, sin
+// relación con este login). El overlay de login sigue apareciendo si no hay
+// token, pero ahora es solo un prompt para la mejora de meta unificada del
+// servidor — dismissible (botón × y click fuera de la tarjeta cierran el
+// overlay sin necesidad de iniciar sesión), nunca bloquea el contenido real
+// detrás. fetchMetaDelServidor() solo se llama si YA hay token; si no, se
+// llama de nuevo dentro de loginSocio() una vez que el login sí ocurre.
+render();
+setTimeout(cargarRealDesdeApi, 800);
 if(!getSocioToken()){
   showLoginOverlay();
 } else {
   updateHeaderUser();
-  render();
-  setTimeout(cargarRealDesdeApi, 800);
   fetchMetaDelServidor();
 }
 </script>
 
-<div class="login-ov" id="loginOverlay">
-  <div class="login-card">
+<div class="login-ov" id="loginOverlay" onclick="if(event.target===this) hideLoginOverlay()">
+  <div class="login-card" style="position:relative">
+    <button type="button" onclick="hideLoginOverlay()" title="Cerrar — el dashboard sigue funcionando sin iniciar sesión"
+      style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:20px;line-height:1;cursor:pointer;color:var(--muted);padding:4px">×</button>
     <div class="login-logo">SF</div>
     <div id="loginView" class="login-view active">
       <div class="login-title">Iniciar sesión</div>
