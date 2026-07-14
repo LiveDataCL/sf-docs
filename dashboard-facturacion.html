@@ -119,33 +119,6 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
   padding:12px 16px;margin-top:12px;font-size:12px;color:var(--ink2);line-height:1.65;}
 .alert strong{color:var(--gold);}
 
-/* ── LOGIN (2026-07-13, mismo sistema/flujo que sf-live) ─────────────────── */
-.login-ov{position:fixed;inset:0;background:rgba(25,24,22,.88);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;}
-.login-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:32px 28px 26px;width:100%;max-width:360px;box-shadow:0 10px 40px rgba(0,0,0,.22);}
-.login-logo{width:48px;height:48px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.04em;}
-.login-title{text-align:center;font-family:'Libre Baskerville',serif;font-size:17px;font-weight:700;color:var(--ink);margin-bottom:3px;}
-.login-sub{text-align:center;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:22px;}
-.login-label{display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
-.login-field{position:relative;margin-bottom:12px;}
-.login-input{width:100%;padding:11px 40px 11px 14px;border:1.5px solid var(--rule);border-radius:6px;font-size:14px;font-family:'DM Sans',sans-serif;background:var(--white);color:var(--ink);outline:none;transition:border-color .15s;box-sizing:border-box;}
-.login-input:focus{border-color:var(--gold);}
-.login-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:2px;line-height:1;}
-.login-eye:hover{color:var(--ink2);}
-.login-btn{width:100%;padding:12px;margin-top:14px;background:var(--gold);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s;letter-spacing:.02em;}
-.login-btn:hover{opacity:.88;}
-.login-btn:disabled{opacity:.55;cursor:not-allowed;}
-.login-err{font-size:12px;color:var(--down);text-align:center;margin-top:8px;min-height:18px;}
-.login-back{text-align:center;margin-top:14px;font-size:12px;color:var(--muted);}
-.login-back a{color:var(--ink2);cursor:pointer;text-decoration:underline;}
-.login-back a:hover{color:var(--ink);}
-.login-view{display:none;}
-.login-view.active{display:block;}
-.hdr-socio-controls{display:none;align-items:center;gap:8px;}
-.hdr-socio-controls.visible{display:flex;}
-.hdr-socio-nombre{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.hdr-btn{padding:5px 11px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;}
-.hdr-btn:hover{background:var(--paper);color:var(--ink);}
-
 @media(max-width:700px){
   .hdr{padding:14px 16px 12px;}
   .main{padding:14px 14px;}
@@ -165,11 +138,6 @@ body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;f
     <div class="chip ch-a">Academia de Barberos (futuro)</div>
     <div class="chip ch-p">Productos detalle</div>
     <div class="chip ch-t">Total</div>
-  </div>
-  <div class="hdr-socio-controls" id="socioControls">
-    <span class="hdr-socio-nombre" id="socioNombreHdr"></span>
-    <button class="hdr-btn" onclick="showChangePwView()">Cambiar contraseña</button>
-    <button class="hdr-btn" onclick="logoutSocio()">Cerrar sesión</button>
   </div>
 </header>
 
@@ -224,62 +192,38 @@ const CUR = (() => {
   return Math.max(0, Math.min(11, Math.floor((now - start)/(30.44*24*3600*1000))));
 })();
 
-// ─── FIX: meta dinámica +10% MoM, reemplaza la curva optimista hardcodeada ────
-// Antes: 12 valores tipeados a mano escalando hasta $21.500.000 (irreal, nunca
-// validado contra desempeño real). Ahora: se genera desde el baseline
-// confirmado de mayo ($6.500.000) creciendo 10% mes a mes — una meta de
-// crecimiento sostenido, no una proyección de "mejor caso".
+// ─── FIX (2026-07-13, ronda 4 — decisión final de César): la meta mensual
+// (PLAN_S) NO se calcula en ningún lugar de este archivo. El algoritmo de
+// ancla (+tasa_crecimiento sobre el último mes que efectivamente cumplió su
+// propia meta) vive EXCLUSIVAMENTE en el servidor
+// (calcularMetaAnchorServicios() en barberpilot-api) y se lee desde GET
+// /config/negocio/publico (sin autenticación — ver cargarMetaDelServidor()
+// más abajo). Esto elimina por completo la duplicación cliente/servidor de
+// rondas anteriores: no hay dos fuentes de verdad que mantener sincronizadas,
+// no hay guard de "quién gobierna este cálculo ahora".
 //
-// FIX (2026-07-13, corrección de César): la meta de cada mes es +10% sobre el
-// ÚLTIMO MES QUE EFECTIVAMENTE CUMPLIÓ su propia meta — no sobre el mes
-// inmediatamente anterior sin condición. Un mes fallido no baja las metas
-// futuras, pero tampoco compone una penalización extra encima del
-// crecimiento perdido: el ancla simplemente no avanza ese mes, y el mes
-// siguiente repite la misma meta hasta que un mes real la alcance.
+// PLAN_S_FALLBACK es un snapshot CONGELADO — los valores reales conocidos al
+// momento de este deploy (2026-07-13), usados solo mientras
+// cargarMetaDelServidor() nunca haya respondido con éxito (red caída,
+// servidor no responde). NO es una fórmula: si este snapshot llega a
+// mostrarse, quedará desactualizado con el tiempo, pero eso es preferible a
+// reimplementar el algoritmo del servidor localmente otra vez.
 //
-// PLAN_S se MUTA en el mismo array (asignación por índice dentro de
-// actualizarMetaS()), nunca se reasigna — CANALES guarda una referencia
-// directa a este array, y reasignarlo rompería esa referencia en silencio.
-// actualizarMetaS() debe volver a llamarse (junto con actualizarPlanT())
-// cada vez que REAL_S cambia: ver cargarRealDesdeApi() y updateAll().
-const META_FLOOR            = 6500000; // piso base pre-mayo — ancla inicial
-const TASA_CRECIMIENTO_META = 0.10;
-const PLAN_S = new Array(12).fill(0);
+// PLAN_S se MUTA en el mismo array (asignación por índice), nunca se
+// reasigna — CANALES guarda una referencia directa a este array.
+const PLAN_S_FALLBACK = [7150000,8014600,8014600,8816060,9697666,10667433,11734176,12907594,14198353,15618188,17180007,18898008];
+const PLAN_S = [...PLAN_S_FALLBACK];
 
-// ─── FIX (2026-07-13, unificación con Expo/sf-live, ronda 2): GET /config/negocio
-// ahora devuelve meta.historial_metas — un valor por mes desde periodo_base
-// hasta el mes actual (el backend corre este mismo algoritmo — ver
-// calcularMetaAnchorServicios() en barberpilot-api). Esto reemplaza la
-// necesidad de recalcular localmente TODOS los meses: una vez que
-// fetchMetaDelServidor() responde exitosamente aunque sea una vez,
-// historial_metas puebla los 12 meses de PLAN_S directamente y
-// _historialServidorCargado queda en true.
-//
-// actualizarMetaS() (este cálculo local) queda como fallback de ÚLTIMO
-// RECURSO únicamente — igual que SERVICES_FALLBACK en otros archivos de este
-// proyecto: solo se usa mientras el servidor nunca haya respondido con éxito
-// (primera carga, sin caché, fetch fallido, o auth aún no desplegada). Una
-// vez que el servidor respondió con éxito, este cálculo ya no se vuelve a
-// consultar — evita la doble fuente de verdad que esta unificación busca
-// eliminar (ver el guard al inicio de la función).
-let _historialServidorCargado = false;
+// Tasa de crecimiento tal como la reporta el servidor (para el texto de
+// "Clave de lectura" más abajo) — valor conocido al momento del snapshot
+// hasta que cargarMetaDelServidor() confirme el valor real vigente.
+let _tasaCrecimientoServidor = 0.10;
 
 // Índice (0-11) desde el cual PLAN_S deja de ser un valor real del servidor y
-// pasa a ser la curva de proyección aspiracional (ver fetchMetaDelServidor()).
-// null = sin proyección activa todavía (antes de la primera respuesta del
-// servidor, o si CUR es el último mes del rango). Usado solo para estilizar
-// el gráfico — no afecta ningún cálculo.
-let _primerIndiceProyeccion = null;
-
-function actualizarMetaS(){
-  if(_historialServidorCargado) return;
-  let ancla = META_FLOOR;
-  for(let i=0;i<12;i++){
-    const meta = Math.round(ancla*(1+TASA_CRECIMIENTO_META));
-    PLAN_S[i] = meta;
-    if(REAL_S[i]!==null && REAL_S[i]>=meta) ancla = REAL_S[i];
-  }
-}
+// pasa a ser la curva de proyección aspiracional (ver cargarMetaDelServidor()).
+// Coherente con el snapshot congelado hasta la primera respuesta real.
+// Usado solo para estilizar el gráfico — no afecta ningún cálculo.
+let _primerIndiceProyeccion = CUR < 11 ? CUR + 1 : null;
 
 // Academia de Barberos (futuro): canal aún no confirmado por César — sin
 // fecha de inicio ni plan numérico comprometido. Cero en todos los meses
@@ -300,8 +244,6 @@ const PLAN_P = new Array(12).fill(0);
 let REAL_S = new Array(12).fill(null);
 let REAL_A = new Array(12).fill(null);
 let REAL_P = new Array(12).fill(null);
-
-actualizarMetaS(); // llamada inicial — con REAL_S aún todo null, es la curva +10% pura desde META_FLOOR
 
 const API_URL_FACT = 'https://barberpilot-api-production.up.railway.app';
 const PLAN_BASE    = { year: 2026, month: 4 };
@@ -391,10 +333,9 @@ function cargarRealDesdeApi(){
     );
 
   Promise.all(promesas).then(() => {
-    // REAL_S acaba de cambiar (recién llenado desde la API) — recalcular la
-    // meta adaptativa y el total antes de renderizar con los nuevos datos.
-    actualizarMetaS();
-    actualizarPlanT();
+    // REAL_S acaba de cambiar (recién llenado desde la API) — re-renderizar
+    // con los nuevos datos. PLAN_S no depende de REAL_S en este archivo —
+    // viene siempre de cargarMetaDelServidor(), sin relación con esta carga.
     render();
     renderProyeccion();
     actualizarTicketPromedio();
@@ -700,7 +641,7 @@ function renderResumen(el){
     </div>
     <div class="chart-wrap"><canvas id="mainChartCanvas"></canvas></div>
     <div class="alert" style="margin-top:12px;">
-      <strong>Clave de lectura:</strong> El canal "Academia de Barberos" es un proyecto futuro aún sin fecha de inicio confirmada — no forma parte de la meta actual. La meta mensual de Servicios crece ${(TASA_CRECIMIENTO_META*100).toFixed(0)}% sobre el último mes que efectivamente cumplió su propia meta (piso base: $6.500.000) — un mes fallido no baja las metas futuras, pero tampoco compone una penalización extra encima del crecimiento perdido. En la línea de plan de Servicios, el tramo <strong>punteado y más claro</strong> (meses futuros) es una proyección aspiracional ilustrativa, no una meta ya vigente — la meta real de cada mes futuro se define recién cuando ese mes llega, según el mismo algoritmo. Cada canal se mide de forma independiente.
+      <strong>Clave de lectura:</strong> El canal "Academia de Barberos" es un proyecto futuro aún sin fecha de inicio confirmada — no forma parte de la meta actual. La meta mensual de Servicios crece ${(_tasaCrecimientoServidor*100).toFixed(0)}% sobre el último mes que efectivamente cumplió su propia meta — un mes fallido no baja las metas futuras, pero tampoco compone una penalización extra encima del crecimiento perdido (cálculo hecho enteramente en el servidor). En la línea de plan de Servicios, el tramo <strong>punteado y más claro</strong> (meses futuros) es una proyección aspiracional ilustrativa, no una meta ya vigente — la meta real de cada mes futuro se define recién cuando ese mes llega, según el mismo algoritmo. Cada canal se mide de forma independiente.
     </div>
   `;
   el.appendChild(chartCard);
@@ -1000,122 +941,16 @@ function updateAll(){
       }
     }
   });
-  // REAL_S puede haber cambiado con la edición manual — recalcular la meta
-  // adaptativa y el total antes de re-renderizar.
-  actualizarMetaS();
+  // REAL_S puede haber cambiado con la edición manual — recalcular el total
+  // antes de re-renderizar. PLAN_S no se toca aquí: viene siempre del
+  // servidor (o del snapshot congelado), nunca de un cálculo local.
   actualizarPlanT();
   if(mainChart){mainChart.destroy();mainChart=null;}
   render();
 }
 
-// ─── AUTH (2026-07-13) — mismo sistema/flujo que sf-live y barberpilot-control:
-// login socio (POST /api/v2/auth/socio/login), sesión en sessionStorage, sin
-// mecanismo de auth propio o más liviano. Esta página antes no tenía ningún
-// tipo de autenticación.
-function getSocioToken(){ return sessionStorage.getItem('sf_socio_token') || ''; }
-function getSocioNombre(){ return sessionStorage.getItem('sf_socio_nombre') || ''; }
-
-function showLoginOverlay(){
-  document.getElementById('loginOverlay').style.display = 'flex';
-  showLoginView();
-}
-function hideLoginOverlay(){ document.getElementById('loginOverlay').style.display = 'none'; }
-function showLoginView(){
-  document.getElementById('loginView').classList.add('active');
-  document.getElementById('changePwView').classList.remove('active');
-  document.getElementById('loginErr').textContent = '';
-}
-function showChangePwView(){
-  document.getElementById('loginOverlay').style.display = 'flex';
-  document.getElementById('loginView').classList.remove('active');
-  document.getElementById('changePwView').classList.add('active');
-  document.getElementById('changePwErr').textContent = '';
-}
-function togglePw(id, btn){
-  const inp = document.getElementById(id);
-  if(inp.type === 'password'){ inp.type = 'text'; btn.textContent = '🙈'; }
-  else { inp.type = 'password'; btn.textContent = '👁'; }
-}
-function updateHeaderUser(){
-  const nombre = getSocioNombre();
-  const ctrl = document.getElementById('socioControls');
-  const nmEl = document.getElementById('socioNombreHdr');
-  if(nombre){ nmEl.textContent = nombre; ctrl.classList.add('visible'); }
-  else { ctrl.classList.remove('visible'); }
-}
-function logoutSocio(){
-  sessionStorage.removeItem('sf_socio_token');
-  sessionStorage.removeItem('sf_socio_nombre');
-  document.getElementById('socioControls').classList.remove('visible');
-  showLoginOverlay();
-}
-function loginSocio(){
-  const email = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
-  const password = document.getElementById('loginPassword').value || '';
-  const btn = document.getElementById('loginBtn');
-  const errEl = document.getElementById('loginErr');
-  errEl.textContent = '';
-  if(!email || !password){ errEl.textContent = 'Ingresa tu email y contraseña'; return; }
-  btn.disabled = true; btn.textContent = 'Ingresando…';
-  fetch(API_URL_FACT + '/api/v2/auth/socio/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  }).then(r => r.json().then(json => ({ status: r.status, json })))
-  .then(res => {
-    btn.disabled = false; btn.textContent = 'Ingresar';
-    if(res.status === 200 && res.json.ok){
-      sessionStorage.setItem('sf_socio_token', res.json.token);
-      sessionStorage.setItem('sf_socio_nombre', res.json.nombre);
-      hideLoginOverlay();
-      updateHeaderUser();
-      render();
-      setTimeout(cargarRealDesdeApi, 800);
-      fetchMetaDelServidor();
-    } else if(res.status === 429){
-      errEl.textContent = res.json.message || 'Demasiados intentos. Espera 1 minuto.';
-    } else {
-      errEl.textContent = 'Email o contraseña incorrectos';
-    }
-  }).catch(() => {
-    btn.disabled = false; btn.textContent = 'Ingresar';
-    errEl.textContent = 'Error de conexión. Intenta nuevamente.';
-  });
-}
-function changePw(){
-  const cur = document.getElementById('cpCurrent').value || '';
-  const nw = document.getElementById('cpNew').value || '';
-  const conf = document.getElementById('cpConfirm').value || '';
-  const btn = document.getElementById('changePwBtn');
-  const errEl = document.getElementById('changePwErr');
-  errEl.textContent = '';
-  if(!cur || !nw || !conf){ errEl.textContent = 'Completa todos los campos'; return; }
-  if(nw !== conf){ errEl.textContent = 'Las contraseñas nuevas no coinciden'; return; }
-  if(nw.length < 8){ errEl.textContent = 'Mínimo 8 caracteres'; return; }
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  fetch(API_URL_FACT + '/api/v2/auth/socio/change-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getSocioToken() },
-    body: JSON.stringify({ current_password: cur, new_password: nw, confirm_password: conf }),
-  }).then(r => r.json().then(json => ({ status: r.status, json })))
-  .then(res => {
-    btn.disabled = false; btn.textContent = 'Guardar contraseña';
-    if(res.json.ok){
-      hideLoginOverlay();
-    } else if(res.json.error === 'wrong_current_password'){
-      errEl.textContent = 'La contraseña actual es incorrecta';
-    } else if(res.json.error === 'same_password'){
-      errEl.textContent = 'La nueva contraseña es igual a la actual';
-    } else {
-      errEl.textContent = res.json.message || 'Error al cambiar contraseña';
-    }
-  }).catch(() => {
-    btn.disabled = false; btn.textContent = 'Guardar contraseña';
-    errEl.textContent = 'Error de conexión. Intenta nuevamente.';
-  });
-}
-
-// ─── Meta unificada desde el servidor (2026-07-13, ronda 2) ──────────────────
+// ─── Meta unificada desde el servidor (2026-07-13, ronda 4 — decisión final
+// de César: sin login, sin duplicación) ──────────────────────────────────────
 // Convierte un índice de PLAN_S (0=Mayo 2026, igual que PLAN_BASE) al mismo
 // formato 'YYYY-MM' que usa meta.historial_metas — mismo patrón que ya usa
 // cargarRealDesdeApi() para construir sus periodos.
@@ -1124,50 +959,41 @@ function periodoParaIndice(i){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
 
-function fetchMetaDelServidor(){
-  fetch(API_URL_FACT + '/config/negocio', {
-    headers: { 'Authorization': 'Bearer ' + getSocioToken() },
-  })
+// Llamada incondicional, igual que cargarRealDesdeApi() — GET
+// /config/negocio/publico no requiere autenticación (la meta mensual no es
+// más sensible que los precios de servicios, ya públicos en esta misma
+// ruta). Si falla, PLAN_S se queda en PLAN_S_FALLBACK (snapshot congelado) —
+// nunca se recalcula con una fórmula local, porque esa fórmula ya no existe
+// en este archivo.
+function cargarMetaDelServidor(){
+  fetch(API_URL_FACT + '/config/negocio/publico?tenant=saulfino')
   .then(r => {
-    if(r.status === 401){
-      sessionStorage.removeItem('sf_socio_token');
-      sessionStorage.removeItem('sf_socio_nombre');
-      showLoginOverlay();
-      throw new Error('token inválido o expirado');
-    }
+    if(!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   })
   .then(json => {
-    if(!json.ok || !json.meta || !json.meta.historial_metas) return;
+    if(!json.ok || !json.meta || !json.meta.historial_metas) throw new Error('respuesta inesperada');
     const historial = json.meta.historial_metas;
     const tasaCrecimiento = json.meta.tasa_crecimiento;
     const metaActualVal = historial[periodoActual()];
 
     // Meses ya transcurridos (incluido el actual): valor real del servidor,
-    // uno por mes — nada de aritmética local para estos. Este es el único
-    // valor que gobierna KPIs/bonos para esos meses.
+    // uno por mes — nada de aritmética local para estos.
     for(let i = 0; i <= CUR; i++){
       const p = periodoParaIndice(i);
       if(historial[p] !== undefined) PLAN_S[i] = historial[p];
     }
 
-    // ─── FIX (corrección de César, ronda 3): meses futuros NO repiten el
-    // valor plano del mes actual — muestran una curva de crecimiento
-    // ASPIRACIONAL, cada mes proyectando +tasa_crecimiento sobre el mes
-    // proyectado anterior, partiendo del valor real vigente de hoy. Esto es
-    // una ilustración de "si seguimos cumpliendo X%/mes desde aquí", NO una
-    // predicción de lo que el algoritmo del servidor realmente calculará para
-    // esos meses — ese cálculo depende de datos reales que todavía no
-    // existen y sigue evaluándose EXCLUSIVAMENTE por
-    // calcularMetaAnchorServicios() en el servidor cuando esos meses
-    // realmente ocurran (ese algoritmo es intocado por esto). Esta
-    // proyección es puramente local/cosmética para este gráfico — nunca se
-    // envía al servidor ni influye en tenant_meta_anchor_config ni en el
-    // ancla real.
-    //
-    // _primerIndicedeProyeccion marca desde qué índice PLAN_S deja de ser un
-    // valor real y pasa a ser esta proyección — usado solo para estilizar el
-    // gráfico (línea punteada), ver renderResumen()/renderCanal().
+    // Meses futuros: curva de crecimiento ASPIRACIONAL, cada mes proyectando
+    // +tasa_crecimiento sobre el mes proyectado anterior, partiendo del
+    // valor real vigente de hoy. Ilustración de "si seguimos cumpliendo
+    // X%/mes desde aquí", NO una predicción de lo que el servidor calculará
+    // cuando esos meses realmente ocurran (depende de datos reales que
+    // todavía no existen, y sigue evaluándose exclusivamente por
+    // calcularMetaAnchorServicios() en el servidor — intocado por esto).
+    // Puramente local/cosmética para el gráfico — nunca se envía al
+    // servidor.
+    if(tasaCrecimiento != null) _tasaCrecimientoServidor = tasaCrecimiento;
     _primerIndiceProyeccion = null;
     if(metaActualVal !== undefined && tasaCrecimiento != null){
       let proyeccion = metaActualVal;
@@ -1178,89 +1004,27 @@ function fetchMetaDelServidor(){
       if(CUR < 11) _primerIndiceProyeccion = CUR + 1;
     }
 
-    // Historial del servidor ya es autoritativo para los 12 meses — el
-    // cálculo local (actualizarMetaS()) no se vuelve a consultar a menos que
-    // este fetch nunca haya tenido éxito.
-    _historialServidorCargado = true;
-
     actualizarPlanT();
     render();
     renderProyeccion();
     actualizarKpiProy();
   })
-  .catch(() => {});
+  .catch(() => {
+    // Fetch falló — PLAN_S se queda en PLAN_S_FALLBACK. Silencioso a
+    // propósito, igual que el catch por-mes de cargarRealDesdeApi(); el
+    // badge "Sin conexión" ya cubre el caso de red caída para los datos
+    // reales.
+  });
 }
 
-// ─── HOTFIX (2026-07-13, urgente): el login ya NO bloquea el renderizado.
-// Regresión encontrada minutos después del deploy: con el gate anterior,
-// render()/cargarRealDesdeApi() NUNCA corrían sin sesión — cualquier visita
-// sin token activo (primera visita, pestaña nueva, sesión expirada; sessionStorage
-// no persiste entre reinicios de navegador ni pestañas nuevas) mostraba el
-// dashboard completamente vacío, "como desconectado de cualquier fuente de
-// datos". Reproducido y confirmado antes de este fix.
-//
-// Corrección: render()/cargarRealDesdeApi() corren SIEMPRE, con o sin sesión
-// — exactamente el comportamiento de antes de esta semana para los datos
-// reales (que nunca requirieron auth, vienen de GET /stats/mes/:periodo, sin
-// relación con este login). El overlay de login sigue apareciendo si no hay
-// token, pero ahora es solo un prompt para la mejora de meta unificada del
-// servidor — dismissible (botón × y click fuera de la tarjeta cierran el
-// overlay sin necesidad de iniciar sesión), nunca bloquea el contenido real
-// detrás. fetchMetaDelServidor() solo se llama si YA hay token; si no, se
-// llama de nuevo dentro de loginSocio() una vez que el login sí ocurre.
+// ─── INIT (2026-07-13, ronda 4 — decisión final de César: sin login) ────────
+// Todo corre incondicionalmente — no hay estado de autenticación de ningún
+// tipo en este archivo. Exactamente el mismo patrón para ambas fuentes de
+// datos: datos reales desde GET /stats/mes/:periodo (nunca requirió auth) y
+// la meta desde GET /config/negocio/publico (pública desde esta ronda).
 render();
 setTimeout(cargarRealDesdeApi, 800);
-if(!getSocioToken()){
-  showLoginOverlay();
-} else {
-  updateHeaderUser();
-  fetchMetaDelServidor();
-}
+cargarMetaDelServidor();
 </script>
-
-<div class="login-ov" id="loginOverlay" onclick="if(event.target===this) hideLoginOverlay()">
-  <div class="login-card" style="position:relative">
-    <button type="button" onclick="hideLoginOverlay()" title="Cerrar — el dashboard sigue funcionando sin iniciar sesión"
-      style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:20px;line-height:1;cursor:pointer;color:var(--muted);padding:4px">×</button>
-    <div class="login-logo">SF</div>
-    <div id="loginView" class="login-view active">
-      <div class="login-title">Iniciar sesión</div>
-      <div class="login-sub">Salon Men Saúl Fino · Dashboard Facturación</div>
-      <label class="login-label" for="loginEmail">Email</label>
-      <div class="login-field">
-        <input class="login-input" id="loginEmail" type="email" placeholder="tu@email.com" autocomplete="email">
-      </div>
-      <label class="login-label" for="loginPassword">Contraseña</label>
-      <div class="login-field">
-        <input class="login-input" id="loginPassword" type="password" placeholder="Contraseña" autocomplete="current-password">
-        <button class="login-eye" type="button" onclick="togglePw('loginPassword',this)">👁</button>
-      </div>
-      <div class="login-err" id="loginErr"></div>
-      <button class="login-btn" id="loginBtn" onclick="loginSocio()">Ingresar</button>
-    </div>
-    <div id="changePwView" class="login-view">
-      <div class="login-title">Cambiar contraseña</div>
-      <div class="login-sub">Salon Men Saúl Fino · Dashboard Facturación</div>
-      <label class="login-label" for="cpCurrent">Contraseña actual</label>
-      <div class="login-field">
-        <input class="login-input" id="cpCurrent" type="password" placeholder="Contraseña actual" autocomplete="current-password">
-        <button class="login-eye" type="button" onclick="togglePw('cpCurrent',this)">👁</button>
-      </div>
-      <label class="login-label" for="cpNew">Nueva contraseña</label>
-      <div class="login-field">
-        <input class="login-input" id="cpNew" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
-        <button class="login-eye" type="button" onclick="togglePw('cpNew',this)">👁</button>
-      </div>
-      <label class="login-label" for="cpConfirm">Confirmar contraseña</label>
-      <div class="login-field">
-        <input class="login-input" id="cpConfirm" type="password" placeholder="Repetir contraseña" autocomplete="new-password">
-        <button class="login-eye" type="button" onclick="togglePw('cpConfirm',this)">👁</button>
-      </div>
-      <div class="login-err" id="changePwErr"></div>
-      <button class="login-btn" id="changePwBtn" onclick="changePw()">Guardar contraseña</button>
-      <div class="login-back"><a onclick="hideLoginOverlay()">Volver al dashboard</a></div>
-    </div>
-  </div>
-</div>
 </body>
 </html>
