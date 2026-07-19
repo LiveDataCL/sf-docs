@@ -162,6 +162,35 @@ left unaddressed, and status (open / closed, with closure date if applicable).
   and run production-altering SQL against the wrong database without realizing it.
 - **Status:** Open — pending César's decision on the Railway dashboard rename.
 
+### 9. `COM_PAGO` commission rates duplicated in `barberpilot-api` and `barberpilot-control`
+
+- **Date found:** 2026-07-19, noted while removing `SERVICE_PRICES` from `barberpilot-api/index.js`
+  during the server-driven price/roster cutover (Steps A+B).
+- **Description:** Commission rates per payment method (`efectivo: 0.50`, `debito: 0.43`,
+  `transferencia: 0.50`) are hardcoded in two places:
+  1. `barberpilot-api/index.js` — `COM_PAGO` constant (used by `POST /queue/control/registrar`
+     to compute `bb` / `neg` when closing a queue entry)
+  2. `barberpilot-control/index.html` — `COM` object (used for the live split preview in the
+     Sala editor and cierre de caja flow)
+  These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices — it was
+  removed in this round because `resolverServicioYValidarPrecio` now supplies the catalog
+  price. Commission rates don't have an equivalent DB table yet, so the duplication remains.
+- **Why not fixed immediately:** `COM_PAGO` is not in scope for the current cutover (Steps A–D),
+  which is focused on eliminating hardcoded prices and rosters from client files. A commission
+  table would require a new migration, a new API field, and updates across every consumer of
+  the split preview (control, possibly the app) — a separate, larger lift.
+- **Severity/risk if left unaddressed:** Low-to-moderate. A commission rate change (e.g. the
+  debito rate changes from 43% to 45%) requires editing two files and redeploying both repos.
+  Worse: `barberpilot-api` computes the *actual* `bb`/`neg` stored in `registros`, while
+  `barberpilot-control` computes the *preview* shown before confirming — if they drift, the
+  preview shown to staff would be wrong while the ledger entry is correct, creating confusion
+  without a billing error.
+- **Recommended fix:** Add a `tenant_comisiones` table (or extend `tenant_metas`) with
+  per-payment-method rates, expose via `GET /config/negocio`, and have `barberpilot-control`
+  read `com_rates` from the server response for its preview. `barberpilot-api` already has the
+  route; it would just need to read from the table instead of `COM_PAGO`.
+- **Status:** Open.
+
 ---
 
 ## Closed
