@@ -188,6 +188,53 @@ risk if left unaddressed, and status (open / closed, with closure date if applic
   route; it would just need to read from the table instead of `COM_PAGO`.
 - **Status:** Open.
 
+### 11. Outbox has no deactivation-aware guard — offline transactions for a deactivated barber fail silently forever
+
+- **Date found:** 2026-07-20, during the post-deactivation incident where Samuel (b3) was
+  deactivated (2026-07-19) and his still-pending outbox items subsequently failed 5+
+  times with "bid inválido" because `validateRegistro` now rejects b3 (active-only query
+  in `_loadBarberCache`). The generic red-dot sync indicator gave no information about
+  which barber, which transactions, or why — requiring forensic investigation to identify.
+- **Description:** `drainOutbox()` retries `POST /registros` (or `/gastos`) items
+  indefinitely at 30-second intervals until `attempts >= 5`, at which point `status` flips
+  to `'error'` and `pruneOutbox()` never removes them. The `updateSyncBadge()` indicator
+  shows a red dot with the text "Error de sync" — but gives no barber name, no transaction
+  count, no `last_error` text, and no distinction between a transient network failure and a
+  permanent validation rejection. An operator seeing the red dot has no actionable path
+  forward without opening the browser console and inspecting `localStorage['bp_outbox']`
+  manually.
+  When a barber is deactivated, any of their locally-queued (unsynced) transactions become
+  permanently irrecoverable via normal outbox drain, because `validateRegistro` uses a
+  live `WHERE activo = true` query. Revenue records sitting in the outbox since before
+  deactivation are silently discarded (from an operator perspective) — there is no alert,
+  no notification to check a specific device, and no recovery path that doesn't require
+  manual DB intervention.
+- **Severity:** Medium — real revenue records can be permanently lost with no warning beyond
+  a generic red dot that could be dismissed as a transient connectivity blip.
+- **Urgency:** Near-term — this pattern just occurred in production (Samuel b3 deactivation
+  2026-07-19). Any future barber deactivation or deletion will reproduce it identically if
+  there are any offline-queued transactions for that barber at the time of deactivation.
+- **Why not fixed immediately:** Recovery of the current incident items takes priority.
+  The structural fix (below) requires changes across both `barberpilot-control` and
+  `barberpilot-api`; out of scope for the incident resolution turn.
+- **Risk if unaddressed:** The next barber deactivation (or any operator action that makes
+  a `bid` invalid) will silently consume any unsynced transactions for that barber, with no
+  operator alert, no recovery path surfaced in the UI, and no cross-device awareness
+  (localStorage is per-device, so each staff device needs to be checked independently).
+- **Recommended fix (three layers):**
+  1. **Detection:** `updateSyncBadge()` should surface `last_error` text for error-state
+     items — at minimum, count them and show "N transacciones sin recuperar — ver consola",
+     ideally a panel showing the bid, fecha, precio, and last_error for each error item so
+     an operator can act without opening dev tools.
+  2. **Prevention:** On barber deactivation, the control panel (or the API's barber-update
+     route) should check whether any outbox items reference that barber's bid, and warn
+     before proceeding — or flush/escalate those items as part of the deactivation flow.
+  3. **API resilience:** `validateRegistro` could be relaxed for historical bids — accept
+     bids that existed in the barber table (even inactive) as long as the record's `fecha`
+     is within the barber's active period. This would let legitimate historical records sync
+     even after deactivation, while still rejecting bids that were never valid.
+- **Status:** Open — incident recovery in progress (2026-07-20).
+
 ### 10. Revert endpoint doesn't check `activo` before restoring a service's prior price
 
 - **Date found:** 2026-07-20, during Phase 2 Step 1 review.
