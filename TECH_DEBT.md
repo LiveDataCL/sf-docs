@@ -99,7 +99,7 @@ risk if left unaddressed, and status (open / closed, with closure date if applic
 - **Risk if unaddressed:** Audit trail for this field can be spoofed or inaccurate since
   it trusts client-supplied text rather than the server-verified actor identity already
   available on every authenticated request.
-- **Status:** Open — blocked on César's direct confirmation, not on further design work.
+- **Status:** **Closed 2026-07-20.** `requirePanelRole` now stamps `req.actorIdentity` from the verified JWT; `PATCH /registros/:id/pago` derives `modificado_por` server-side from that identity, removing the client free-text field and its UI input entirely. Verified live: registros_audit rows 29–31 show `"Cesar Valencia"` (JWT name), not client-typed text. Commits: `6d7a1d5` (barberpilot-api), `0a8c85f` (barberpilot-control).
 
 ### 7. Unjustified `OR estado IS NULL` clause, widespread across `barberpilot-api`
 
