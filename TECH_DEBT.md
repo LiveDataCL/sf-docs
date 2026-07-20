@@ -5,29 +5,12 @@ closed, rather than leaving it scattered across chat history. Spans all four rep
 (`barberpilot-api`, `barberpilot-control`, `saulfino-web`, `BarberPilot_App`), which is
 why it lives here in `sf-docs` rather than in any single repo's own `docs/`.
 
-Each entry: date found, description, why it wasn't fixed immediately, severity/risk if
-left unaddressed, and status (open / closed, with closure date if applicable).
+Each entry: date found, description, severity, urgency, why it wasn't fixed immediately,
+risk if left unaddressed, and status (open / closed, with closure date if applicable).
 
 ---
 
 ## Open
-
-### 1. `tenant_servicio_precios` reads never check `valid_from`
-
-- **Date found:** 2026-07-13, during July 16 price-change prep.
-- **Description:** Every read of `tenant_servicio_precios` (`resolverServicioYValidarPrecio`
-  and others in `barberpilot-api/index.js`) filters only on `valid_to IS NULL`. The
-  `valid_from` column is stored but never compared against `NOW()`.
-- **Why not fixed immediately:** Out of scope under this week's time pressure for the
-  July 16 price change; the July 16 migration script sidesteps it by closing the old row
-  and opening the new one at the exact same instant (no gap/overlap), so the gap doesn't
-  bite for that specific change.
-- **Severity/risk if left unaddressed:** A price change can't be genuinely *scheduled*
-  ahead of time without it activating early — any future attempt to stage a price change
-  in advance (rather than running the migration exactly on the effective date, as done
-  this time) would silently activate the new price the moment the row is inserted, not
-  on the intended future date.
-- **Status:** Open.
 
 ### 2. Queue `ABANDONED` auto-cleanup (Migration 008) uses UTC `CURRENT_DATE`, not Santiago-local
 
@@ -41,15 +24,18 @@ left unaddressed, and status (open / closed, with closure date if applicable).
   window every night (Santiago 20:00–24:00 = UTC 00:00–04:00) where, if the server
   restarts in that window, an entry checked in earlier that same Santiago evening would
   show as "from a previous day" and get wrongly abandoned a day early.
+- **Severity:** Low
+- **Urgency:** Monitor-only
 - **Why not fixed immediately:** Out of scope for July 16; investigated only to
   determine whether it explained the observed 100%-abandoned state (it doesn't — see
   investigation notes in `barberpilot-api/docs/july16_verification_checklist.md` §6b;
   the actual cause is tickets not being closed via `/queue/control/registrar` at all,
   with gaps of 1-17+ days between check-in and abandonment, not tight midnight crossings).
-- **Severity/risk if left unaddressed:** Low-to-moderate. Only matters if a restart lands
-  in that specific 4-hour nightly window while a real ticket is still open — would
-  prematurely mark it `ABANDONED` (setting `service_end=NOW()`) a day before it should
-  be. Fix: swap `CURRENT_DATE` for `(NOW() AT TIME ZONE 'America/Santiago')::date`.
+- **Risk if unaddressed:** Only matters if a server restart lands in the 4-hour Santiago
+  midnight window (20:00–24:00 local = 00:00–04:00 UTC) while a real ticket is still
+  open — would prematurely mark it `ABANDONED` (setting `service_end=NOW()`) a day
+  before it should be.
+- **Recommended fix:** Swap `CURRENT_DATE` for `(NOW() AT TIME ZONE 'America/Santiago')::date`.
 - **Status:** Open.
 
 ### 3. `PaymentSheet.js` resolves service name via raw string match, not `servicio_alias`
@@ -62,16 +48,18 @@ left unaddressed, and status (open / closed, with closure date if applicable).
   exact match logic against all 531 historical `queue.service` values: **83.4% match
   cleanly, 16.6% (88 entries) fall through to manual price entry** — almost entirely
   (87 of 88) the `'Corte Clásico'` vs. server's `'Corte'` naming variant.
+- **Severity:** Low
+- **Urgency:** Near-term
 - **Why not fixed immediately:** Deferred per César's implicit agreement this round.
   Fixing properly means exposing `servicio_alias` data to the app (server-side surface
   change: `GET /config/negocio` would need to return aliases per service, which it
   already computes in `fetchServiciosActivos()` but doesn't currently need to for its
   existing consumers) — a bigger lift than fits in the July 16 scope.
-- **Severity/risk if left unaddressed:** Not a pricing-correctness risk — write-time
-  validation (`resolverServicioYValidarPrecio` via `POST /registros`) still catches and
-  rejects a mismatched manually-typed price. It's a real, measured UX/workflow friction
-  gap: roughly 1 in 6 real transactions closed via this screen force the barber to type
-  the price manually instead of getting it auto-filled.
+- **Risk if unaddressed:** Not a pricing-correctness risk — write-time validation
+  (`resolverServicioYValidarPrecio` via `POST /registros`) still catches and rejects a
+  mismatched manually-typed price. It's a real, measured UX/workflow friction gap:
+  roughly 1 in 6 real transactions closed via this screen force the barber to type the
+  price manually instead of getting it auto-filled.
 - **Status:** Open.
 
 ### 4. `/queue/control/registrar`'s `precioOverride` has no `override`/`override_reason` UI equivalent
@@ -84,12 +72,14 @@ left unaddressed, and status (open / closed, with closure date if applicable).
   `/queue/control/registrar`'s `precioOverride` field has no equivalent reason-logging
   or explicit-override-flag mechanism; it just silently accepts whatever price staff type
   in barberpilot-control's Sala editor.
+- **Severity:** Low
+- **Urgency:** Eventual
 - **Why not fixed immediately:** Not itself broken — this is a pre-existing, working,
   legitimate staff workflow (e.g. discretionary discounts). Flagged only as an asymmetry
   between the two write paths worth resolving for consistency, not an active defect.
-- **Severity/risk if left unaddressed:** Low. Means price overrides made via the Sala
-  Cola-closing flow aren't logged/reasoned the way `POST /registros` overrides are —
-  an audit-trail gap, not a correctness one.
+- **Risk if unaddressed:** Price overrides made via the Sala Cola-closing flow aren't
+  logged/reasoned the way `POST /registros` overrides are — an audit-trail gap, not a
+  correctness one.
 - **Status:** Open.
 
 ### 5. `registros_audit.modificado_por` reads a client-typed free-text field, not `req.actorIdentity`
@@ -100,13 +90,15 @@ left unaddressed, and status (open / closed, with closure date if applicable).
 - **Description:** `registros_audit.modificado_por` is still populated from a client-
   supplied free-text field rather than the now-established `req.actorIdentity` pattern
   used elsewhere (e.g. the `registro_precio_override` audit logging added this project).
+- **Severity:** Medium
+- **Urgency:** Near-term
 - **Why not fixed immediately:** Fix is designed and ready to apply, but is pending
   César's direct in-person confirmation to Claude Code specifically — not relayed
   through a chat message — per a standing rule from earlier in this project for this
   particular class of change.
-- **Severity/risk if left unaddressed:** Audit trail for this field can be spoofed or
-  inaccurate since it trusts client-supplied text rather than the server-verified actor
-  identity already available on every authenticated request.
+- **Risk if unaddressed:** Audit trail for this field can be spoofed or inaccurate since
+  it trusts client-supplied text rather than the server-verified actor identity already
+  available on every authenticated request.
 - **Status:** Open — blocked on César's direct confirmation, not on further design work.
 
 ### 7. Unjustified `OR estado IS NULL` clause, widespread across `barberpilot-api`
@@ -123,15 +115,16 @@ left unaddressed, and status (open / closed, with closure date if applicable).
   (8 rows, correctly excluded). So there's no legacy pre-`estado`-column category this
   clause is protecting; it appears to be an unreviewed carryover, copy-pasted forward
   each time a new query needed this filter.
+- **Severity:** Low
+- **Urgency:** Monitor-only
 - **Why not fixed immediately:** Out of scope for the goal-unification round it was
   found in — fixed only in the one new function that round added
   (`calcularMetaAnchorServicios`), which now uses the strict `estado = 'confirmado'`
   filter. The other 4 pre-existing occurrences were left untouched, since fixing all of
   them is a broader, separate change.
-- **Severity/risk if left unaddressed:** Currently zero — the clause is empirically a
-  no-op everywhere it appears, since no NULL-estado rows exist. Risk is latent: if
-  anything ever inserts a `registros` row with a NULL `estado` not intending it as
-  confirmed revenue, all 4 of these queries (stats, per-day barber totals, per-day
+- **Risk if unaddressed:** Currently a no-op — zero NULL-estado rows exist in production.
+  Latent: if anything ever inserts a `registros` row with NULL `estado` not intending it
+  as confirmed revenue, all 4 affected queries (stats, per-day barber totals, per-day
   service-duration lookups, WhatsApp-pending index) would silently include it as real.
 - **Status:** Open.
 
@@ -147,19 +140,22 @@ left unaddressed, and status (open / closed, with closure date if applicable).
   Railway primary. Both steps were subsequently corrected in Railway via Migrations 009 and
   009a, and the Neon replica was confirmed to be an accurate copy, so no data integrity harm
   resulted. But the root trigger was purely the ambiguous env var name.
+- **Severity:** Medium
+- **Urgency:** Near-term
 - **Why not fixed immediately:** Environment variable changes in Railway are a manual
   operation in the Railway dashboard — outside the scope of a code commit, and a decision
   reserved for César rather than automated tooling.
+- **Risk if unaddressed:** No live code path in `index.js` reads `NEON_DATABASE_URL`
+  (confirmed grep: zero hits), so the variable is inert for the running API. Risk is
+  procedural: an operator under time pressure could repeat the same workaround and run
+  production-altering SQL against the wrong database without realizing it.
 - **Recommended fix:** Rename `NEON_DATABASE_URL` to `NEON_DR_URL` or `NEON_STANDBY_URL`
   in the Railway environment variables dashboard. Either name makes the disaster-recovery
   purpose unambiguous and prevents any future script from treating it as a general-purpose
-  alternative connection string. The credential itself (the Neon.tech connection string) stays
-  unchanged — only the Railway env var name changes. Existing safeguards (`seed-staging.js`
-  ABORT guard, `env.staging.example` comment) continue to work regardless of the rename.
-- **Severity/risk if left unaddressed:** Low — no live code path in `index.js` reads
-  `NEON_DATABASE_URL` (confirmed grep: zero hits), so the variable is inert for the running
-  API. Risk is procedural: an operator under time pressure could repeat the same workaround
-  and run production-altering SQL against the wrong database without realizing it.
+  alternative connection string. The credential itself (the Neon.tech connection string)
+  stays unchanged — only the Railway env var name changes. Existing safeguards
+  (`seed-staging.js` ABORT guard, `env.staging.example` comment) continue to work
+  regardless of the rename.
 - **Status:** Open — pending César's decision on the Railway dashboard rename.
 
 ### 9. `COM_PAGO` commission rates duplicated in `barberpilot-api` and `barberpilot-control`
@@ -175,16 +171,17 @@ left unaddressed, and status (open / closed, with closure date if applicable).
   These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices — it was
   removed in this round because `resolverServicioYValidarPrecio` now supplies the catalog
   price. Commission rates don't have an equivalent DB table yet, so the duplication remains.
+- **Severity:** Medium
+- **Urgency:** Eventual
 - **Why not fixed immediately:** `COM_PAGO` is not in scope for the current cutover (Steps A–D),
   which is focused on eliminating hardcoded prices and rosters from client files. A commission
   table would require a new migration, a new API field, and updates across every consumer of
   the split preview (control, possibly the app) — a separate, larger lift.
-- **Severity/risk if left unaddressed:** Low-to-moderate. A commission rate change (e.g. the
-  debito rate changes from 43% to 45%) requires editing two files and redeploying both repos.
-  Worse: `barberpilot-api` computes the *actual* `bb`/`neg` stored in `registros`, while
-  `barberpilot-control` computes the *preview* shown before confirming — if they drift, the
-  preview shown to staff would be wrong while the ledger entry is correct, creating confusion
-  without a billing error.
+- **Risk if unaddressed:** A commission rate change (e.g. the débito rate changes from 43% to
+  45%) requires editing two files and redeploying both repos. Worse: `barberpilot-api` computes
+  the *actual* `bb`/`neg` stored in `registros`, while `barberpilot-control` computes the
+  *preview* shown before confirming — if they drift, the preview shown to staff would be wrong
+  while the ledger entry is correct, creating confusion without a billing error.
 - **Recommended fix:** Add a `tenant_comisiones` table (or extend `tenant_metas`) with
   per-payment-method rates, expose via `GET /config/negocio`, and have `barberpilot-control`
   read `com_rates` from the server response for its preview. `barberpilot-api` already has the
@@ -194,6 +191,24 @@ left unaddressed, and status (open / closed, with closure date if applicable).
 ---
 
 ## Closed
+
+### 1. `tenant_servicio_precios` reads never check `valid_from`
+
+- **Date found:** 2026-07-13, during July 16 price-change prep.
+- **Description:** Every read of `tenant_servicio_precios` (`resolverServicioYValidarPrecio`
+  and others in `barberpilot-api/index.js`) filtered only on `valid_to IS NULL`. The
+  `valid_from` column was stored but never compared against `NOW()`.
+- **Why not fixed immediately:** Out of scope under this week's time pressure for the
+  July 16 price change; the July 16 migration script sidesteps it by closing the old row
+  and opening the new one at the exact same instant (no gap/overlap), so the gap didn't
+  bite for that specific change.
+- **Risk if left unaddressed:** A price change can't be genuinely *scheduled* ahead of
+  time without activating early — any future attempt to stage a price change in advance
+  (rather than running the migration exactly on the effective date) would silently
+  activate the new price the moment the row is inserted, not on the intended future date.
+- **Status:** **Closed 2026-07-19.** `AND tsp.valid_from <= NOW()` added to both
+  `fetchServiciosActivos()` and `resolverServicioYValidarPrecio()` in
+  `barberpilot-api/index.js` as part of Phase 3 Step A/B deploy; confirmed live.
 
 ### 6. Near-miss: Corte auto-filled at $13.000 in queue-closing flow on César's device, 3 days before the sanctioned July 16 change
 
