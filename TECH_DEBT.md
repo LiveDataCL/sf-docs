@@ -188,6 +188,30 @@ risk if left unaddressed, and status (open / closed, with closure date if applic
   route; it would just need to read from the table instead of `COM_PAGO`.
 - **Status:** Open.
 
+### 10. Revert endpoint doesn't check `activo` before restoring a service's prior price
+
+- **Date found:** 2026-07-20, during Phase 2 Step 1 review.
+- **Description:** `POST /api/v2/config/servicios/:servicio_id/precio/revertir` queries
+  the current active price row and the immediately-prior row, then closes and reopens
+  without first verifying that the service itself is still `activo = true`. In the
+  normal case this is harmless — `GET /config/negocio/publico` only surfaces active
+  services, so a retired service's price is unreachable from any live UI. The gap only
+  bites if an admin manually POSTs to the revert endpoint for a service that has since
+  been deactivated, which would silently create a live price row for a service that no
+  consumer will render or validate against.
+- **Severity:** Low
+- **Urgency:** Monitor-only
+- **Why not fixed immediately:** Edge case with no plausible near-term trigger (reverting
+  a retired service's price requires a deliberate admin action against a service that is
+  already invisible to all consumers). Out of scope for Phase 2 Step 1.
+- **Risk if unaddressed:** An orphaned live price row for an inactive service. No billing
+  risk (the service is unreachable from all write paths), but creates noise in the price
+  history and could confuse future audits.
+- **Recommended fix:** Add the same `activo` check from the PATCH endpoint (query
+  `servicios WHERE servicio_id = $1 AND tenant_id = $2`, reject with
+  `servicio_inactivo 400` if `activo = false`) before proceeding with the close+reopen.
+- **Status:** Open.
+
 ---
 
 ## Closed
