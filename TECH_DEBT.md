@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-08-10
+**Last updated:** 2026-08-10 (CI gap entry)
 
 ---
 
@@ -105,6 +105,31 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 ---
 
 ## Open
+
+### 2026-08-10 — boot-smoketest.yml CI has no CREATE TABLE for 9 core tables — zero real coverage for anything touching them
+
+**Repo:** barberpilot-api
+
+**Description**: `boot-smoketest.yml`'s CI Postgres container starts genuinely empty. The boot-time migration chain in `index.js` only ever issues `ALTER TABLE`/`ADD COLUMN` statements against `registros`, `gastos`, `queue`, `service_durations`, `agenda`, `cortes_historicos`, `inventory`, `metas`, and `notas` — there is no `CREATE TABLE` for any of these nine tables anywhere in the boot sequence. Against CI's empty database, every migration touching them fails: some silently (logged as `(non-fatal)`), some loudly (three lines flagged 🚨 as genuine non-idempotent failures, e.g. Migration 023's `registros.cliente_id` FK never getting enforced in CI). Confirmed directly from a real job log (PR #36, run `31442491890`):
+```
+ERROR: relation "registros" does not exist
+STATEMENT: ALTER TABLE registros ADD COLUMN IF NOT EXISTS tenant_id TEXT DEFAULT 'saulfino'
+ERROR: relation "gastos" does not exist
+ERROR: relation "queue" does not exist
+```
+This is the same category of incident referenced as having affected "9 of 12 migrations" silently for months — confirmed still unresolved as of this entry.
+
+**Practical impact**: any endpoint reading or writing these tables has zero real CI coverage. The smoke test's only HTTP assertion is `GET /clientes/recurrencia` returning 401 without auth — a single unrelated route. This was surfaced while validating `/registros/rango` and `/gastos/rango` (just given a new auth path for the `reporte-financiero-mensual` feature): CI went green on that PR, but neither endpoint — nor the new `requireDashboardOrSocio` middleware — was ever actually invoked by the workflow, and even if it had been, both would have hit `relation "gastos"/"registros" does not exist` against CI's DB. Validation for that feature was done manually instead, cross-checked against real production data.
+
+Separately, `boot-smoketest.yml` has **no lint or type-check step at all** — not specific to these tables, just a gap in the same workflow worth recording alongside it.
+
+**Why deferred**: discovered as a side effect of validating an unrelated feature (`reporte-financiero-mensual`, Aug 2026) — not introduced by it. Fixing the CI table setup (presumably by having the workflow run the real migration chain against a truly empty DB in dependency order, or seeding a minimal schema before the app boots) is a dedicated piece of work, not an in-scope fix for the PR that surfaced it.
+
+**Severity**: Medium-High — CI is not actually validating a large fraction of the application's core functionality (client/service records, expenses, the walk-in queue, and everything downstream of them), despite reporting green.
+
+**Urgency**: Eventual — no active incident, but every PR touching these tables ships with the same false confidence this one did. Worth prioritizing before the next migration to one of these nine tables.
+
+**Status**: Open. No fix scheduled.
 
 ### 2026-08-10 — Appointment unification + proximity alerts — status record (mostly already resolved before this entry existed)
 
