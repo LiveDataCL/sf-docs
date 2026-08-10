@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-08-06
+**Last updated:** 2026-08-10
 
 ---
 
@@ -66,9 +66,101 @@ When a staff member (barbero) leaves, they must be removed from:
 
 Emerson removal complete as of Aug 2026 for `barberos`/`tenant_staff`/`BarberPilot_App` (DB, app source, commit, push, and OTA publish all confirmed) — with two open exceptions: no on-device visual confirmation yet, and `barberpilot-control`'s roster copies not updated. Pattern documented here for reuse on the next staff removal.
 
+### Procedimiento: Agregar un Socio (Dashboard sf-live)
+
+**Repo:** sf-live, barberpilot-api
+
+**Sistema:** sf-live (frontend estatico, GitHub Pages) + barberpilot-api (backend,
+Railway, tabla `socios` en Postgres).
+
+**Endpoint:** `POST /api/v2/auth/socio/setup`
+Body: `{ nombre, email, password, master_pin }`
+Requiere el valor de la variable de entorno `ADMIN_MASTER_PIN` (Railway, texto plano —
+NO confundir con `ADMIN_MASTER_PIN_HASH`, que es solo una variable interna en memoria
+calculada al arrancar el servidor, ni con `SOCIO_PIN_HASH`, que es una variable distinta
+usada por un endpoint legacy no relacionado `POST /api/v2/auth/login` con `bid==='socio'`).
+
+**Pasos:**
+1. Confirmar que `ADMIN_MASTER_PIN` esta configurada en Railway (Variables del servicio
+   barberpilot-api). Si no aparece en la lista, hay que agregarla ahi primero — el
+   endpoint devuelve 401 en todos los intentos si esta variable no existe en el entorno.
+2. Ejecutar un POST al endpoint con nombre, email, password inicial, y el master_pin.
+   Ver plantilla de script PowerShell abajo.
+3. Comunicar las credenciales al nuevo socio por un canal distinto al del propio
+   dashboard (ej. WhatsApp), nunca por el mismo email que sera su usuario de login.
+4. El socio cambia su clave desde el boton "Cambiar contrasena" ya integrado en el
+   dashboard (`POST /api/v2/auth/socio/change-password`, requiere clave actual).
+
+**Gotcha conocido:** al editar un script que use un valor placeholder (ej.
+`REEMPLAZA_ESTO_CON_EL_PIN_REAL`) para el PIN, NO usar "Reemplazar todo" en el editor —
+si el placeholder aparece en dos lugares del archivo (el valor y una linea de validacion
+que lo compara), un reemplazo masivo sobreescribe ambos y la validacion queda comparando
+el PIN real contra si mismo, dando un falso "todavia no lo reemplazaste" permanente.
+Editar el valor a mano, linea por linea.
+
+**Email unico por tenant, no global:** el indice unico en la tabla es
+`(tenant_id, email)`, no `(email)` solo — relevante si en el futuro se activa un
+segundo tenant (saulfino-maipu) y se reutiliza un email.
+
 ---
 
 ## Open
+
+### 2026-08-10 — Appointment unification + proximity alerts — status record (mostly already resolved before this entry existed)
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: A task was opened assuming panel-created "Servicio" bookings still lived in `blocked_slots` and that proximity alerts didn't exist. Investigation found:
+- **Servicio → `appointments` unification was already resolved on 2026-07-30** (commit `46c95c6` in `barberpilot-api` + the matching `agenda-admin.html` change in `barberpilot-control`): `POST /blocked-slots` rejects new `tipo='servicio'` rows; the panel creates bookings via `POST /appointments` instead, which enforces `client_phone`, reuses `findOrCreateClienteByTelefono()`'s placeholder-phone guard, defaults `estado='confirmado'`, and already runs the shared overlap check against `appointments` — so double-booking prevention across public (`saulfino-web`) and panel bookings was unified automatically. This was never logged here, which is why the task assumed it was still open.
+- As a direct consequence, the existing 15-min "previa" poller (`notified_15min` column, `index.js` `setInterval`) started covering **all** appointment types automatically, with zero new code, the moment Part 1 shipped.
+- The one real gap was an **arrival alert** (fired when an appointment's start time is reached), which did not exist. Added 2026-08-10: `alerta_llegada_enviada_en` timestamp column on `appointments`, a new block in the existing 15-min poller (5-minute lookback, `IS NULL` idempotency guard, per-row try/catch), and `GET /appointments/proximity?fecha=` for the panel to read alert state. Deliberately did **not** add a parallel `alerta_previa_enviada_en` column — that would have duplicated `notified_15min`, which already does the same job for all appointments.
+- Push delivery for both alert types uses the existing `sendPush()` (Expo push via `push_tokens.token` → `exp.host`), not FCM — correcting a wrong assumption the originating task carried.
+
+**Why deferred**: N/A — recorded as closed. Logged here specifically so the Part 1 unification (which shipped with no TECH_DEBT entry) has a durable record, and so a future task doesn't re-assume it's still open.
+
+**Severity**: N/A (informational/closure record).
+
+**Urgency**: N/A.
+
+**Addendum (live-fire staging verification, 2026-08-10)**:
+- **15-min window behavior, confirmed from code**: the existing `notified_15min` poller query (`index.js`, `WHERE ... BETWEEN NOW() AND NOW() + interval '15 minutes'`) is a wide 0-15-minute safety net, not a narrow band around the 14-15 min mark — it fires on the first tick that sees a qualifying appointment anywhere inside that window, then never again (`notified_15min` guard). Confirmed empirically in staging: it correctly fired for a test appointment only ~2 minutes out. Same design pattern used for the new `alerta_llegada_enviada_en` arrival check.
+- **Staging schema drift found and fixed during this verification**: staging's `appointments` table was missing `notified_15min` entirely (`column "notified_15min" does not exist`, repeating every poller tick), even though `scripts/seed-staging.js`'s own `CREATE TABLE appointments` already declares that column. Root cause: this staging Postgres has been running since 2026-06-19 and its live schema had drifted from what the seed script currently declares — a reminder that **staging schema can silently diverge from the seed script's declared source of truth** if the DB isn't actually rebuilt (DROP/CREATE via the script) after the script changes. Fixed by re-running the script's DROP/CREATE against staging rather than hand-patching the one column, to keep the seed script as the single authoritative schema definition.
+
+**Status**: Closed 2026-08-10.
+
+### 2026-08-08 — Gap identificado: no existe endpoint para quitar/desactivar un socio
+
+**Repo:** barberpilot-api
+
+**Description**: La tabla `socios` tiene una columna `active BOOLEAN DEFAULT true`, pero
+la auditoria de codigo (barberpilot-api, index.js) no encontro ningun endpoint que la
+modifique — el unico insert/update path documentado en todo el repo es el de creacion
+(`/socio/setup`). Tampoco esta confirmado si el login (`/socio/login`) siquiera verifica
+el valor de `active` antes de emitir un JWT (no se audito ese detalle).
+
+**Implicacion practica**: si hoy fuera necesario quitar el acceso a un socio (ej. si se
+termina una sociedad), la unica via conocida es un UPDATE o DELETE manual directo en la
+base de datos de produccion (Railway Postgres) — lo cual requiere el mismo tipo de
+autorizacion explicita que cualquier acceso a credenciales de produccion.
+
+**Why deferred**: surgio como hallazgo colateral al auditar el flujo de creacion de
+socios (`/socio/setup`) para dar de alta a un nuevo partner — no hay todavia un
+incidente real que haya forzado a desactivar a alguien, asi que construir el endpoint
+de baja quedo fuera de alcance de esa tarea.
+
+**Severity**: Medium — misma categoria que otros gaps de este archivo que dependen de
+una intervencion manual directa sobre la base de datos de produccion; sin via de
+reversion rapida si se comete un error.
+
+**Urgency**: Monitor-only — no hay ningun caso pendiente de desactivacion de socio hoy;
+revisar si/cuando se necesite quitarle el acceso a alguien.
+
+**Pendiente:** antes de que esto se necesite de verdad, conviene (a) confirmar si
+`/socio/login` respeta el flag `active`, y (b) construir un endpoint admin de
+desactivacion protegido por el mismo `ADMIN_MASTER_PIN`, en vez de depender de queries
+manuales a la base de datos.
+
+**Status**: Open.
 
 ### 2026-08-06 — Hardcoded barbero roster fallbacks across checkin.html, queue-dashboard.html, barberpilot-control's index.html/agenda-admin.html, and BarberPilot_App's LoginScreen.js
 
