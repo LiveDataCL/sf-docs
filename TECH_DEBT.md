@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-08-10 (CI gap entry)
+**Last updated:** 2026-08-10 (feriados hardcode entry)
 
 ---
 
@@ -105,6 +105,22 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 ---
 
 ## Open
+
+### 2026-08-10 — sf-live's Reporte Financiero uses a hardcoded feriados list instead of the real `feriados` table
+
+**Repo:** sf-live, barberpilot-api
+
+**Description**: The "Reporte Financiero" tab's Domingo/Feriado row labeling (`FERIADOS_CHILE_2026` in `sf-live/index.html`) uses a fixed, hand-curated array of 2026 national holiday dates instead of reading `barberpilot-api`'s real `feriados` table (which also supports per-tenant overrides via `tenant_feriados_override`). This was a deliberate choice, not an oversight: the only endpoint currently serving `feriados` data (`GET /config/negocio`) requires `requireConfigNegocioAuth` (panel/barber JWT), which sf-live's socio-JWT session does not satisfy — and that endpoint also bundles unrelated servicios/productos/meta data. Reusing it would mean building a new, narrower endpoint compatible with the socio auth path; out of scope for the labeling feature that surfaced this.
+
+**Open unknown, explicitly flagged rather than assumed**: it has **not** been checked whether `tenant_feriados_override` has any rows for `saulfino` that differ from the national public calendar (e.g. a day the shop deliberately opens on a public holiday, or closes on a day that isn't one). If such an override exists, `FERIADOS_CHILE_2026` would silently disagree with the tenant's actual configured calendar. Nobody has queried this yet.
+
+**Why deferred**: out of scope for the row-labeling feature that surfaced it (a visual/cosmetic refinement); building proper socio-compatible access to the real `feriados`/`tenant_feriados_override` data is a small but real backend + frontend change, not a one-line fix.
+
+**Severity**: Low — the fixed list was cross-referenced against the official public calendar at write time, and worst case is a cosmetic mislabel (a real-activity day showing normally regardless, since the label only ever applies when totals are already zero) — never a monetary/data-correctness issue.
+
+**Urgency**: Eventual — becomes worth fixing before 2027 regardless (the list needs a manual update every year — see the year-guard console warning added alongside this), a natural point to also check `tenant_feriados_override` and consider wiring real access instead of extending the hardcoded list again.
+
+**Status**: Open. No fix scheduled.
 
 ### 2026-08-10 — boot-smoketest.yml CI has no CREATE TABLE for 9 core tables — zero real coverage for anything touching them
 
