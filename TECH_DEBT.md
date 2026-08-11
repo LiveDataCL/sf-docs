@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-08-10 (feriados hardcode entry)
+**Last updated:** 2026-08-10 (jsdom harness entry)
 
 ---
 
@@ -105,6 +105,24 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 ---
 
 ## Open
+
+### 2026-08-10 — jsdom verification harness (caught a real bug) is a one-off local script, not part of any test suite
+
+**Repo:** sf-live
+
+**Description**: While validating the Reporte Financiero feature this session, a real bug (`escHtml` used but never defined, silently crashing the gastos-detail table render) was found and fixed by actually executing `sf-live/index.html`'s real inline script in a jsdom-simulated DOM — mocking `fetch`, invoking the page's own functions (`cambiarVista`, `cargarReporteFinanciero`), and inspecting the resulting DOM/thrown errors. The same harness was then used to verify the cumulative chart's zero-crossing color-split logic against both real production data and a synthetic forced-negative scenario, confirming exact expected segment counts and that no Y-coordinate clips outside the SVG's drawing bounds.
+
+This was effective — it caught a bug that purely static review and manual math-recomputation both missed — but it exists only as an ad-hoc script (`test-dom.js`/`test-chart.js`) in a session scratchpad directory. It is not committed to the repo, not wired into any CI, and does not run automatically on future changes to `sf-live/index.html`.
+
+**Recommendation (not implemented here)**: convert this into a real, repo-committed test (e.g. a small `tests/` directory with `jsdom` as a dev dependency) and wire it into a GitHub Actions workflow that runs on push/PR to `sf-live`. This would be sf-live's **first** automated test coverage of any kind — currently the repo has zero CI beyond the auto-generated Pages build/deploy.
+
+**Why deferred**: out of scope for the feature work that produced the harness; formalizing it into a maintained test suite is a deliberate, separate piece of work (choosing what to assert, deciding coverage scope, setting up the workflow), not a quick follow-up.
+
+**Severity**: Medium — sf-live currently ships changes with no automated safety net at all; this session's `escHtml` bug is a concrete example of the kind of regression that would otherwise reach production undetected.
+
+**Urgency**: Eventual — no active incident, but every future change to the Reporte Financiero (or any other sf-live) script carries the same undetected-regression risk this one did.
+
+**Status**: Open. No fix scheduled.
 
 ### 2026-08-10 — sf-live's Reporte Financiero uses a hardcoded feriados list instead of the real `feriados` table
 
