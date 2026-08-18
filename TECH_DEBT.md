@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-08-10 (jsdom harness entry)
+**Last updated:** 2026-08-18 (Cierre de caja server-side persistence gap)
 
 ---
 
@@ -105,6 +105,24 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 ---
 
 ## Open
+
+### 2026-08-18 — Cierre de caja has no server-side persistence
+
+**Repo:** barberpilot-control
+
+**Description**: The "Cierre de caja" tab (`index.html`, pane `id="pCaja"`, rendered by `renderCaja()`) computes and stores the daily register close entirely in browser localStorage — `BASE_CAJA`, `gastos`, and `liquidaciones` all live under per-date localStorage keys (`sfsf_base_caja_<fecha>`, `sfsf_gastos_<fecha>`, `sfsf_liq_<fecha>`). Individual `gasto` entries do sync to the backend one-at-a-time via `POST /gastos` (outbox pattern), but there is no consolidated `/cierre` endpoint and no database record of a completed daily close (base inicial, totals by channel, barber liquidations, final `cajaFinal`/`aDepositar`). If the browser cache is cleared or the close is done from a different device, that day's close data is unrecoverable, and there is no server-side audit trail — even though a daily PDF (`printCajaA4()`) is already generated and handed to socios.
+
+Confirmed decision (Aug 2026): the new "Ajuste vs. base estándar" field added alongside `BASE_CAJA` (WhatsApp/PDF export feature) follows the same localStorage-only pattern for now (César's explicit call). This entry tracks the underlying gap, not a blocker on that specific feature.
+
+**Why deferred**: out of scope for the WhatsApp/PDF export feature that surfaced it; building a `/cierre` endpoint + DB table is real backend + frontend scope (schema design, migration, save-flow wiring), not a one-line fix.
+
+**Structural fix (not in scope until prioritized)**: build a `/cierre` POST endpoint + DB table that snapshots the full daily close on save, so the existing daily PDF has a durable server-side backing record — matching how `gastos` already sync individually.
+
+**Severity**: Medium — no fraudulent-billing path, but a real audit/recovery gap: the only record of a completed cierre lives in one browser's localStorage, with no server-side backup.
+
+**Urgency**: Eventual — no active incident forcing this, but every day's close carries the same unrecoverable-if-cache-cleared risk until it's fixed.
+
+**Status**: Open. No fix scheduled.
 
 ### 2026-08-10 — jsdom verification harness (caught a real bug) is a one-off local script, not part of any test suite
 
