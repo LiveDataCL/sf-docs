@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-08-18 (Cierre de caja server-side persistence gap)
+**Last updated:** 2026-08-18 (WhatsApp ajuste discrepancy, unreproduced)
 
 ---
 
@@ -105,6 +105,24 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 ---
 
 ## Open
+
+### 2026-08-18 — "Enviar por WhatsApp" once showed a correct ajuste while "Copiar texto" (tested shortly after) showed $0 — unreproduced
+
+**Repo:** barberpilot-control
+
+**Description**: During manual testing of the Cierre de caja ajuste feature (PR #30), César observed "Enviar por WhatsApp" correctly show Base inicial = $55.530 (ajuste +$5.530), then "Copiar texto" — tested shortly after, same day, same gastos — show Base inicial = $50.000 with no ajuste. Both buttons called the identical shared `textoCierreWhatsapp()` function, so a difference between them can only mean `AJUSTE_CAJA` itself changed value in memory between the two clicks.
+
+**Investigation performed**: pulled the exact commit deployed at test time (`5651d3595`) and reproduced the click sequence three ways — direct function calls, real simulated DOM clicks (fill + blur + click), and a full same-day page reload — all three preserved `AJUSTE_CAJA` correctly across both buttons. Traced every code path touching `AJUSTE_CAJA`/`BASE_CAJA` (boot sequence, all `setInterval` pollers, `drainOutbox`, both global click listeners): none reset it outside of `cambiarBase()`/`cambiarAjuste()`, which persist synchronously and consistently. César confirmed none of the obvious non-bug explanations applied (no device switch, no reload, no manual base edit between the two clicks). No root cause found.
+
+**Why deferred**: unreproducible after three independent repro methods against the exact deployed code; the "Enviar por WhatsApp" button that exposed this discrepancy has since been removed entirely (César's call — wa.me/WhatsApp Web rendering wasn't reliable enough to keep regardless of this bug), so the specific two-button divergence that surfaced this can no longer occur. "Copiar texto" alone is now the only export path and has been independently verified correct.
+
+**Open unknown, explicitly flagged rather than assumed**: the leading unverified hypothesis is a mobile-specific quirk headless testing can't simulate — iOS Safari discarding/reloading a backgrounded tab under memory pressure when `wa.me` handed off to the WhatsApp app (which could look like "no reload happened" from the user's perspective), or private/incognito mode restricting `localStorage`. Neither has been confirmed. If this recurs, capture device/browser/private-mode status at the time — that's the missing piece that would let this be root-caused.
+
+**Severity**: Low — no longer reachable via the removed button, and the remaining "Copiar texto" path has been independently verified correct across function calls, real DOM events, and same-day reload.
+
+**Urgency**: Monitor-only — revisit only if a similar single-value discrepancy is ever observed again via "Copiar texto" itself (the only remaining export path), since that would rule out the "button removed" mitigation and indicate the underlying cause is still live.
+
+**Status**: Open. No fix scheduled — unreproduced, and the surface that exposed it is gone.
 
 ### 2026-08-18 — Cierre de caja has no server-side persistence
 
