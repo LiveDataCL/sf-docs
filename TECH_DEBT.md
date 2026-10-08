@@ -106,6 +106,225 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 ## Open
 
+### 2026-10-08 — Checkout has no notes/comment field (feature request)
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: Confirmed by reading `validateRegistro` and the `registros` table's real column list (`scripts/seed-staging.js:121-140`) — there's no notes/comentario field anywhere on a service record. Surfaced while planning how to record that a backfilled entry was "actually performed this morning" (Angie's first day) — there's no field to put that kind of annotation on, so it has to live only in whoever manually remembers it, or not at all.
+
+**Why deferred**: Not blocking — the accepted trade-off for today's backfill is "entry time stands in for actual service time," with date/amount/payment/commission still correct. Adding a real field is a small schema + UI change but wasn't needed today.
+
+**Severity**: Low — a convenience gap, not a correctness or financial issue.
+
+**Urgency**: Eventual — revisit if backfilled/annotated entries become a recurring need.
+
+**Status**: Open.
+
+### 2026-10-08 — "Agregar barbero" form's bid input field does nothing
+
+**Repo:** barberpilot-control
+
+**Description**: The "Agregar barbero" card has a visible input field for `bid` (placeholder "Ej: b5"), and the form requires it to be non-empty before submitting. Confirmed by reading the actual handler (`barberpilot-api/index.js:6364`, `const { name, role = 'barber', email, pin, spec, color } = req.body;`) that `bid` is never destructured from the request body at all — whatever the admin types there is silently discarded, and the server always assigns the next ID itself via `generateStaffBid()`. An admin creating a new hire has no way to know this and may reasonably believe they're choosing the ID.
+
+**Why deferred**: Cosmetic/UX, not a correctness bug — surfaced while onboarding Angie (the field was filled with a guessed value that the server correctly ignored).
+
+**Severity**: Low — misleading UI, no functional or data impact.
+
+**Urgency**: Eventual — worth removing or relabeling (e.g. "ID asignado automáticamente") next time this form is touched for another reason.
+
+**Status**: Open.
+
+### 2026-10-08 — `POST /registros/bulk` accepts writes with no authentication and no validation of any kind — CRITICAL
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Reclassified from High to Critical / Immediate** (same day, during Angie's onboarding) after confirming the actual blast radius is larger than first scoped: this isn't just an unvalidated import tool, it's a completely open write endpoint with zero auth, reachable by anyone who knows the API's base URL.
+
+**Description**: `POST /registros/bulk` (`index.js:1711`) has no auth middleware at all — not `requirePanelRole`, not `requireDashboardToken`, nothing — and no `express-validator` chain either. It inserts directly into `registros` from whatever JSON body is sent: no check that `bid` refers to a real or active barbero, no check that `sid`/`precio` match the service catalog, no check that `pago` is a real payment method, no tenant scoping. A single bad or malicious request can write arbitrary financial records.
+
+**Who can actually reach it today — confirmed by searching every repo, not assumed**: nothing automated calls it. The only documented caller is a `curl` command in `barberpilot-api/README.md:104`, meant to be run by hand with a JSON file downloaded from barberpilot-control's "Ingresar histórico" tab (`descargarHistorico()`, `index.html` — confirmed separately that this tool makes zero API calls itself, it only produces a downloadable file). **The README also claims a second path that turns out not to exist**: "O desde el sistema de control: pestaña 📥 Ingresar histórico → botón Sincronizar con nube" (`README.md:109`) — but the only button anywhere in `barberpilot-control` with that label calls `migrarHistoricoNube()` (`index.html:935`), and that function **is not defined anywhere in the file**. Clicking it does nothing but throw a silent `ReferenceError` in the browser console. This is documentation describing a feature that doesn't exist (or existed once and was removed without updating the README) — distinct from, but discovered alongside, the endpoint's real security gap.
+
+**An existing, usable marker for a first anomaly pass**: records created via the sanctioned Ingresar histórico → curl flow get an `id` starting with `TK_MAN_` (assigned client-side in `agregarItemHistorico()`/`descargarHistorico()`); genuine live-checkout records get `id: TK<epoch>` with no `_MAN_` segment. This is a **positive signal only** — an `id` matching `TK_MAN_` is very likely a sanctioned bulk import, but since the endpoint validates nothing, anyone could POST a row with any `id` shape at all, including one disguised to look like a live sale. Don't treat the absence of the marker as proof a row is clean, and **don't treat a zero-anomaly result from the queries below as proof nothing bad happened either** — an attacker who bothers to fake a plausible `id`, a real `bid`, and a real service/price would sail through every check here undetected. These queries catch sloppy or accidental bad data, not a deliberate, careful forgery.
+
+**Read-only queries for César to run (rewritten after review — monthly-aggregated not daily, tenant-scoped, bid list derived from `barberos` not hardcoded)**. `registros` and `barber_schedule` both got a `tenant_id TEXT DEFAULT 'saulfino'` column via `initTenantColumns()` (`index.js:5897-5909`, confirmed called at boot, `index.js:8234`) — despite the earlier draft of this entry saying otherwise, so these now filter by it. `registros.fecha` is confirmed a real `DATE` column (`scripts/seed-staging.js:123`), but date-range filters below still cast to text rather than assume — cheap insurance, correct either way:
+```sql
+-- 0. Run this FIRST — confirms the real set of payment-method values
+-- actually stored, since validateRegistro's code only ever allows
+-- efectivo/debito/transferencia (no 'credito' path exists in the validated
+-- checkout today) but this reads the live data directly rather than trusting that.
+SELECT pago, COUNT(*) AS cantidad
+FROM registros
+WHERE tenant_id = 'saulfino'
+GROUP BY pago
+ORDER BY cantidad DESC;
+
+-- 1. Rows by insertion path, by MONTH (not day — stays single-page even over
+-- a long window), with anomaly flags. bid list comes from the real barberos
+-- table for this tenant (active + inactive + any future hire), not a
+-- hardcoded list that would go stale the next time someone's added/retired.
+SELECT
+  LEFT(fecha::text, 7) AS mes,
+  CASE WHEN id LIKE 'TK_MAN_%' THEN 'bulk_historico' ELSE 'vivo' END AS origen,
+  COUNT(*) AS cantidad,
+  SUM(precio) AS total_facturado,
+  COUNT(*) FILTER (
+    WHERE bid NOT IN (SELECT bid FROM barberos WHERE tenant_id = 'saulfino')
+  ) AS bids_desconocidos,
+  COUNT(*) FILTER (WHERE pago NOT IN ('efectivo','debito','transferencia')) AS metodos_pago_invalidos
+FROM registros
+WHERE tenant_id = 'saulfino'
+  AND fecha::text >= to_char(CURRENT_DATE - INTERVAL '90 days', 'YYYY-MM-DD')
+GROUP BY mes, origen
+ORDER BY mes DESC, origen;
+
+-- 2. Rows priced differently from the service catalog's CURRENT active
+-- price, by month (summary count only — catalog prices change over time, so
+-- this flags candidates to look at, not confirmed anomalies).
+SELECT
+  LEFT(r.fecha::text, 7) AS mes,
+  COUNT(*) AS filas_con_precio_distinto_al_catalogo_actual
+FROM registros r
+LEFT JOIN servicios s ON s.servicio_id = r.sid
+WHERE r.tenant_id = 'saulfino'
+  AND r.fecha::text >= to_char(CURRENT_DATE - INTERVAL '90 days', 'YYYY-MM-DD')
+  AND (s.precio_activo IS NULL OR r.precio <> s.precio_activo)
+GROUP BY mes
+ORDER BY mes DESC;
+```
+**mae-studio note**: without the `tenant_id = 'saulfino'` filter, mae-studio's own bids (`p1`-`p4`) would show up in query 1's `bids_desconocidos` count purely because they're not saulfino barberos — not a real anomaly, just a tenant mismatch. The filter above avoids that false positive entirely by only ever looking at saulfino's own rows.
+
+**Scoped fix (not built yet — own branch, own go-ahead, first task after Angie is operational)**:
+- Add `requirePanelRole('admin')` — same pattern already used for every other admin-sensitive route in this file. Closes the "anyone on the internet" exposure immediately.
+- Validate `pago` against the same enum `validateRegistro` already uses (`efectivo`/`debito`/`transferencia`).
+- Validate `bid` — **found a real limitation while scoping this**: there's no history table recording *when* a barbero was activated/deactivated, only a current boolean. True "was this barbero active on that specific past date" validation isn't buildable against today's schema without adding that history table (bigger, separate work). The realistic near-term check is narrower: "does this bid exist in `barberos` for this tenant at all" (catches typos and made-up bids, doesn't catch "active-right-now-but-wasn't-on-that-date" edge cases, which barely matter for backfilling a specific day anyway).
+- Validate service/price — reuse the existing `resolverServicioYValidarPrecio()` (`index.js:1420-1481`, already used by `POST /registros`) rather than writing a third, slightly-different variant of the same check.
+- Tenant scoping — `registros` has no `tenant_id` column today, and this whole queue/registros system is already single-tenant (saulfino-only) elsewhere in the codebase, so there's nothing to validate against yet; becomes relevant only once a second tenant uses this table.
+- Wrap the whole batch in one transaction, reject all rows if any row is invalid (replacing today's per-row `ON CONFLICT DO NOTHING`, which silently partial-succeeds).
+- Log who imported what — `req.panelUser.panel_user_id`/`nombre` becomes available for free once the auth guard above is added; a minimal version is a structured `console.log`, a more durable version is a small audit table.
+- **The dead "Sincronizar con nube" button (`barberpilot-control/index.html:935`, `onclick="migrarHistoricoNube()"`, function never defined) must be resolved as part of this fix, not left dangling**: either implement it properly on top of the now-secured endpoint (so "Ingresar histórico" gets a real one-click cloud sync instead of download-then-manual-curl), or remove the button entirely if the manual-curl path is going to remain the sanctioned flow. Leaving a dead button that silently does nothing is its own small UX bug either way.
+- **Effort estimate**: roughly half a day for a developer already familiar with this codebase — 2-4 hours for the guard, validation, and atomic transaction (all reusing existing patterns), 1-2 hours for logging, about an hour for testing, plus a small additional amount (30-60 min) for whichever choice is made on the dead button. The "active-at-date" schema gap above is explicitly out of this estimate if full point-in-time correctness is wanted later.
+
+**Severity**: Critical — unauthenticated arbitrary writes to financial records, reachable by anyone who knows the API's base URL, not gated behind any login at all.
+
+**Urgency**: Immediate — scheduled as the first task once Angie is operational, per explicit instruction, ahead of other queued work.
+
+**Status**: Open. Investigated and scoped only — no code changed, per instruction to keep this read-only today.
+
+### 2026-10-08 — Railway barberpilot-api has no healthcheck path configured — a broken build can go live and replace a working one with no safety net
+
+**Repo:** barberpilot-api
+
+**Description**: A real `/health` endpoint already exists (`index.js:501`) and already does a genuine check, not a stub — `await query('SELECT 1')`, returning 500 if the database connection is actually broken. The gap isn't the endpoint; it's that nothing tells Railway to use it. No `railway.json`/`railway.toml`/`Procfile` exists in the repo declaring a healthcheck path, so (per César confirming Railway's Settings → Scale screen, same session this was found in) Railway has no configured healthcheck for this service at all. Practical effect: every deploy on this project this entire session (including the three just shipped) went live the instant the process started listening, with nothing checking whether it could actually reach the database first.
+
+**Why deferred**: Out of scope for the auth/boot-seed/roster fixes shipped today — a deploy-pipeline safety net, not a functional bug in any of those changes. Found incidentally while scoping an unrelated item, not something that blocked today's work.
+
+**Proposed fix (not built — scope only)**: add a `railway.json` with `"deploy": {"healthcheckPath": "/health", "healthcheckTimeout": ...}` (version-controlled, reviewable, survives environment recreation) rather than only setting it by hand in Railway's dashboard. Small, low-risk, no application code changes — the endpoint it points to is already correct.
+
+**Severity**: Medium — no incident has happened yet, but every future deploy carries the same "bad build goes live with zero rollback-on-failure" risk until this is wired up.
+
+**Urgency**: Eventual — no active incident; worth doing before the next deploy that has any real chance of a boot-time failure (e.g. anything touching the migration chain), since that's exactly the scenario a healthcheck would catch.
+
+**Status**: Open. Scoped only, not built.
+
+### 2026-10-08 — barberpilot-api runs on Node 18.20.8 (Railpack default), which is end-of-life
+
+**Repo:** barberpilot-api
+
+**Description**: Confirmed during the same Railway settings review as the healthcheck item above — the deployed runtime is Node 18.20.8, Railpack's current default for a repo with no explicit engine pin. Node 18 reached its Node.js project end-of-life in April 2025 (per Node.js's published release schedule as of this writing) — it no longer receives security patches from upstream. `package.json`'s `"engines": {"node": ">=18"}` is wide enough to allow a newer LTS already; nothing in the dependency list was checked yet for a hard Node-20/22-only requirement.
+
+**Why deferred**: Found incidentally, same as the healthcheck item — not something blocking today's onboarding work, and a runtime upgrade deserves its own dedicated verification pass rather than being folded into an unrelated change.
+
+**Proposed scope (not started)**: 1) pin an explicit newer LTS (22 is current LTS as of this writing; 20 is the more conservative choice) via `"engines"` and/or a Railway-specific version file, whichever Railpack respects; 2) run the full existing test/verification approach used this session (the jsdom-based harnesses, plus the dependency-free auth-guard tests) against the new runtime before deploying; 3) deploy to the single Railway replica during a confirmed no-payments window, same discipline as today's deploys; 4) watch real boot logs for any Node-version-sensitive dependency warning (none anticipated given the dependency list is unremarkable — `express`, `pg`, `jsonwebtoken`, `bcrypt`, etc. — but not independently verified against Node 20/22 compatibility yet).
+
+**Severity**: Medium — no active exploit known, but running an unpatched, unsupported runtime in production is a standing, compounding risk with no offsetting benefit.
+
+**Urgency**: Eventual — no active incident; reasonable to schedule as ordinary maintenance rather than an emergency.
+
+**Status**: Open. Scoped only, not started.
+
+### 2026-10-08 — Pending confirmation: is Railway "Serverless" (sleep-on-idle) enabled for barberpilot-api?
+
+**Repo:** barberpilot-api
+
+**Description**: Not yet confirmed either way by César. If Railway's "Serverless" mode is turned on for this service, the process (and everything living only in its memory) gets torn down after a period of inactivity and cold-started on the next request. Two things in this codebase live purely in-memory and would be silently lost on every sleep cycle if this is on: the active-barber cache this session already investigated (`_barbCache`, refreshed at boot + every 5 min + on staff changes — a sleep/wake would just mean an extra cold-start reload, probably harmless) and, more importantly, the 15-minute-appointment / arrival-alert poller and the SSE connections used for real-time admin-panel alerts — both of which would simply stop firing while asleep and need the service to wake up (via an incoming request) before resuming, with no queued catch-up for whatever was missed during the sleep window.
+
+**Why deferred**: Genuinely unknown status, not yet checked — raised here so it isn't forgotten, not because a problem has been confirmed.
+
+**Next step**: César to confirm in Railway → barberpilot-api → Settings → whatever surfaces "Serverless"/sleep behavior (same screen already used to confirm the 1-replica setting this session). If it's on, scope turning it off (likely the simple fix, assuming the cost tradeoff is acceptable) versus making the poller/SSE paths resilient to being asleep (more invasive, probably not worth it for a single-location salon's traffic pattern).
+
+**Severity**: Medium if enabled (silent loss of real-time alerting with no error surfaced to anyone) — Low/moot if disabled.
+
+**Urgency**: Near-term to just confirm the setting (cheap); the fix itself (if needed) is Eventual.
+
+**Status**: Open, pending César's confirmation of the actual setting.
+
+### 2026-10-08 — In-memory active-barber cache (`_barbCache`) assumes a single Railway replica
+
+**Repo:** barberpilot-api
+
+**Description**: Confirmed during Angie's onboarding (same session) that `_barbCache` — the in-memory list `validateRegistro`'s `bid` check reads from, refreshed at boot, every 5 minutes, and immediately on every staff create/update/deactivate/reactivate — is a plain in-process JS `Map`, with no cross-instance sharing mechanism (no Redis, no pub/sub). Confirmed with César that barberpilot-api currently runs exactly 1 replica (Railway Settings → Scale, US West), so every refresh trigger reaches the only copy that exists and this is correct today — no fix needed right now.
+
+**Why deferred**: No active problem — explicitly a "monitor, don't build" item, not a bug.
+
+**Trigger to revisit**: the moment this service is ever scaled to more than 1 replica. At that point, each replica holds its own independent copy, and a cache-invalidating event (e.g. creating a new staff member) handled by one replica would not refresh the others until their own 5-minute timer fires — meaning a brand-new hire's first sale could be rejected by whichever replica happens to handle that request, for up to 5 minutes. Fix at that point: either move the cache to a shared store, or have each instance's staff-mutation handlers broadcast an invalidation signal to its siblings, or (simplest) have `validateRegistro` query the DB directly instead of an in-memory cache if the extra query-per-sale cost is acceptable.
+
+**Severity**: Low today (single replica, confirmed correct) — would become Medium the moment replica count increases, since it'd then be a real, if narrow, window where a legitimate sale can be wrongly rejected.
+
+**Urgency**: Monitor-only — revisit only if/when replica count changes.
+
+**Status**: Open, monitor-only.
+
+### 2026-10-08 — `POST /api/v2/staff` (and the related `PATCH /api/v2/staff/:bid`) require a token type the control panel's UI never produces — "Agregar barbero" button has likely never worked since 2026-07-01
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: Found while planning Angie's onboarding. `barberpilot-control/index.html`'s "Agregar barbero" card (`staffSubmitNewBarber()`) sends either a panel-login JWT (`sessionStorage.panelJwt`, shape `{type:'panel', panel_user_id, role:'admin'|'operator', ...}`) or a dashboard token (`x-dashboard-token` header) via `getAuthHeaders()`. The actual endpoint it calls, `POST /api/v2/staff` (`index.js` ~6346), is gated by `requireTenantAuth` + `requireRole('owner')` — middleware that expects a *barber-app PIN-login session* JWT (shape `{tenant_id, staff_id, bid, role, session_id}`, issued only by `POST /api/v2/auth/login`), verified against a live `auth_sessions` row. A panel JWT has no `session_id`/`staff_id` fields and a `role` of `admin`/`operator`, never `owner` — it structurally cannot satisfy either check. `PATCH /api/v2/staff/:bid` (used for edits, including PIN resets) has the identical guard and the identical mismatch.
+
+**Evidence (git history, not just code reading)**:
+- `3879222` (2026-06-17) originally added `POST`/`GET /api/v2/staff` guarded by `requireDashboardToken` — compatible with the control panel's auth, per the commit message ("allowing full barber CRUD from control panel").
+- `0535757` (2026-07-01, same day) deliberately deleted that `requireDashboardToken`-guarded `GET`/`POST /api/v2/staff` as part of a security-hardening pass ("sensitive route auth"), leaving only an earlier, until-then-unused `requireTenantAuth`-guarded duplicate (added 2026-06-15 in `06f8dd6`, multi-tenant Phase 1 scaffolding) as the sole surviving implementation. The frontend was never updated to match the new auth requirement.
+- Neither b5 (Steven, added 2026-07-01 in the same commit range) nor b6 (Winder, added 2026-07-19 in `3debbf8`) were created through this endpoint or through the control panel UI at all — both were added by editing hardcoded arrays and a boot-time SQL seed block directly in `index.js`, deployed as a code change. So the button's broken state has had no opportunity to be noticed: nobody has used it for a real hire since the guard changed.
+- Confirmed the payload-shape mismatch directly (no DB needed): signed a panel-shaped JWT with a throwaway local secret and inspected it — `session_id` and `staff_id` are `undefined`, `role` is `admin`, none of which `requireTenantAuth`/`requireRole('owner')` can accept.
+- Did not complete a full live round-trip against a real Postgres (no Docker or local Postgres binary available on the machine used for this investigation) — the two pieces of evidence above are independently conclusive without it, but a live confirmation would be the most rigorous close.
+
+**Why deferred**: Discovered during read-only discovery for Angie's onboarding, not caused by that work. Fixing it (e.g. accepting a panel `admin`-role JWT via `requirePanelRole`, consistent with the existing hardcoded `'saulfino'` tenant convention used elsewhere) is a real backend change needing review, not a one-line patch to apply silently mid-investigation.
+
+**Severity**: High — the control panel's only UI path for creating/editing staff (including PIN resets) is very likely completely non-functional in production, with no workaround available through that UI at all; every roster change for the life of this bug has had to go through a direct code change + deploy instead.
+
+**Urgency**: Immediate-if-relied-upon — becomes blocking the moment anyone tries to use the "Agregar barbero" button for a real hire (e.g. Angie) without the fix landing first.
+
+**Status**: Open. Structural fix proposed, not yet built or approved.
+
+### 2026-10-08 — First-login "set your own PIN" flow has no identity verification — whoever taps a tile first claims that PIN
+
+**Repo:** barberpilot-api, BarberPilot_App
+
+**Description**: `POST /api/v2/auth/login` — when `tenant_staff.pin_hash IS NULL` (a new hire who hasn't set a PIN yet, e.g. Steven today) — accepts *any* 4+ digit input as valid (`pinValid = true` unconditionally unless it happens to match `ADMIN_MASTER_PIN`) and issues a full session token, routing straight to `SetupPinScreen`. There is no check that the person tapping that barbero's tile is actually them — no phone verification, no one-time code, nothing. Whoever taps the tile and enters any PIN first permanently claims it (`pin_set=true` after `POST /api/v2/auth/set-pin`); the real person is locked out until an admin intervenes. Any newly-created barbero left with no PIN (the recommended, lowest-friction onboarding path) carries this exposure between account creation and their first real login.
+
+**Admin recovery check**: no PIN-reset button exists anywhere in `barberpilot-control`'s UI (confirmed by search — no matching function). The backend does support resetting a PIN via `PATCH /api/v2/staff/:bid` with a `pin` field, but that route has the identical auth mismatch as the entry above, so it isn't reachable from the panel today either. The one working recovery path is: the real staff member (or César with them) logs in using `ADMIN_MASTER_PIN` as the PIN (which overrides any staff member's check), then uses the in-app "change PIN" option (`ConfigScreen.js`), again supplying the master PIN as `current_pin`. This works, but depends entirely on César being present with the master PIN each time — there's no self-serve or panel-driven reset.
+
+**Why deferred**: Pre-existing product behavior (already live for Steven today), not introduced by the Angie onboarding work that surfaced it. Closing the race condition (e.g. requiring a short-lived claim code shown to the real hire, or restricting first-login PIN-setup to a short window right after account creation) is a real design decision, not a quick fix.
+
+**Severity**: Medium — account takeover is low-value (gates check-in/registro entry under that barbero's name, not payment data directly) but real, and the only existing recovery path requires the owner's personal master PIN every time.
+
+**Urgency**: Monitor-only for a trusted, small, in-person staff — becomes Near-term if the login screen/kiosk is ever reachable by the public, or once headcount grows enough that "whoever's near the tablet first" stops being an acceptable risk model.
+
+**Status**: Open.
+
+### 2026-10-08 — `tenant_commissions` (per-barber, per-service commission table) exists in schema but has zero API wiring — effectively dead
+
+**Repo:** barberpilot-api
+
+**Description**: `tenant_commissions` (`bid, svc_id, pct`, unique per tenant+bid+svc_id — `index.js` ~5653) looks like it supports a different commission rate per individual barber per service. In practice, no `GET`/`POST`/`PATCH` route anywhere in `index.js` reads or writes it — the only commission mechanism actually wired up is `tenant_commissions_v2` (`payment_method, staff_pct, business_pct`), which is tenant-wide, not per-barber, and covers cash/transfer/debit splits only. Found while confirming, for Angie's onboarding, whether a new hire could be given a different commission rate than the rest of the roster — the honest answer is no, not without new backend work, despite the `tenant_commissions` table's name suggesting otherwise.
+
+**Why deferred**: Out of scope for onboarding a barber who (per current plan) gets the same tenant-wide split as everyone else. Building real per-barber override support (new endpoints, control-panel UI, and a defined precedence rule against `tenant_commissions_v2`) is separate, larger work with no current trigger.
+
+**Severity**: Low — no incorrect commission is being paid; the gap is a missing *capability*, not a wrong calculation. Mildly misleading to a future reader who assumes the table's existence means the feature works.
+
+**Urgency**: Eventual — becomes relevant the moment a real need for a per-barber (not per-payment-method) commission rate comes up. No such need today.
+
+**Status**: Open. Table kept as-is (not deleted) per standing instruction not to remove existing schema speculatively.
+
 ### 2026-08-18 — "Enviar por WhatsApp" once showed a correct ajuste while "Copiar texto" (tested shortly after) showed $0 — unreproduced
 
 **Repo:** barberpilot-control
@@ -257,16 +476,23 @@ manuales a la base de datos.
 
 **Status**: Open.
 
-### 2026-08-06 — Hardcoded barbero roster fallbacks across checkin.html, queue-dashboard.html, barberpilot-control's index.html/agenda-admin.html, and BarberPilot_App's LoginScreen.js
+### 2026-08-06 — Hardcoded barbero roster fallbacks across checkin.html, queue-dashboard.html, and barberpilot-control's index.html / BarberPilot_App's LoginScreen.js
 
 **Repo:** barberpilot-api, barberpilot-control, BarberPilot_App
 
-**Description**: Multiple surfaces across three repos maintain their own hand-copied array of the barbero roster instead of reading it live from `GET /barberos` (which already filters `activo=true` server-side):
-- `barberpilot-api/checkin.html` and `barberpilot-api/queue-dashboard.html` — load the real roster from `GET /barberos` at page init, but fall back to a hardcoded array if that fetch fails.
-- `barberpilot-control/index.html`'s `BB` array (`~line 1208`) and `agenda-admin.html`'s `B_MAP`/`BID_TO_QID`/roster filter pills — no live fetch at all found; purely hardcoded, comment claims "Populated from GET /barberos" but nothing actually does that.
-- `BarberPilot_App/src/constants/index.js`'s `BARBEROS_FALLBACK` — feeds `LoginScreen.js`'s tile list with zero live reconciliation.
+**Correction (2026-10-08, Angie onboarding investigation)**: This entry previously described `agenda-admin.html` as having "no live fetch at all" and had not checked sf-live or saulfino-web. Both corrected below — the real remaining scope is narrower than originally written (two surfaces, not four+).
 
-This is one systemic pattern, not three separate bugs — merging what were previously three separate entries (barberpilot-api's 2026-07-23 entry, BarberPilot_App's 2026-08-06 entry, and a barberpilot-control instance found during the same investigation) into one, since they're the same root cause recurring in every frontend surface that needs to know the roster.
+**Description**: Two surfaces genuinely have no live reconciliation and would hide a newly-added barbero even after their DB rows exist:
+- `barberpilot-control/index.html`'s `BB` array (`~line 1242`) and its `BB_CANONICAL_NAMES` map (`~line 6877`): `staffRefreshFromAPI()` only patches the `active` flag on entries that already exist in `BB` by matching `bid` — it has no `else` branch, so a `bid` present in the live `GET /api/v2/staff` response but absent from the hardcoded seed array is silently dropped, never added. Display names also come only from `BB_CANONICAL_NAMES`, not the live API response's `name` field. A brand-new hire is invisible in every barber picker fed by `BB` (service entry, cierre de caja, reports) until someone hand-edits both the array and the map and ships a commit.
+- `BarberPilot_App/src/constants/index.js`'s `BARBEROS_FALLBACK` / `TODOS_PERFILES` — feeds `LoginScreen.js`'s tile list (where a barbero picks their profile and enters their PIN) with zero live reconciliation. A hook that already does live-fetch-with-fallback exists (`src/hooks/useBarberos.js`, used by `AdminScreen.js`) but `LoginScreen.js` and `App.js:192` bypass it and read the static constant directly.
+
+**Corrected / already fine, no fix needed**:
+- `agenda-admin.html` (`barberpilot-control`) — confirmed via code read: `cargarBarberos()` runs on page load, fetches `GET /config/negocio/publico?tenant=saulfino`, and fully rebuilds `BARBERS`/`B_MAP`/`BID_TO_QID` from the response (not a selective patch). A new hire appears here automatically. The previous write-up of this entry was wrong about this file.
+- `checkin.html`/`queue-dashboard.html` (`barberpilot-api`) — as previously documented, live-fetch with fallback.
+- `sf-live/index.html`'s two arrays (`SILLAS_BARBS`, `BB_BID`/`_sfBarberos`) — checked for the first time in this investigation. An IIFE at page load (`~line 1847`) fetches `GET /barberos` and fully rebuilds all three (`BB_BID`, `_sfBarberos`, and `SILLAS_BARBS`) from the live response; the hardcoded values are only the pre-fetch/fetch-failure fallback. A new hire appears here automatically.
+- `saulfino-web/checkin.html` and `saulfino-web/barber.html` — also checked for the first time. Both call `GET /barberos` on load (`loadBarberosFromAPI()` in checkin.html, an equivalent fetch in barber.html) and rebuild their barber list from the response; a hire with no locally-cached photo just renders with no photo, not as a missing barbero. A new hire appears here automatically.
+
+This is one systemic pattern, not several separate bugs — merging what were previously three separate entries (barberpilot-api's 2026-07-23 entry, BarberPilot_App's 2026-08-06 entry, and a barberpilot-control instance found during the same investigation) into one, since they're the same root cause recurring in the two surfaces that still have it.
 
 **History of recurrence**:
 - **2026-07-23** — `checkin.html`/`queue-dashboard.html` found stale (still listed `samuel`/`b3`, missing `winder`/`b6`) during the Gabriel/b3 investigation; fixed to b1/b2/b5/b6 (Didian/Emerson/Steven/Winder) in that change.
@@ -283,13 +509,13 @@ This is one systemic pattern, not three separate bugs — merging what were prev
 
 **Urgency**: Eventual — revisit next time the barbero roster changes (add/remove/reactivate), since none of these arrays update themselves. Escalates to Medium when the second tenant (`saulfino-maipu`) activates, since the hardcoded-array pattern breaks structurally (can't serve two tenants' rosters from one array), not just staleness, at that point.
 
-**Closure path**: Each surface should fetch its roster live (`GET /barberos`) on load/mount and build its UI from the live response, falling back to a hardcoded array only on fetch failure:
-- `checkin.html`/`queue-dashboard.html` already do this — just need the fallback arrays kept in sync until the structural fix below lands everywhere.
-- `barberpilot-control/index.html`/`agenda-admin.html` need the live fetch added — currently missing entirely despite the comment claiming otherwise.
-- `BarberPilot_App/LoginScreen.js` needs the live fetch added, mirroring the `checkin.html` pattern.
+**Closure path**: Each surface should fetch its roster live (`GET /barberos`) on load/mount and build its UI from the live response, falling back to a cached/hardcoded array only on fetch failure:
+- `checkin.html`/`queue-dashboard.html`, `agenda-admin.html`, `sf-live`, `saulfino-web` already do this — just need their fallback arrays kept in sync until the two remaining fixes below land.
+- `barberpilot-control/index.html`'s `BB`/`BB_CANONICAL_NAMES` need the sync logic fixed to add missing bids (not only patch `active` on existing ones) and to take the display name from the live response instead of the hardcoded map.
+- `BarberPilot_App/LoginScreen.js` (and `App.js:192`) need to switch to the existing `useBarberos()` hook instead of reading `BARBEROS_FALLBACK`/`TODOS_PERFILES` directly — mirroring what `AdminScreen.js` already does.
 Add a stale-while-revalidate cache layer so each surface still renders instantly from a cached roster while the live fetch resolves in the background. Test against `saulfino-maipu` once that tenant activates, to confirm each fetch is tenant-scoped correctly and roster A/B don't leak into each other.
 
-**Status**: Open. `checkin.html`/`queue-dashboard.html` fallback data and `BarberPilot_App`'s `BARBEROS_FALLBACK` are both current as of 2026-08-06; `barberpilot-control`'s `BB` array/`agenda-admin.html` are currently stale (still show Emerson as active). Fail-loud-instead recommendation open, pending César's product call. Structural live-fetch fix not implemented anywhere.
+**Status**: Open, narrowed scope (2026-10-08): `barberpilot-control`'s `BB` array and `BarberPilot_App`'s `LoginScreen.js`/`App.js` are the two confirmed-stale surfaces. `checkin.html`/`queue-dashboard.html`, `agenda-admin.html`, `sf-live`, and `saulfino-web` are all confirmed structurally fine (live-fetch with fallback) as of this date. Fail-loud-instead recommendation open, pending César's product call.
 
 ### 2026-08-04 — Migration numbering collision: two branches independently picked "Migration 040"
 
@@ -602,6 +828,8 @@ Confirmed examples from the client-memory feature (Phase 1): `GET /clientes/:id/
 **Status**: Partially resolved 2026-07-29. The predicted trigger happened — the WhatsApp admin conversations feature (`GET/POST /admin/whatsapp/...`, powering barberpilot-control's "Mensajes WhatsApp" tab) needed real multi-tenant behavior (saulfino vs. saulfino-maipu). Fixed the root cause: `requirePanelRole` now sets `req.panelUser = decoded`, exposing the JWT's `tenant_id` claim exactly like `requireConfigNegocioAuth`/`requirePanelAuth` already did — purely additive, zero regression risk. The 3 WhatsApp endpoints now derive `tenantId` from `req.panelUser.tenant_id` instead of a hardcoded literal.
 
 Still open: every *other* route built on `requirePanelRole` (staff CRUD, `/config/bebidas-disponibles`, `/clientes*`, servicios/productos precio endpoints) still hardcodes `'saulfino'` literally — the middleware fix makes migrating them possible, it doesn't migrate them; that's separate, unscoped work per route. Also still open: there is no way to actually authenticate against `barberpilot-control` as `saulfino-maipu` yet — Migration 033 seeded that tenant minimally (id/slug only, explicitly no `panel_users` row), and the login form has no tenant selector.
+
+**2026-10-08 addition**: `POST /api/v2/staff` and `PATCH /api/v2/staff/:bid` (fixed in this same session — see the "Agregar barbero" auth regression entry above) are two more confirmed members of the still-hardcoded list. Deliberately used an explicit `const tenantId = 'saulfino';` with a comment pointing back to this entry, rather than `req.panelUser.tenant_id || 'saulfino'` — a silent `||` fallback here would misroute every future write to `'saulfino'` the instant a second tenant's panel admin calls either route, with nothing to surface the mistake. Migrating these two to real tenant resolution is still unscoped future work, same as every other route in this list.
 
 ### 2026-07-24 — `bebida` never reaches `registros` when a barbero closes a service from BarberPilot_App instead of the control panel
 
