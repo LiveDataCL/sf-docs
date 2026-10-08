@@ -106,6 +106,41 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 ## Open
 
+### 2026-10-08 — `barber_schedule`'s unique constraint is `(bid, dia_semana)`, with no `tenant_id` — a cross-tenant bid collision would silently skip an insert
+
+**Repo:** barberpilot-api
+
+**Description**: `barber_schedule`'s primary key is `(bid, dia_semana)` only (`index.js:5048`), even though the table later gained a `tenant_id` column via `initTenantColumns()`. If two tenants ever assign the same literal `bid` string (e.g. both using a `b`-prefixed sequence, or any other overlap), `ON CONFLICT (bid, dia_semana) DO NOTHING` — the exact pattern this session's boot-seed fix and Angie's own schedule insert both rely on — would silently treat the second tenant's insert for that `bid`+day as "already exists" and skip it, even though it's a completely different tenant's barber. Today `saulfino` uses prefix `b` and `mae-studio` uses prefix `p` (confirmed via `tenants.staff_prefix`, `index.js:7900-7904`), so no actual collision exists yet — but nothing in the schema prevents one.
+
+**Why deferred**: No active collision today (different prefixes keep the two tenants' bids disjoint in practice) — found while writing Angie's own schedule-insert statement this session, not blocking that work.
+
+**Proposed fix (not built)**: change the unique constraint/primary key to `(tenant_id, bid, dia_semana)`, matching the pattern already used elsewhere (e.g. `tenant_staff`'s `UNIQUE(tenant_id, bid)`). Requires a migration (drop + recreate the constraint) rather than just a new `ALTER TABLE ADD COLUMN`.
+
+**Severity**: Medium — silent data loss (a legitimate insert that looks like it succeeded but didn't) if it's ever triggered, not a security issue.
+
+**Urgency**: Eventual — no active trigger while tenants keep disjoint bid prefixes; worth fixing before that assumption is ever relied on less carefully (e.g. a future tenant reusing a prefix, or a manual data-entry mistake).
+
+**Status**: Open.
+
+### 2026-10-08 — saulfino's 'credito' commission row is stuck at 40/60 instead of 43/57 — re-scoped, lower priority
+
+**Repo:** barberpilot-api
+
+**Description**: `tenant_commissions_v2`'s saulfino `'credito'` row has held `staff_pct=40.00, business_pct=60.00` since it was first seeded; César has confirmed the intended rate is 43/57, matching `'debito'`. Not fixed yet — deliberately deferred, see below.
+
+**Key finding that changed the scope of this task**: `validateRegistro` (`index.js:389`, `body('pago').isIn(['efectivo', 'debito', 'transferencia'])`) has no path for `'credito'` at all, and nothing in `barberpilot-control`'s checkout UI offers "Crédito" as a distinct option from "Débito" either. So in practice, **every POS credit-card transaction today is already being recorded as `pago='debito'`**, not `'credito'` — the `'credito'` row in the commission table has likely never actually been read by anything, live or historical. César will separately confirm this matches actual staff practice at the register.
+
+**Re-scoped plan (was: investigate + fix a real discrepancy; now: mostly a consistency cleanup)**:
+1. Set the `'credito'` row to `43.00/57.00` for consistency with `'debito'`, and confirm (grep/read, not guess) that no surface anywhere actually reads `tenant_commissions_v2` filtered to `pago='credito'` — if truly unread, this is a low-stakes value change, not a financial correction.
+2. Only investigate historical impact if the Critical `/registros/bulk` entry's query 0 (`SELECT pago, COUNT(*) ... GROUP BY pago`) actually turns up any `'credito'` rows — if it returns none, there's no history to reconcile.
+3. Still its own branch + its own go-ahead before touching the live rate, per the standing production-billing-change rule — just lower priority than originally scoped, since the "credit cards are being mis-recorded" risk turned out not to exist structurally.
+
+**Severity**: Low (re-scoped down from the original framing) — no evidence yet of any real transaction ever being mis-recorded under the wrong rate, since the column that would carry that rate has no live write path.
+
+**Urgency**: Eventual — proceed whenever `feature/credit-commission-43` is picked up; not blocking anything.
+
+**Status**: Open, re-scoped 2026-10-08.
+
 ### 2026-10-08 — Checkout has no notes/comment field (feature request)
 
 **Repo:** barberpilot-api, barberpilot-control
