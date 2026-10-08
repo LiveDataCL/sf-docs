@@ -106,6 +106,26 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 ## Open
 
+### 2026-10-08 — `ConfigScreen.js`'s "Cambiar PIN" is local-only and falsely reports success — can lock a barbero out
+
+**Repo:** BarberPilot_App
+
+**Description**: `ConfigScreen.js`'s `cambiarPin()` (lines 135-160) never calls the server at all — no `fetch`, no `POST /api/v2/auth/set-pin`. It compares the typed "current PIN" against a value in `SecureStore` (`'bp_pin_' + barbero.bid`, falling back to `barbero.pin`) and, if it matches, writes the new PIN to that same local key only. It then shows "✓ PIN actualizado correctamente" — a real success message for a change that never reached `tenant_staff.pin_hash`. Found while confirming the correct PIN-change path for Angie's onboarding; the real, server-connected path turns out to be `SetupPinScreen` (triggered automatically on any login where the server reports `pin_set: false`, confirmed it calls `POST /api/v2/auth/set-pin` correctly), not this screen.
+
+**Practical risk**: anyone who uses this screen believes they've changed their real PIN. The next time they log in — especially on a different device, after a reinstall, or once this local value is cleared — the server still expects whatever PIN was there before. Looks like a leftover from before the real server-side PIN system existed, never removed or reconnected.
+
+**Why deferred**: Found via code reading while answering a direct question for this session's onboarding work, not something that's bitten anyone yet as far as is known — but it's a real, live trap waiting for whoever uses that screen first.
+
+**Scoped fix (not built)**: either wire `cambiarPin()` to the real endpoint (send `current_pin`/`new_pin`/`confirm_pin`, matching what `SetupPinScreen` already does correctly) or remove the option from `ConfigScreen` entirely until it's rebuilt properly — a half-working, falsely-reassuring PIN screen is worse than no PIN screen there at all.
+
+**Related inconsistency, same area**: client-side minimum length here is `barbero?.rol === 'admin' ? 6 : 4` digits, and the *other* client-side check (`SetupPinScreen.js`) enforces exactly 4 unconditionally — but the actual server-side rule (`POST /api/v2/auth/set-pin`, `/^\d{4}$/`) is **exactly 4 digits, always**, regardless of role. Align whichever client-side checks remain to that same rule rather than inventing a role-based minimum the server doesn't enforce.
+
+**Severity**: High — silent, falsely-confirmed account lockout risk for whoever uses this screen.
+
+**Urgency**: Near-term — low effort to fix (reuse the exact pattern `SetupPinScreen` already proves works), real risk the longer it sits.
+
+**Status**: Open.
+
 ### 2026-10-08 — `barber_schedule`'s unique constraint is `(bid, dia_semana)`, with no `tenant_id` — a cross-tenant bid collision would silently skip an insert
 
 **Repo:** barberpilot-api
