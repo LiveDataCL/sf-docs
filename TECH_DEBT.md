@@ -106,6 +106,24 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 ## Open
 
+### 2026-10-09 — EAS internal-distribution build artifacts expire, with no warning from the CLI itself
+
+**Repo:** BarberPilot_App (EAS infrastructure, not app code)
+
+**Description**: Found while trying to install the app for a new hire (Angie) without a fresh build. `eas build:list`/`eas build:view` reported two existing Android builds (profile `internal`, distribution `internal`) as having a present, downloadable artifact — `"artifactUrl":"present"` in the CLI's own JSON output. Actually requesting both URLs directly returned a real HTTP 404 for both: the July 20, 2026 build and the August 5, 2026 build. The CLI's metadata is not a reliable signal that the install link still works — only an actual HTTP request against the URL is. The most likely cause is EAS's own storage retention window for build artifacts on this plan, though the exact retention period isn't confirmed from anything in this repo or the CLI output — it would need to come from Expo's own account/plan documentation, not guessed here.
+
+**Why deferred**: Discovered as a blocker while trying to reuse an old build to onboard Angie faster — not something that was broken by any change in this session, a pre-existing gap in how the project has distributed the app that nobody had hit before (every prior hire happened to be onboarded soon enough after a build that the link was still live).
+
+**Practical impact**: any gap of more than a few weeks between a build and the next new hire risks the only known install path being dead, forcing a brand-new build (cost + queue time) just to install the unchanged app on one more phone.
+
+**Fix/mitigation (in progress, same day)**: the APK from each new `internal` build should be downloaded once and kept in a location the project controls (César's own Google Drive), independent of EAS's own artifact retention — that stored copy becomes the canonical install source for new hires, not a freshly-fetched EAS link. A stored APK only needs replacing when the native side changes (a new Expo SDK version, a new native module) — an OTA-only update (like the live-roster fix shipped this session) never requires a new install.
+
+**Severity**: Medium — no data loss or security exposure, but a real, repeatable operational blocker for onboarding (confirmed to have actually happened, not hypothetical).
+
+**Urgency**: Near-term — the Drive-copy mitigation should be in place before the next time this is needed, which could be the very next hire.
+
+**Status**: Open. Mitigation (Drive copy) being put in place today; underlying EAS retention behavior itself is outside this project's control.
+
 ### 2026-10-08 — `ConfigScreen.js`'s "Cambiar PIN" is local-only and falsely reports success — can lock a barbero out
 
 **Repo:** BarberPilot_App
