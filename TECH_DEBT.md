@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-10-12 ("Configuration as single source of truth" program — service catalog, commissions, registros write paths, security findings deferred by owner decision)
+**Last updated:** 2026-10-13 (configuration program: Stage 0 and Stage 1 live, Stage 2a approved; rate-limiter findings → Stage R; remaining hardcoded business constants; two entries closed)
 
 ---
 
@@ -116,6 +116,159 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 > findings are deferred by owner decision on 2026-10-12 — scheduled after the
 > functional program**; their severities are not downgraded by that deferral.
 
+> **2026-10-13 batch.** Progress on the program: **Stage 0** (freeze local service
+> and commission edits) live — barberpilot-control `573ef84`, owner-verified.
+> **Stage 1** (backend service catalog API, Migration 042) live — barberpilot-api
+> `9dbac29`, owner-verified in production (sale + 6 read-only queries). **Stage 2a**
+> (catalog from the API in Administración and cobro) approved — barberpilot-control
+> PR #33, merge pending. Order from here (owner, 2026-10-13): Stage 2a → **Stage R**
+> (rate limiter) → Step A-3 → Stage C → Stage 2b → Stage 3. Line references in the
+> 2026-10-13 entries are to barberpilot-api `9dbac29` and barberpilot-control `573ef84`.
+
+### 2026-10-13 — API rate limiter keys clients by an unstable address; sf-live report bursts hit it and silently drop days
+
+**Repo:** barberpilot-api, sf-live (also relevant to barberpilot-control, BarberPilot_App, saulfino-web)
+
+**Owner report (2026-10-13)**: no "Too many requests" errors, and no failures that succeeded on retry, have ever been observed in shop operation (check-in, Sala de Espera close, login, App).
+
+**Description**: The global limiter allows 100 requests/min per key, the key being `req.ip` with `app.set('trust proxy', 1)` (`index.js:20`, `:146`, `:148`); the write limiter (30/min on `POST /registros`) and push limiter (10/min on `/push`) key the same way. The limiter is registered before `app.options` and the API sets no CORS preflight `max-age`, so every `OPTIONS` preflight counts.
+
+**Read-only production evidence (2026-10-13)**:
+- *Keying*: Railway's HTTP logs show **one instance** (a single `deploymentInstanceId`) serving all traffic, yet limiter headers for one client IP advanced **two independent counters** (94→88 interleaved with 98→94). So `req.ip` is not stable per client — most likely a proxy address — which would make the budget shared beyond one client. Stage R's diagnostic will confirm the cause.
+- *429 history* (Railway HTTP logs, retention ≈ 7 days: oldest available record 2026-10-06 ≈23:52 UTC): **67 responses with status 429**, all from a desktop browser, in two bursts — **2026-10-09 18:38** (10, from the shop's address: `/resumen`, `/registros/dia`) and **2026-10-13 11:10–11:15** (57, from another address: 50 × `GET /registros/dia`, plus preflights for `/horarios/:fecha`, `/queue/control`). These are **sf-live's** request patterns. **No 429 on any shop operational route** (cobro, Sala de Espera, check-in, login, App) — consistent with the owner's report.
+- *Measured load* (current deployment, 2026-10-13 16:39–18:31 UTC, 1,517 requests, 19 client addresses): total per minute median 12, p95 25, max 58; the busiest single address (91% of traffic, the shop) p95 21, max 58 per minute; 26% of requests are `OPTIONS` preflights.
+
+**Code-based estimates (not measurements)**: a shop peak of ≈70–100 requests/min assumed every screen open on 6 devices (control panel ≈24–30 incl. preflights, 4 phones ≈36–52, check-in tablet and queue TV ≈10–18). The measured afternoon peak above is well below that.
+
+**The confirmed harm — sf-live**: the monthly consolidation (`sf-live index.html:1728`, `/resumen` per day) and the heatmaps (`:483`, `/registros/dia` per day) fire one request per day of the range all at once (plus a preflight each). A month is ≈60+ requests per view, so a report alone can exceed 100/min. A rejected day is **silently skipped** (`if(!json.ok || !json.data) return;`), so the report shows **understated totals with no warning**. That happened at least on the two dates above.
+
+**Why deferred**: Found during the Stage 2a pre-merge check; Stage 2a doesn't worsen it.
+
+**Fix (Stage R — before Stage C, which adds per-device polling, and Stage 2b, which adds public booking/check-in traffic; scope re-evaluated with this evidence)**: confirm the real proxy chain with a short-lived diagnostic log; key limits by authenticated identity (tenant + panel user / barber) and by correctly resolved client IP only for unauthenticated routes; skip `OPTIONS` and set a CORS preflight `max-age`; all limit values as `tenant_config` data (missing-key behavior to be decided by the owner); Spanish 429 messages with safe retry on client surfaces; sf-live must never silently drop a day (show the gap or retry), and should fetch a range in one request (an existing `/registros/rango` route is a candidate) instead of one per day; document that a second replica would need a shared store.
+
+**Severity**: Medium — no operational shop failure observed; partner reports can silently understate totals.
+
+**Urgency**: Near-term — Stage R lands before Stage C and Stage 2b.
+
+**Status**: Open — Stage R scheduled after Step A-3.
+
+### 2026-10-13 — New services can't be booked from agenda-admin: the appointments API has its own hardcoded catalog
+
+**Repo:** barberpilot-api, barberpilot-control, saulfino-web
+
+**Description**: `POST /appointments` and `GET /appointments/slots` take duration and display name from `APT_DURATIONS` / `APT_NAMES` (`index.js:5017`, `:5032`), keyed by the old website ids (`'corte'`, `'mat_cabello'`…), not the service catalog. agenda-admin's service dropdown is a matching hardcoded `<option>` list. Sending a catalog id (e.g. `s14`) would book a 30-minute default and name the service "s14" — including in the client's WhatsApp confirmation. So a service created in Administración can't be booked from agenda-admin.
+
+**Why deferred**: Needs an API change shared with saulfino-web's public booking (same code path, same ids). Owner decision 2026-10-13 (Option B): do both in Stage 2b.
+
+**Severity**: Medium — new services can be charged (cobro) but not booked as appointments.
+
+**Urgency**: Near-term — Stage 2b.
+
+**Status**: Open.
+
+### 2026-10-13 — Hardcoded business constants still in code (owner rule: none allowed)
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: Owner rule (2026-10-13): no business values hardcoded; limits are tenant data. Remaining instances, each assigned to the stage that removes it:
+- Queue-close fallback price **12000** when no override and no catalog match — `precioOverride || _catalogPrecio || 12000` (api `index.js:4205`) → Sala de Espera stage.
+- Sala de Espera price box default **12000** (control `index.html:6379`) and the `SALA_PRECIOS` map (`:5594`, refreshed from the API at load) → Sala de Espera stage.
+- `validateRegistro` price cap **500000** on the sales path (api `index.js:388`) → Stage 3.
+- `PRODUCTO_MAGNITUD_THRESHOLD = 0.25` for product price edits (api `index.js:7206`) → products stage.
+- Hardcoded `PRODUCTOS` fallback list (control `index.html:1311`) → products stage.
+
+**Why deferred**: Each belongs to a later stage of the program; none affects Stage 2a.
+
+**Severity**: Medium — values that silently go stale when the business changes.
+
+**Urgency**: Eventual — per stage.
+
+**Status**: Open.
+
+### 2026-10-13 — Catalog limits in `tenant_config` can't be edited from Administración
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: Stage 1 moved catalog limits to `tenant_config` data: `servicio_precio_max_variacion_pct` (seeded 40), `servicio_duracion_default_min` (seeded 30), `servicio_precio_max` (not seeded = no cap). Today they can only be changed with SQL. Owner rule: everything admin-changeable is managed from Administración.
+
+**Why deferred**: The configuration program adds an Administración screen for tenant settings in a later stage.
+
+**Severity**: Low — values are correct today and documented.
+
+**Urgency**: Eventual.
+
+**Status**: Open.
+
+### 2026-10-13 — Control's catalog loader treats a 429 as "server unavailable" and switches to the read-only copy
+
+**Repo:** barberpilot-control
+
+**Description**: Stage 2a's `catalogoCargar()` uses the saved read-only catalog for any failed load (network error or non-200 other than 401/403), including a rate-limit 429. Behavior is safe — the last known services stay chargeable, catalog changes are blocked, a dated warning is shown — but at peak (see the rate-limiter entry) staff may see "Datos sin conexión" while the server is up.
+
+**Why deferred**: By design for Stage 2a; Stage R removes the main trigger.
+
+**Severity**: Low.
+
+**Urgency**: Monitor-only — revisit after Stage R.
+
+**Status**: Open.
+
+### 2026-10-13 — CI boot smoke test runs PostgreSQL 14; production runs 18.6
+
+**Repo:** barberpilot-api
+
+**Description**: `.github/workflows/boot-smoketest.yml:30` uses `image: postgres:14`; production reports `server_version 18.6` (owner query, 2026-10-13). Stage 1 was tested locally on both 14.22 and 18.4 with identical results, but CI itself only proves PG 14.
+
+**Why deferred**: Out of scope for Stage 1; a one-line change with its own review.
+
+**Severity**: Medium — a PG 18-only failure would pass CI.
+
+**Urgency**: Near-term.
+
+**Status**: Open.
+
+### 2026-10-13 — On a brand-new database, the barber cache loads before `barberos.tenant_id` exists
+
+**Repo:** barberpilot-api
+
+**Description**: At boot, `_loadBarberCache()` runs (`index.js:8383`) before Migration 015 adds `barberos.tenant_id` (`:8457`). On a fresh database every barber lands under an undefined tenant (`[Barberos] Loaded: undefined:4`) until the next reload, so `bid` validation rejects sales. Production is unaffected (the column already exists). Found while building the Stage 1 test fixture.
+
+**Why deferred**: No production impact; matters for disaster recovery and staging rebuilds.
+
+**Severity**: Low.
+
+**Urgency**: Eventual — before the next fresh-database restore drill.
+
+**Status**: Open.
+
+### 2026-10-13 — Staging seed declares `registros.com` as INTEGER
+
+**Repo:** barberpilot-api
+
+**Description**: `scripts/seed-staging.js:131` creates `com INTEGER`; production stores decimals (0.43, 0.50, 0.10). A staging database built from the seed would truncate every commission rate to 0.
+
+**Why deferred**: Staging only; found while building the Stage 1 test fixture.
+
+**Severity**: Low.
+
+**Urgency**: Eventual — before the next staging rebuild.
+
+**Status**: Open.
+
+### 2026-10-13 — At ~900 px width the control panel's side panel covers the tabs
+
+**Repo:** barberpilot-control
+
+**Description**: At a ~900 px viewport the side panel (`.pl`, `index.html:505`) overlaps the tab bar and intercepts clicks on tabs such as Administración. Found during Stage 0 testing; desktop widths (1366 px) are unaffected.
+
+**Why deferred**: Pre-existing layout issue, unrelated to the configuration program.
+
+**Severity**: Low.
+
+**Urgency**: Eventual.
+
+**Status**: Open.
+
 ### 2026-10-12 — Administración's service catalog is browser-local only — creating a service fails and the new service never reaches the backend
 
 **Repo:** barberpilot-control, barberpilot-api
@@ -134,7 +287,7 @@ The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a l
 
 **Urgency**: Immediate — Stage 0 (containment) next, Stage 1/2 to deliver the capability.
 
-**Status**: Open. Owner's read-only queries (2026-10-12) confirmed no orphan rows were created server-side.
+**Status**: Open — in progress. Owner's read-only queries (2026-10-12) confirmed no orphan rows were created server-side. 2026-10-13: Stage 0 froze local service edits (live, `573ef84`; the owner cleared 3 local junk rows with "Restaurar valores por defecto"); Stage 1 provides the API (live, barberpilot-api PR #37, merge `9dbac29`); Stage 2a (PR #33, approved) moves Administración and cobro onto it. Close after Stage 2a is live and the owner's production acceptance passes (create "Corte + Matizado de cabello y barba" / 22000 / 60 from "+ Agregar" and charge it from cobro).
 
 ### 2026-10-12 — barberpilot-api has no route to create, rename, deactivate or reorder a service
 
@@ -148,7 +301,7 @@ The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a l
 
 **Urgency**: Near-term — Stage 1.
 
-**Status**: Open.
+**Status**: Closed 2026-10-13 — Stage 1 (barberpilot-api PR #37, merge `9dbac29`) added `/api/v2/config/servicios` (list, create, rename, deactivate/reactivate, reorder; admin-only writes; one transaction with audit and `catalogo_version`), plus Migration 042 (display order, server-generated ids). Verified live by the owner in production: a normal sale and 6 read-only queries matching the expected results exactly.
 
 ### 2026-10-12 — Renaming a service in Administración would make every sale of it fail (`alias_no_mapeado`)
 
@@ -162,7 +315,7 @@ The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a l
 
 **Urgency**: Immediate — latent trap live today until Stage 0 ships.
 
-**Status**: Open.
+**Status**: Open — contained. 2026-10-13: Stage 0 disabled local renames (live, `573ef84`); Stage 1's rename route keeps every old alias and matching is now case/accent-insensitive. Close after Stage 2a is live (rename through the API, verified in its end-to-end test: old and new names both chargeable).
 
 ### 2026-10-12 — Deleting a service in Administración only hides it on that one browser
 
@@ -176,7 +329,7 @@ The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a l
 
 **Urgency**: Near-term — Stage 0 / Stage 1.
 
-**Status**: Open.
+**Status**: Open — contained. 2026-10-13: Stage 0 disabled local delete (live, `573ef84`). Stage 2a replaces it with deactivate/reactivate through the API (never deletes). Close after Stage 2a is live.
 
 ### 2026-10-12 — Hardcoded copies of the service catalog on every surface (barberpilot-control, App, saulfino-web) — s12 "Corte + Cejas" can't be charged from cobro
 
@@ -196,7 +349,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — Stage 2.
 
-**Status**: Open.
+**Status**: Open — partly in progress. 2026-10-13: Stage 2a (PR #33) removes barberpilot-control's `SS`/`SS_DEFAULT` and the paper-records tab's price map, and makes s12 chargeable from cobro. Still hardcoded after 2a: BarberPilot_App `SERVICIOS_FALLBACK`, saulfino-web `SVCS`/`_SID`/`SERVICE_META`, control agenda-admin options and the appointments API catalog (→ Stage 2b), control Sala de Espera lists (→ Sala de Espera stage). See also the 2026-10-13 entries.
 
 ### 2026-10-12 — `POST /registros` stores the client-sent commission (`com`/`bb`/`neg`) without recomputing it — CRITICAL
 
@@ -224,7 +377,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Immediate — Stage 0.
 
-**Status**: Open.
+**Status**: Open — contained. 2026-10-13: Stage 0 disabled local rate editing (live, `573ef84`; Stage 2a keeps it frozen). The underlying fix — rates from backend config — is Stage 3.
 
 ### 2026-10-12 — Sala de Espera close (`POST /queue/control/registrar`): not transactional, `sid` always `'queue'`, unknown payment method silently paid at 50%, unknown service passes with a $12.000 default
 
@@ -243,7 +396,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — Stage 3.
 
-**Status**: Open.
+**Status**: Open. 2026-10-13 (Stage 1, live): the catalog lookup now matches names case/accent/space-insensitively, so a variant spelling gets the catalog price instead of the $12.000 fallback, and an inactive service is rejected under any spelling (accepted behavior change). `precioOverride` precedence is unchanged (tested). The $12.000 fallback itself is now tracked in the 2026-10-13 "hardcoded business constants" entry.
 
 ### 2026-10-12 — `PATCH /registros/:id/pago` recomputes product rows at service rates, and the commission change isn't audited
 
@@ -327,7 +480,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — Stage 1.
 
-**Status**: Open.
+**Status**: Closed 2026-10-13 — Stage 1 (barberpilot-api PR #37, merge `9dbac29`, Migration 042): primary key now `(tenant_id, alias_texto)`, a trigger forbids one normalized name for two services, `alias_normalizado`/`nombre_normalizado` computed in application code and recomputed on every boot, and `/registros` and queue-close match normalized names. Verified live by the owner (PK `(tenant_id, alias_texto)`, 0 unnormalized services).
 
 ### 2026-10-12 — Reports group sales by raw service text; ~1,560 sales carry a generic `sid`
 
@@ -369,7 +522,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — must be designed into Stage 1's schema.
 
-**Status**: Open.
+**Status**: Open. 2026-10-13: Stage 1 added nullable `precio_min`/`precio_max` to `tenant_servicio_precios` with a check constraint (schema ready, nothing reads them yet). Enforcement, UI and the audited override model remain.
 
 ### 2026-10-12 — Write routes with no authentication across barberpilot-api — CRITICAL (deferred)
 
@@ -638,7 +791,7 @@ ORDER BY mes DESC;
 
 **Urgency**: Monitor-only — revisit only if/when replica count changes.
 
-**Status**: Open, monitor-only.
+**Status**: Open, monitor-only. 2026-10-13 evidence: production logs show a single queue poller (one API process). The two rate-limiter counters seen for one client IP the same day therefore most likely come from unstable client-IP resolution rather than a second replica (the Stage R diagnostic will confirm) — see the 2026-10-13 rate-limiter entry.
 
 ### 2026-10-08 — `POST /api/v2/staff` (and the related `PATCH /api/v2/staff/:bid`) require a token type the control panel's UI never produces — "Agregar barbero" button has likely never worked since 2026-07-01
 
