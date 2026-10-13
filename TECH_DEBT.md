@@ -125,6 +125,167 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 > (rate limiter) → Step A-3 → Stage C → Stage 2b → Stage 3. Line references in the
 > 2026-10-13 entries are to barberpilot-api `9dbac29` and barberpilot-control `573ef84`.
 
+> **2026-10-13 evening update.** **Stage 2a** live — barberpilot-control `cdfd303`
+> (PR #33, merged ≈17:46 Santiago on the owner's explicit deploy-window exception);
+> owner acceptance in production passed (created s14 "Corte + Matizado de canas"
+> 22000 / 60 min from Administración and charged it from cobro). **Stage L** (one
+> range request per sf-live report, no silently dropped days) live —
+> barberpilot-api `28ac97c` (PR #38) and sf-live `f2d2728` (PR #6), both merged
+> ≈18:25–18:31 Santiago on explicit owner exceptions; owner verified sf-live's
+> monthly view. Order from here: Step A-3 → Stage R → Stage C → Stage 2b → Stage 3.
+> Line references in entries added by this update are to barberpilot-api `28ac97c`,
+> barberpilot-control `cdfd303`, BarberPilot_App `2b101ff`, sf-live `f2d2728`.
+
+### 2026-10-13 — Report read routes return sales with client names and phone numbers to anyone, with no authentication — HIGH (deferred)
+
+**Repo:** barberpilot-api (callers in barberpilot-control, BarberPilot_App)
+
+**Description**: These `GET` routes have no auth middleware and no check in the handler:
+- `GET /registros/dia` (`index.js:1808`) — every confirmed sale of a day, **including `cliente_nombre` and `cliente_telefono`**, plus prices and commissions.
+- `GET /gastos/dia` (`:1883`) — every expense of a day.
+- `GET /resumen` (`:1986`) — the day's totals, per-barber earnings, last sales and expenses.
+- By code reading only (not called in production): `GET /barbero/:bid/hoy` (`:2197`), `GET /barbero/:bid/mes/:periodo` (`:2235`), `GET /stats/mes/:periodo` (`:2318`).
+
+Verified in production 2026-10-13 (status codes only, no body kept): `/resumen`, `/registros/dia` and `/gastos/dia` answer **200 with no credentials**; the authenticated range routes `/registros/rango` and `/resumen/rango` answer 401. CORS doesn't protect these: requests with no `Origin` are accepted. `GET /registros/dia` was noted as a "related read" in the 2026-10-12 write-routes entry; this entry tracks the read side.
+
+**Callers that would break if auth were simply added**: barberpilot-control `index.html` (`:1646`, `:1700`, `:1809`, `:1853`, `:1875`, `:5126`, `:6170`, `:6582`) and `dashboard_kpis_barberia.html:547`; BarberPilot_App `AdminScreen.js:138`, `ConfigScreen.js:57`, `HoyScreen.js:79/119/193`, `SocioScreen.js:74`, `TendenciasScreen.js:34`. Several send no auth header at all. sf-live no longer uses them (Stage L).
+
+**Why deferred**: Deferred by owner decision on 2026-10-12 — scheduled after the functional program. Found during the 2026-10-13 sf-docs update.
+
+**Fix**: require auth on every report read (panel JWT, barber session or socio/dashboard token, scoped to tenant and — for barbers — to their own `bid`); move callers to the authenticated range routes (`/registros/rango`, `/gastos/rango`, `/resumen/rango`), whose accepted token types must be extended to the panel JWT for control; then remove or lock the per-day routes. Classify every `GET` route, which has never been audited systematically.
+
+**Severity**: High — client personal data (names and phone numbers) and the full financial ledger are readable by anyone who knows the API URL.
+
+**Urgency**: Near-term — first security stage after the functional program.
+
+**Status**: Open — deferred by owner decision.
+
+### 2026-10-13 — Per-day report loops that silently drop failed days remain in barberpilot-control and BarberPilot_App
+
+**Repo:** barberpilot-control, BarberPilot_App
+
+**Description**: Stage L fixed this bug class in sf-live only. The same pattern — one `GET /registros/dia` (and sometimes `/gastos/dia`) per day of the range, all at once, with any failed day turned into an empty result and skipped without a warning — is still in:
+- barberpilot-control `index.html:1809` (date-range report, up to 31 days), `:5126` (monthly view); `dashboard_kpis_barberia.html:547` — worse there: a failed expenses day is replaced with `{ok:true, gastos:[]}`, i.e. counted as $0 of expenses.
+- BarberPilot_App `SocioScreen.js:74` (partner view, up to 121 days), `TendenciasScreen.js:34`, `AdminScreen.js:138` (month to date).
+
+A month is ≈30 requests (≈60 with expenses) fired together, enough to reach the rate limiter; a rejected or timed-out day silently understates every total, ranking and chart. Not observed from these surfaces so far (the 429 evidence in the rate-limiter entry matches sf-live's patterns), but the mechanism is identical to the one that understated sf-live's monthly totals.
+
+**Why deferred**: Out of scope for Stage L (sf-live only, by owner decision); found during the 2026-10-13 sf-docs update.
+
+**Fix**: same as Stage L — one authenticated range request per report through the existing range routes (which need to accept the panel JWT and the App's session; see the report-read-routes entry), one shared retry helper per client, and a visible warning naming any date that couldn't be loaded. Never substitute an empty result for a failed one.
+
+**Severity**: Medium — partner and admin reports can silently understate totals.
+
+**Urgency**: Near-term — candidate for Stage R (owner to decide), which already touches the limiter and client retry behavior.
+
+**Status**: Open.
+
+### 2026-10-13 — sf-live's monthly report showed understated totals on 2026-10-09 and 2026-10-13 (silently dropped days)
+
+**Repo:** sf-live, barberpilot-api
+
+**Description**: sf-live's multi-day views fetched `/resumen` and `/registros/dia` once per day, all at once; days rejected by the rate limiter (429 bursts on 2026-10-09 18:38 and 2026-10-13 11:10–11:15, see the rate-limiter entry) were skipped without any warning, so the totals shown were lower than the real ones. The database was always correct — only the report was wrong.
+
+**Why deferred**: Not deferred — fixed by Stage L the same day it was diagnosed.
+
+**Severity**: Medium — partners saw understated figures with no indication.
+
+**Urgency**: Immediate (at the time).
+
+**Status**: Closed 2026-10-13 — Stage L: new `GET /resumen/rango` (barberpilot-api `28ac97c`, aggregation shared with `/resumen`, whose per-day output stayed byte-identical in production) and sf-live `f2d2728` (one range request per report, shared retry helper, red warning naming any date that couldn't be loaded, figures blanked instead of understated). Owner verified the monthly view live.
+
+### 2026-10-13 — sf-live's "últimos registros" on a multi-day view showed the first day's sales, not the latest
+
+**Repo:** sf-live
+
+**Description**: The consolidated feed concatenated each day's last 8 sales in date order and kept the first 8 (`consolidado.ultimosRegs.concat(d.ultimosRegs).slice(0,8)`, sf-live `12ff272` `index.html:1760`), so a monthly view showed sales from the first day(s) of the period instead of the most recent ones. Pre-existing; found during the Stage L investigation.
+
+**Why deferred**: Not deferred — fixed in Stage L.
+
+**Severity**: Low — display only.
+
+**Urgency**: Near-term (at the time).
+
+**Status**: Closed 2026-10-13 — Stage L: `/resumen/rango` returns the period's latest 8 sales (ordered by date and time, each with its date) and sf-live shows the date on multi-day views (`f2d2728`). Owner verified live.
+
+### 2026-10-13 — sf-live's Reporte Financiero computes its totals in the browser from raw rows
+
+**Repo:** sf-live, barberpilot-api
+
+**Description**: `cargarReporteFinanciero()` (`index.html:1121`) downloads the month's raw sales and expenses and sums facturación, negocio, pago a barberos and gastos itself (`rfAgruparPorDia`, `:1179`; `rfRenderTodo`, `:1207`). The API computes the same totals in `resumirPeriodo` for `/resumen` and `/resumen/rango`. Two independent implementations of the same financial figures can drift apart (e.g. a future change to tip handling or to which `estado` counts).
+
+**Why deferred**: Stage L kept scope to the silently dropped days; moving the report's math is a separate change.
+
+**Fix**: the API returns the per-day and period totals (one aggregation, shared with `/resumen/rango`); the page only renders them.
+
+**Severity**: Medium — two sources of truth for partner-facing financial figures.
+
+**Urgency**: Eventual — a later reporting stage.
+
+**Status**: Open.
+
+### 2026-10-13 — The API doesn't expose its `RateLimit-*` headers to browsers
+
+**Repo:** barberpilot-api
+
+**Description**: The limiters send standard `RateLimit-*` headers (`standardHeaders: true`, `index.js:23` and others), but the CORS config (`:157`) has no `exposedHeaders`, so cross-origin pages (sf-live, control) can't read them. sf-live's retry helper therefore falls back to fixed 1 / 2 / 4 s waits instead of waiting exactly until the limit resets.
+
+**Why deferred**: Belongs to Stage R (rate limiter); harmless meanwhile — the fallback works.
+
+**Severity**: Low.
+
+**Urgency**: Near-term — Stage R.
+
+**Status**: Open.
+
+### 2026-10-13 — Sale times are invented when missing: `'00:00'` in the API, `'10:00'` in the historical-entry tool
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: Every `registros` insert in the API stores `r.hora || '00:00'` (`index.js:1704` `POST /registros`, `:1772` `/registros/bulk`, `:3443` `/registros/barbero`), so a sale sent without a time would be recorded at midnight. Only the queue close sets the time server-side (Santiago, `:4259`). Control's "Ingresar histórico" tool defaults a missing time to `'10:00'` (`index.html:4531`).
+
+Production check by the owner (2026-10-13): **no row has a NULL or `00:00` time** in any `sid` group or month — the API fallback has never fired. The `'10:00'` default did: **61 service sales and 3 custom sales in 2026-05 are at exactly 10:00**, most likely historical imports, which creates an artificial 10:00 spike in May's by-hour charts.
+
+**Why deferred**: Latent (no affected rows from the API path); owner decision 2026-10-13: no dedicated stage.
+
+**Fix (Stage 3, which touches every `registros` write path)**: one shared helper for all insert paths: keep a valid client time; if missing and the sale is for today, use the server's `America/Santiago` time; if missing for a past date, store NULL ("unknown") — never invent a time.
+
+**Severity**: Low.
+
+**Urgency**: Eventual — Stage 3.
+
+**Status**: Open.
+
+### 2026-10-13 — By-hour charts silently leave out sales without a time or outside a hardcoded 10–20 window
+
+**Repo:** sf-live, BarberPilot_App
+
+**Description**: sf-live's heatmaps (`procesarRegistros`, `index.html:569`; hour list `:570` and `:818`) parse `hora` and count only hours 10–20; a sale with no time, at `00:00`, or outside that window is dropped from the by-hour chart with no indication (day, barber and total figures still include it). BarberPilot_App does the same with a 10–19 window (`AdminScreen.js` `porHora`; `TendenciasScreen.js:10` `HORAS`). Production (owner, 2026-10-13): outside 10–20 — 7 service sales in 2026-05, 1 in 2026-06, 1 custom sale in 2026-07. The window is a business constant in code; the shop's real hours belong in configuration.
+
+**Why deferred**: Owner decision 2026-10-13: fold into the business-hours configuration stage.
+
+**Fix**: hour window read from the shop hours in `tenant_config`; a visible "N ventas sin hora no incluidas" (and outside-hours count) on the chart; read-side helper `hora_efectiva` / `hora_origen` (registered / derived from `creado_en` in Santiago when the dates match / unknown) shared by every report — never rewriting `registros`.
+
+**Severity**: Low.
+
+**Urgency**: Eventual — business-hours configuration stage.
+
+**Status**: Open.
+
+### 2026-10-13 — Barber rotation and the WhatsApp follow-up depend on each sale's `hora`
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: The next-barber suggestion ranks free barbers by their last sale time today — control `index.html:6185` and `:6607`, API `index.js:3732` (`MAX(hora)`). A sale with a missing or invented early time makes that barber look idle the longest, so they would be offered the next client unfairly. The post-service WhatsApp poller (`index.js:7856`) builds the send time from `fecha + hora`: a NULL time means the follow-up is never sent; `00:00` would send it within minutes instead of 2 hours later.
+
+**Why deferred**: Latent — production has no NULL or `00:00` times (owner, 2026-10-13); closes with the Stage 3 write-side fix above.
+
+**Severity**: Low.
+
+**Urgency**: Eventual — Stage 3.
+
+**Status**: Open.
+
 ### 2026-10-13 — API rate limiter keys clients by an unstable address; sf-live report bursts hit it and silently drop days
 
 **Repo:** barberpilot-api, sf-live (also relevant to barberpilot-control, BarberPilot_App, saulfino-web)
@@ -150,7 +311,7 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 **Urgency**: Near-term — Stage R lands before Stage C and Stage 2b.
 
-**Status**: Open — Stage R scheduled after Step A-3.
+**Status**: Open — Stage R scheduled after Step A-3. 2026-10-13 evening: the sf-live harm is fixed by Stage L (barberpilot-api `28ac97c`, sf-live `f2d2728`; see the closed "understated totals" entry); the limiter keying, preflight counting and limit values remain for Stage R. The same per-day burst pattern still exists in barberpilot-control and BarberPilot_App — tracked in its own entry.
 
 ### 2026-10-13 — New services can't be booked from agenda-admin: the appointments API has its own hardcoded catalog
 
@@ -287,7 +448,9 @@ The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a l
 
 **Urgency**: Immediate — Stage 0 (containment) next, Stage 1/2 to deliver the capability.
 
-**Status**: Open — in progress. Owner's read-only queries (2026-10-12) confirmed no orphan rows were created server-side. 2026-10-13: Stage 0 froze local service edits (live, `573ef84`; the owner cleared 3 local junk rows with "Restaurar valores por defecto"); Stage 1 provides the API (live, barberpilot-api PR #37, merge `9dbac29`); Stage 2a (PR #33, approved) moves Administración and cobro onto it. Close after Stage 2a is live and the owner's production acceptance passes (create "Corte + Matizado de cabello y barba" / 22000 / 60 from "+ Agregar" and charge it from cobro).
+**Progress**: in progress. Owner's read-only queries (2026-10-12) confirmed no orphan rows were created server-side. 2026-10-13: Stage 0 froze local service edits (live, `573ef84`; the owner cleared 3 local junk rows with "Restaurar valores por defecto"); Stage 1 provides the API (live, barberpilot-api PR #37, merge `9dbac29`); Stage 2a (PR #33, approved) moves Administración and cobro onto it. Close after Stage 2a is live and the owner's production acceptance passes (create "Corte + Matizado de cabello y barba" / 22000 / 60 from "+ Agregar" and charge it from cobro).
+
+**Status**: Closed 2026-10-13 — Stage 2a live (barberpilot-control `cdfd303`): "+ Agregar" creates the service through `POST /api/v2/config/servicios` after a "¿Crear <nombre> a $<precio>?" confirmation, and cobro and Administración render the API catalog on every browser. The local-only functions are gone from the live page (`staffAddSvc`, `staffSaveSvcName`, `staffDelSvc`, `staffMoveSvc`, `SS_DEFAULT`). Owner acceptance in production: created s14 "Corte + Matizado de canas" (22000, 60 min) from Administración and charged it from cobro (confirmed sale, $22.000).
 
 ### 2026-10-12 — barberpilot-api has no route to create, rename, deactivate or reorder a service
 
@@ -315,7 +478,9 @@ The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a l
 
 **Urgency**: Immediate — latent trap live today until Stage 0 ships.
 
-**Status**: Open — contained. 2026-10-13: Stage 0 disabled local renames (live, `573ef84`); Stage 1's rename route keeps every old alias and matching is now case/accent-insensitive. Close after Stage 2a is live (rename through the API, verified in its end-to-end test: old and new names both chargeable).
+**Progress**: contained. 2026-10-13: Stage 0 disabled local renames (live, `573ef84`); Stage 1's rename route keeps every old alias and matching is now case/accent-insensitive. Close after Stage 2a is live (rename through the API, verified in its end-to-end test: old and new names both chargeable).
+
+**Status**: Closed 2026-10-13 — Stage 2a live (`cdfd303`): renaming in Administración calls `PATCH /api/v2/config/servicios/:id` after a confirmation, which adds the new name as an alias and keeps every old one. Verified locally on PostgreSQL 14 and 18 (Stage 1 suite, 113/113: **old and new names both chargeable** after a rename) and end to end with the real control page against the Stage 1 API (Stage 2a test, 55/55, run on the exact commit now live: rename confirmed, another browser shows the new name, sale still accepted). No rename has been done in production yet.
 
 ### 2026-10-12 — Deleting a service in Administración only hides it on that one browser
 
@@ -329,7 +494,9 @@ The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a l
 
 **Urgency**: Near-term — Stage 0 / Stage 1.
 
-**Status**: Open — contained. 2026-10-13: Stage 0 disabled local delete (live, `573ef84`). Stage 2a replaces it with deactivate/reactivate through the API (never deletes). Close after Stage 2a is live.
+**Progress**: contained. 2026-10-13: Stage 0 disabled local delete (live, `573ef84`). Stage 2a replaces it with deactivate/reactivate through the API (never deletes). Close after Stage 2a is live.
+
+**Status**: Closed 2026-10-13 — Stage 2a live (`cdfd303`): there is no local delete any more; Administración deactivates/reactivates through the API (`/deactivate`, `/reactivate`, each with a confirmation), the row is kept, and the change reaches every browser. An inactive service is rejected by `POST /registros` under any spelling. Verified in the Stage 1 suite and the Stage 2a end-to-end test (deactivate hides it from cobro; reactivate brings it back at its price).
 
 ### 2026-10-12 — Hardcoded copies of the service catalog on every surface (barberpilot-control, App, saulfino-web) — s12 "Corte + Cejas" can't be charged from cobro
 
@@ -350,6 +517,8 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 **Urgency**: Near-term — Stage 2.
 
 **Status**: Open — partly in progress. 2026-10-13: Stage 2a (PR #33) removes barberpilot-control's `SS`/`SS_DEFAULT` and the paper-records tab's price map, and makes s12 chargeable from cobro. Still hardcoded after 2a: BarberPilot_App `SERVICIOS_FALLBACK`, saulfino-web `SVCS`/`_SID`/`SERVICE_META`, control agenda-admin options and the appointments API catalog (→ Stage 2b), control Sala de Espera lists (→ Sala de Espera stage). See also the 2026-10-13 entries.
+
+2026-10-13 evening — **barberpilot-control cobro and Administración part resolved; entry stays Open for the rest.** Stage 2a is live (`cdfd303`): `SS` is now a view derived from the API catalog (`index.html:1332`, `_catalogoDerivarSS` `:1336`); `SS_DEFAULT`, the paper-records price map and the live-catalog price patch are gone. **s12 "Corte + Cejas" is chargeable from cobro** — verified in the Stage 2a end-to-end test (s12 listed at $15.000, sale accepted) and present in production's live catalog; it hasn't been charged in production yet. Still hardcoded, so not closable yet: in barberpilot-control itself, the Sala de Espera lists (`SALA_PRECIOS` `index.html:5695`, refreshed from the API at load `:1279`; `#sala-svc` `:686` and `#editor-svc` `:858` options) and `agenda-admin.html`'s `<option>` list (`:389`ff); BarberPilot_App `SERVICIOS_FALLBACK`; saulfino-web `SVCS`/`_SID`/`SERVICE_META`; the appointments API's `APT_DURATIONS`/`APT_NAMES`.
 
 ### 2026-10-12 — `POST /registros` stores the client-sent commission (`com`/`bb`/`neg`) without recomputing it — CRITICAL
 
@@ -1628,6 +1797,14 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 ---
 
 ## Informational — no action needed
+
+### 2026-10-13 — Railway's database console shows `time` values as blank
+
+**Repo:** — (verification practice)
+
+**Description**: In Railway's web console the `registros.hora` column (type `time`) renders blank even when the value is set — e.g. `TK1047` looked empty but is NOT NULL (owner check, 2026-10-13). When verifying times, select them as text (`hora::text`) or test `hora IS NULL` explicitly; never conclude "empty" from the console grid.
+
+**Status**: N/A — not a defect.
 
 ### 2026-07-31 — Meta error code 130472 ("User's number is part of an experiment") on manual template sends is expected, occasional behavior
 
