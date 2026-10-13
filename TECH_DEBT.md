@@ -19,7 +19,7 @@ Each entry: date found, affected repo(s), description, severity, urgency, why
 it wasn't fixed immediately, risk if left unaddressed, and status (open /
 closed, with closure date if applicable).
 
-**Last updated:** 2026-08-18 (WhatsApp ajuste discrepancy, unreproduced)
+**Last updated:** 2026-10-12 ("Configuration as single source of truth" program — service catalog, commissions, registros write paths, security findings deferred by owner decision)
 
 ---
 
@@ -106,6 +106,289 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 ## Open
 
+> **2026-10-12 batch — "Configuration as single source of truth" program.** Entries
+> dated 2026-10-12 below come from the read-only investigation that opened this
+> program (Phase 1, Steps A and A-2, and the owner's production query results).
+> Line references are to `origin/main` at: barberpilot-api `e2d7c5c`,
+> barberpilot-control `fc27dff`, BarberPilot_App `2b101ff`, saulfino-web `835fab5`,
+> sf-live `12ff272`. Planned stages referenced below (Stage 0, C, 1, 2, 3) are the
+> program's execution order, approved by the owner on 2026-10-12. **Security
+> findings are deferred by owner decision on 2026-10-12 — scheduled after the
+> functional program**; their severities are not downgraded by that deferral.
+
+### 2026-10-12 — Administración's service catalog is browser-local only — creating a service fails and the new service never reaches the backend
+
+**Repo:** barberpilot-control, barberpilot-api
+
+**Description**: In barberpilot-control's Administración tab, every service action except price editing only changes the browser's own `localStorage` (`bp_staff_v1`) — none of them calls the API:
+- **Add** (`staffAddSvc()`, `index.html:7411`): pushes `{id:'s'+<7 digits of Date.now()>, nombre:'Nuevo servicio', precio:0}` into the local `SS` array.
+- **Rename** (`staffSaveSvcName`, `:7340`), **delete** (`staffDelSvc`, `:7406`), **reorder** (`staffMoveSvc`, `:7331`): local only.
+
+Confirmed symptom (owner report, 2026-10-12): creating "Corte de cabello + Matizado de canas" at 22000 fails with *"Error al guardar precio, precio_actual_esperado requerido"*. Mechanism: typing the price calls `staffSaveSvcPrecio` (`:7345`), which sends `PATCH /api/v2/config/servicios/<fake id>/precio` with `precio_actual_esperado: 0` (the local placeholder price). The backend rejects 0 at `index.js:6487` (`precio_actual_esperado <= 0`); even if it didn't, the fake id doesn't exist in `servicios` (`servicio_no_encontrado`, `:6503`). Editing the price of an *existing* service works because s01–s10 exist server-side with an open price row.
+
+The cobro list (`buildServices()`, `:2100`) renders the local `SS` array, so a locally-added service appears (at $0) only on the one browser that added it, and could never be charged anyway (`POST /registros` resolves by name via `servicio_alias` → `alias_no_mapeado`).
+
+**Why deferred**: Found 2026-10-12; the structural fix is the program's Stage 1 (backend catalog API) + Stage 2 (catalog on every surface). Stage 0 freezes the local-only actions in the meantime so nobody hits the trap again.
+
+**Severity**: High — the owner cannot create a new service (an immediate business need: "Corte + Matizado de cabello y barba", 22000), and the UI gives a misleading error instead of saying the feature doesn't exist.
+
+**Urgency**: Immediate — Stage 0 (containment) next, Stage 1/2 to deliver the capability.
+
+**Status**: Open. Owner's read-only queries (2026-10-12) confirmed no orphan rows were created server-side.
+
+### 2026-10-12 — barberpilot-api has no route to create, rename, deactivate or reorder a service
+
+**Repo:** barberpilot-api
+
+**Description**: Searched every `.js` file on every barberpilot-api branch: nothing inserts into `servicios`. The only service write routes are `PATCH /api/v2/config/servicios/:servicio_id/precio` (`:6481`) and `.../precio/revertir` (`:6576`). Services s01–s13 were seeded by hand-run SQL. There is also no display-order column (`servicios` has no `orden`), and `servicio_id` has no server-side generator (unlike `productos`, Migration 034, which uses a sequence).
+
+**Why deferred**: Program Stage 1 (Migration 042: `orden`, `nombre_normalizado`, id sequence above the current max sNN, per-tenant normalized alias uniqueness, active-service-must-have-price trigger, catalog audit table; admin-only endpoints that bump `config_version`).
+
+**Severity**: High — no supported way to evolve the service catalog without manual production SQL.
+
+**Urgency**: Near-term — Stage 1.
+
+**Status**: Open.
+
+### 2026-10-12 — Renaming a service in Administración would make every sale of it fail (`alias_no_mapeado`)
+
+**Repo:** barberpilot-control, barberpilot-api
+
+**Description**: `POST /registros` resolves the service by the exact text it receives (`snom`) through `servicio_alias` (`resolverServicioYValidarPrecio`, `index.js:1393`; reject at `:1539`). A local rename (`staffSaveSvcName`) changes the name the cobro sends, so every subsequent sale of that service on that browser would be rejected and pile up in `bp_outbox`. Owner confirmed (2026-10-12) nobody has renamed a service yet, so no historical sales are affected.
+
+**Why deferred**: Stage 0 disables rename; Stage 1's rename endpoint adds the new name as an extra alias and never removes old ones, so old and new names (and stale clients) keep resolving.
+
+**Severity**: High — would silently stop sales of the renamed service from reaching the ledger.
+
+**Urgency**: Immediate — latent trap live today until Stage 0 ships.
+
+**Status**: Open.
+
+### 2026-10-12 — Deleting a service in Administración only hides it on that one browser
+
+**Repo:** barberpilot-control
+
+**Description**: `staffDelSvc` (`index.html:7406`) filters the local `SS` array. The service stays active in the backend, keeps appearing on every other device and surface (App, saulfino-web check-in), and stays chargeable everywhere except the browser that "deleted" it.
+
+**Why deferred**: Stage 0 disables delete; Stage 1 provides deactivate/reactivate (never a hard delete, to preserve `registros` history).
+
+**Severity**: Medium — inconsistent catalog across devices; no money miscalculated.
+
+**Urgency**: Near-term — Stage 0 / Stage 1.
+
+**Status**: Open.
+
+### 2026-10-12 — Hardcoded copies of the service catalog on every surface (barberpilot-control, App, saulfino-web) — s12 "Corte + Cejas" can't be charged from cobro
+
+**Repo:** barberpilot-control, BarberPilot_App, saulfino-web, barberpilot-api
+
+**Description**: The service list is hardcoded, wholly or partly, in:
+- barberpilot-control `index.html`: `SS` (`:1295`) and `SS_DEFAULT` (`:6895`), s01–s10 only — this *is* the cobro list (`buildServices()`, `:2100`; the API only overwrites prices of ids already present, `:1257`). Sala de Espera: `SALA_PRECIOS` (`:5592`), the `#sala-svc` (`:675`) and `#editor-svc` (`:847`) `<option>` lists.
+- barberpilot-control `agenda-admin.html`: hardcoded service `<option>` list (`:398`ff).
+- BarberPilot_App `src/constants/index.js:54`: `SERVICIOS_FALLBACK` (used when the live catalog is missing; also carries typo'd names "Matizado ganas …").
+- saulfino-web `index.html:1130` / `agenda.html:301`: public booking lists `SVCS`/`SVCS_DATA` with a hardcoded `_SID` id map — the API only refreshes prices; `checkin.html`'s `SERVICE_META` keys icons/durations by id.
+
+Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-side but is not in `SS`, so it cannot be charged from control's cobro** (the App's own code comment at `constants/index.js:50` flags the same gap). A service created in the backend would not appear in control's cobro, Administración, agenda-admin or saulfino-web's public booking.
+
+**Why deferred**: Program Stage 2 (catalog on every surface via the Stage C client module, read-only last-known-good cache, no shipped fallback constants). Icons/durations become catalog fields managed in Administración.
+
+**Severity**: Medium — staleness and missing services, not wrong amounts (the backend validates price/alias on `POST /registros`).
+
+**Urgency**: Near-term — Stage 2.
+
+**Status**: Open.
+
+### 2026-10-12 — `POST /registros` stores the client-sent commission (`com`/`bb`/`neg`) without recomputing it — CRITICAL
+
+**Repo:** barberpilot-api (consumed by barberpilot-control, BarberPilot_App)
+
+**Description**: `validateRegistro` (`index.js:389`ff) only checks `bb`/`neg` are non-negative integers; the insert (`:1652`) stores `r.com || 0.5`, `r.bb`, `r.neg` exactly as sent. The barber's share recorded in the ledger is therefore decided by whichever client sent the sale — barberpilot-control's `COM` (locally editable, see next entry) or the App's inline `pago === 'debito' ? 0.43 : 0.50` (`PaymentSheet.js:59`, `RegistrarScreen.js:56`/`:130`). A stale or edited client produces a wrong payout that the backend accepts. Owner's query (2026-10-12, `registros` grouped by `pago, com`): no service sale has an off-rule rate today — the only rows that differ are the 3 counter sales and 15 product cross-sales explained in the entries below.
+
+**Why deferred**: Program Stage 3 — server-side recompute of `com`/`bb`/`neg` (and price) on `/registros`, queue close and pago edit, from the tenant payment-methods table; client/server mismatch → store server values and record a mismatch alert.
+
+**Severity**: Critical — the ledger trusts the client for money amounts.
+
+**Urgency**: Near-term — no evidence of exploitation or drift in production data; Stage 0 removes the easiest trigger (local rate editing) first.
+
+**Status**: Open.
+
+### 2026-10-12 — Commission rates are editable per-browser in Administración and feed straight into the ledger
+
+**Repo:** barberpilot-control
+
+**Description**: `renderStaffCOM()`/`staffSaveCOM()` (`index.html:7292`/`:7306`) let anyone with access to Administración change efectivo/débito/transferencia rates; the value is saved to `localStorage` (`bp_staff_v1.COM`) and used by `registrar()` (`:2333`) to compute the `com`/`bb`/`neg` it sends — which `POST /registros` stores as-is (entry above). The change affects only that browser and is not audited anywhere.
+
+**Why deferred**: Stage 0 disables local rate editing; Stage 3 moves rates to backend config (frontend read-only).
+
+**Severity**: High — a single edit on one device changes real barber payouts with no trace.
+
+**Urgency**: Immediate — Stage 0.
+
+**Status**: Open.
+
+### 2026-10-12 — Sala de Espera close (`POST /queue/control/registrar`): not transactional, `sid` always `'queue'`, unknown payment method silently paid at 50%, unknown service passes with a $12.000 default
+
+**Repo:** barberpilot-api
+
+**Description** (`index.js:4082`ff):
+- **Not transactional**: the service row (`:4187`), each attached-product row (`:4209`) and the queue update are separate writes; a failure part-way leaves a partial ticket.
+- **`sid` hardcoded `'queue'`** in the INSERT (`:4188`) even though the catalog lookup just above (`:4149`) already resolved the real `servicio_id` — the reason ~1,500 sales have generic `sid='queue'` (owner query: 1,499 confirmado + 7 rechazado, 2026-06-04 → 2026-10-10).
+- **`pago` never validated**; `com = COM_PAGO[pago] || 0.50` (`:4161`) — any unknown method is silently paid at 50%. Same `|| 0.50` fallback in `PATCH /registros/:id/pago` (`:3281`).
+- **Unknown service names pass**: only `servicio_inactivo` is rejected; price is `precioOverride || catalog || 12000` (`:4160`).
+- Tenant hardcoded `'saulfino'`.
+
+**Why deferred**: Stage 3 (server-side recompute, unknown payment key → 400, sale type, single transaction). The free-text/override side belongs to the Sala de Espera lock-down, on hold.
+
+**Severity**: High — wrong commission on an unexpected payment key, and partial writes possible.
+
+**Urgency**: Near-term — Stage 3.
+
+**Status**: Open.
+
+### 2026-10-12 — `PATCH /registros/:id/pago` recomputes product rows at service rates, and the commission change isn't audited
+
+**Repo:** barberpilot-api
+
+**Description**: `index.js:3265`ff recomputes `com = COM_PAGO[newPago] || 0.50` and `bb`/`neg` for **every** row it edits, regardless of row type. Editing the payment method — or only the service name — of a product cross-sale (10%) or a counter sale (0%) silently converts it to 43%/50%. `registros_audit` records changes to `pago`/`precio`/`servicio` but not to `com`/`bb`/`neg`. The update has no tenant scope (`WHERE id=$1`).
+
+**Why deferred**: Stage 3 (recompute by explicit sale type; audit every money field).
+
+**Severity**: High — an ordinary correction can overpay a barber on a product sale without trace.
+
+**Urgency**: Near-term — Stage 3.
+
+**Status**: Open.
+
+### 2026-10-12 — Counter product sales are stored with `com = 0.50` although the barber gets 0%
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: `registrarProducto()` (`barberpilot-control/index.html:2212`) sends `com: 0` for a counter sale (`bid:'none'`, `bb:0`). `POST /registros` stores `r.com || 0.5`, and `0` is falsy, so `com` is saved as 0.50. Owner's queries (2026-10-12) confirmed exactly 3 such rows (debito ×2 — `TK1749574861000` and `TK1791651260822` — and efectivo ×1), all with `bb = 0` and `neg` = full price: **money is correct, only the `com` label is wrong**. These were the "debito at 0.50" anomaly.
+
+**Why deferred**: Fixed going forward in Stage 3 (explicit sale type + server recompute). Historical rows are never modified by code.
+
+**Severity**: Low — mislabelled rate, correct amounts.
+
+**Urgency**: Eventual — Stage 3.
+
+**Status**: Open.
+
+### 2026-10-12 — BarberPilot_App's queue close adds the tip into `bb`
+
+**Repo:** BarberPilot_App
+
+**Description**: `PaymentSheet.js:61` computes `bb = Math.round(precio * com) + propina` and sends it with `propina` separately; barberpilot-control and the App's own `RegistrarScreen` (`:133`) send `bb` without the tip. Owner decision (2026-10-12): `bb` is the commission only; the tip lives only in `propina`. Owner's query confirmed **no historical row has the tip inside `bb`** (every row with `bb <> ROUND(precio*com)` is one of the 3 counter sales) — the defect is latent. Reports that sum `bb + propina` are correct under the owner's definition; they would double-count the tip for any sale this code path records.
+
+**Why deferred**: Stage 3 fixes `PaymentSheet.js` (OTA only after approval) and the server recompute enforces `bb` = commission only regardless of client.
+
+**Severity**: Medium — latent overstatement of barber earnings.
+
+**Urgency**: Near-term — Stage 3.
+
+**Status**: Open.
+
+### 2026-10-12 — No explicit sale-type column on `registros` — service vs. product cross-sale vs. counter sale is inferred
+
+**Repo:** barberpilot-api
+
+**Description**: Sale type is only inferable from combinations of `sid` (matches `productos`?), the id suffix (`TK…-pN` for attached products), `bid='none'` and `com`. Owner's queries needed all of these to classify the 15 rows at `com = 0.10` (12 standalone cross-sales with `sid` pNN and no `ticket_id`; 3 attached: `TK898-p1`, `TK1287-p1`, `TK1596-p1`). Owner decision (2026-10-12): explicit column (`service` / `product_cross_sale` / `product_counter`), set server-side; counter sale = 0% barber commission.
+
+**Why deferred**: Stage 3.
+
+**Severity**: Medium — fragile classification for every report and recompute.
+
+**Urgency**: Near-term — Stage 3.
+
+**Status**: Open.
+
+### 2026-10-12 — Stale parallel service catalog `tenant_services` (saulfino) and its routes
+
+**Repo:** barberpilot-api
+
+**Description**: Besides `servicios`/`tenant_servicio_precios`, the multi-tenant v2 layer seeds `tenant_services` for saulfino (`index.js:5737`) — owner's query: 11 rows with old prices and services not offered (e.g. Corte $10.000, Black Mask, Masaje craneal). It's read by `/api/v2/tenants/:slug/services` (`:6005`), availability (`:7032`) and v2 booking (`:7095`), plus `/api/v2/services`. No caller for saulfino was found in any repo on the dev machine (5 project repos, mae-studio-web, livedata-*), or in api `services/`, scripts or migrations; code can't rule out an external caller (Railway request logs could).
+
+**Why deferred**: Out of scope until the config program decides its fate (retire for saulfino, or make it a view of the real catalog) — tracked so it isn't mistaken for the real catalog.
+
+**Severity**: Medium — a second source of truth with wrong prices; harmless only as long as nothing reads it for saulfino.
+
+**Urgency**: Eventual — resolve within the services stages (Stage 1/2).
+
+**Status**: Open.
+
+### 2026-10-12 — `servicio_alias.alias_texto` is a global primary key, and alias matching is exact-text (case/accent-sensitive)
+
+**Repo:** barberpilot-api
+
+**Description**: `alias_texto TEXT PRIMARY KEY` (`index.js:8037`) is unique across **all tenants**, so a second tenant can't use common names like "Corte". Matching is exact, so case variants and typos had to be added as separate aliases. Owner's queries (2026-10-12): no foreign key references `servicio_alias`, and no two aliases of different services collide after normalization → **per-tenant uniqueness on a normalized column is confirmed safe**. Production has no `unaccent` extension (only `plpgsql`), so normalization must happen in application code (NFD, strip diacritics, lowercase, trim, collapse whitespace) into a stored normalized column.
+
+**Why deferred**: Stage 1 (Migration 042: `alias_normalizado`, uniqueness per `(tenant_id, alias_normalizado)`, normalized matching in `/registros` and queue close).
+
+**Severity**: Medium — blocks multi-tenant use of the catalog; brittle matching today.
+
+**Urgency**: Near-term — Stage 1.
+
+**Status**: Open.
+
+### 2026-10-12 — Reports group sales by raw service text; ~1,560 sales carry a generic `sid`
+
+**Repo:** barberpilot-api, sf-live
+
+**Description**: `/resumen` builds its per-service map from raw `snom` (`index.js:1902`), so sf-live's "Servicios más solicitados" splits case/typo variants into separate services. About 1,560 of 2,441 saulfino `registros` have generic `sid` `'queue'` or `'custom'` (`custom`: 58 rows, 2026-05-04 → 2026-07-18, no longer produced). Owner's query: 35 distinct names; all high-volume names already map exactly to an alias; ~20 low-volume names (1–3 sales each, mostly May–June — e.g. "Perfilado express", "Corte + tintura", "Corte + diseño", "Afeitado de barba", "Corte + Matizado canas cabello") have no mapping. Owner decision (2026-10-12): **never rewrite `registros`**; use a read-time mapping table plus one shared database view for all reports.
+
+**Why deferred**: Owner-review mapping list (each name → proposed `servicio_id` or an explicit "no catalog equivalent" bucket) comes at the end of the program; not urgent.
+
+**Severity**: Low — reporting accuracy, not money.
+
+**Urgency**: Eventual.
+
+**Status**: Open.
+
+### 2026-10-12 — Sala de Espera accepts free-text services and edited prices (design reference; lock-down on hold)
+
+**Repo:** barberpilot-control, barberpilot-api, BarberPilot_App, saulfino-web
+
+**Description**: Every queue entry route stores `service` as free text with no catalog check (`/queue/checkin` `:3702`, `/queue/control/checkin` `:3915`, `PUT /queue/:id` `:4457`). barberpilot-control's Sala shows an editable price box per ticket (`index.html:6376`, defaulting to 12000) and an editor price box (`:863`); the close route uses that price as-is. The App's PaymentSheet allows a manual price when the service isn't found, and `RegistrarScreen`'s "Especial…" allows a free name and price (rejected by the `/registros` alias gate unless the name happens to match an alias). Owner decision (2026-10-12): Sala de Espera will become catalog-selection only (no create, no free text, no price/description edits) — **on hold**. Operational cases that today depend on this flexibility and need a model first: authorized price adjustments (see the `precioOverride` entry), variable-price services ("Diseños — Desde $6.000" on saulfino-web, entry below), services not in the catalog.
+
+**Why deferred**: On hold by owner decision (2026-10-12); A11's investigation is the design reference.
+
+**Severity**: Medium — billing data quality depends on staff typing correctly.
+
+**Urgency**: Eventual — on hold.
+
+**Status**: Open (on hold).
+
+### 2026-10-12 — No model for variable-price services ("Desde $X")
+
+**Repo:** barberpilot-api, saulfino-web
+
+**Description**: saulfino-web's public booking offers "Diseños" as "Desde $6.000" (`agenda.html`), but `tenant_servicio_precios` only supports one fixed price per service. Owner decision (2026-10-12): Stage 1's schema must support a per-service price range (and audited, admin-only, reasoned overrides) without rework, before the server enforces catalog prices everywhere.
+
+**Why deferred**: Schema support in Stage 1; enforcement and UI later.
+
+**Severity**: Low.
+
+**Urgency**: Near-term — must be designed into Stage 1's schema.
+
+**Status**: Open.
+
+### 2026-10-12 — Write routes with no authentication across barberpilot-api — CRITICAL (deferred)
+
+**Repo:** barberpilot-api
+
+**Deferred by owner decision on 2026-10-12 — scheduled after the functional program.**
+
+**Description**: Systematic scan of every write route registered with no middleware before the handler, then the full handler body checked for any header/token/role check. **No check found** in: `POST /registros/bulk` (`:1711`), `POST /registros/barbero` (`:3346`) — both insert into `registros` and have no caller in any repo; `POST /barbero/:bid/avatar` (`:2031`), `POST /asignar` (`:2068`), `POST /comprobantes` (`:3160`), `POST /push/test` (`:3233`), `POST /queue/control/checkin` (`:3915`), `POST /queue/:id/notify` (`:4736`), `POST/PATCH/DELETE /appointments*` (`:5151`, `:5373`, `:5420`), `POST/DELETE /blocked-slots*` (`:5431`, `:5478`), `PUT /appointments/:id/confirm|cancel|reassign` (`:5506`, `:5521`, `:5536`). **Need closer review** (some auth-related code in the handler, enforcement not confirmed): `PATCH /registros/:id/cliente` (`:2375`), `PATCH /clientes/:id` (`:2848`), `POST /queue/control/assign` (`:4036`), `PUT /queue/:id` (`:4457`, separate entry 2026-08-04), `PUT /queue/:id/client` (`:4613`). Some routes are presumably public by design (client check-in, public booking, the HMAC-verified WhatsApp webhook) and need explicit classification. CORS accepts requests with no Origin, so none of this is protected by CORS. **Related read**: `GET /registros/dia` (`:1763`) returns a full day of sales with no auth check in the handler. GET routes were not systematically audited.
+
+Stage S1 is prepared and parked: branch `fix/remove-unauth-registros` (worktree `C:\Users\PC\barberpilot-api-fix-remove-unauth-registros`, uncommitted) removes `/registros/bulk` and `/registros/barbero`; verified locally against a fake database layer (before: both returned 200 and reached `INSERT INTO registros` with no credentials; after: 404, zero SQL; `POST /registros` still 401; route list differs by exactly those routes).
+
+**Why deferred**: Owner decision (2026-10-12): finish the functional program first; security stages S1 → S0 → S2 afterwards. Non-negotiable meanwhile: every new or modified route in the program enforces the correct auth (`requirePanelRole` for staff/admin writes), and no secret value is written anywhere.
+
+**Severity**: Critical — anyone who knows the API URL can write sales, expenses, appointments and queue data.
+
+**Urgency**: Immediate — deferred by owner decision; not downgraded.
+
+**Status**: Open (deferred). Stage S1 ready to deploy on the owner's word.
+
 ### 2026-10-09 — EAS internal-distribution build artifacts expire, with no warning from the CLI itself
 
 **Repo:** BarberPilot_App (EAS infrastructure, not app code)
@@ -178,6 +461,8 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 **Urgency**: Eventual — proceed whenever `feature/credit-commission-43` is picked up; not blocking anything.
 
 **Status**: Open, re-scoped 2026-10-08.
+
+**2026-10-12 update**: Owner decisions — "Tarjeta" covers any POS card (debit and credit) at 43%; the user-facing label "Débito" becomes "Tarjeta"; internal key `debito` stays (historical rows); **no separate crédito method for saulfino** (credito inactive). Owner's query confirmed production still has `credito` 40/60 for saulfino. Code search found **no reader of `tenant_commissions_v2` for saulfino** (only `/api/v2/commissions`, no caller in any repo). Resolution moves to Stage 3: payment methods become a configurable tenant table (key, label, staff_pct, active, orden, applies_to), and `tenant_commissions_v2` / `COM_PAGO` are retired or corrected so there is one source.
 
 ### 2026-10-08 — Checkout has no notes/comment field (feature request)
 
@@ -283,6 +568,14 @@ ORDER BY mes DESC;
 
 **Status**: Open. Investigated and scoped only — no code changed, per instruction to keep this read-only today.
 
+**2026-10-12 update — scope changed from "harden" to "remove"; deferred by owner decision on 2026-10-12 — scheduled after the functional program.**
+- Owner decision: the manual paper import ("Ingresar histórico" → `curl`) is **intentionally retired; no replacement needed**. The fix is therefore removal, not the hardening plan above.
+- Scope widened to the twin route `POST /registros/barbero` (`index.js:3346`), also unauthenticated, also inserting into `registros`, also with no caller. Both are listed in the 2026-10-12 "Write routes with no authentication" entry.
+- Re-swept 2026-10-12: every git repo on the dev machine, every branch and tag, plus all working copies — the only references are the route definitions, README text, a design doc and this file. No caller.
+- Stage S1 prepared and **parked** (not committed): branch `fix/remove-unauth-registros`, worktree `C:\Users\PC\barberpilot-api-fix-remove-unauth-registros`. Removes both routes and the bulk rate-limiter line, and replaces the README's import instructions. Verified locally with a fake database layer: before, both routes returned 200 and reached `INSERT INTO registros` with no credentials; after, 404 and zero SQL; `POST /registros` still 401.
+- Still open alongside it, in barberpilot-control: the "📥 Ingresar histórico" tab still produces JSON files that nothing can import, and the "Sincronizar con nube" button (`index.html:935`) still calls the undefined `migrarHistoricoNube()`. Both should be removed with the import retirement (Low, UI cleanup).
+- Severity stays Critical; urgency stays Immediate — deferral is an owner scheduling decision, not a reassessment.
+
 ### 2026-10-08 — Railway barberpilot-api has no healthcheck path configured — a broken build can go live and replace a working one with no safety net
 
 **Repo:** barberpilot-api
@@ -297,7 +590,7 @@ ORDER BY mes DESC;
 
 **Urgency**: Eventual — no active incident; worth doing before the next deploy that has any real chance of a boot-time failure (e.g. anything touching the migration chain), since that's exactly the scenario a healthcheck would catch.
 
-**Status**: Open. Scoped only, not built.
+**Status**: Open. Scoped only, not built. **Deferred by owner decision on 2026-10-12 — scheduled after the functional program** (security/operations stage S2).
 
 ### 2026-10-08 — barberpilot-api runs on Node 18.20.8 (Railpack default), which is end-of-life
 
@@ -466,7 +759,7 @@ This was effective — it caught a bug that purely static review and manual math
 
 **Urgency**: Eventual — becomes worth fixing before 2027 regardless (the list needs a manual update every year — see the year-guard console warning added alongside this), a natural point to also check `tenant_feriados_override` and consider wiring real access instead of extending the hardcoded list again.
 
-**Status**: Open. No fix scheduled.
+**Status**: Open. 2026-10-12: now scheduled within the "Configuration as single source of truth" program (business hours and holidays stage), which replaces sf-live's hardcoded list with backend data.
 
 ### 2026-08-10 — boot-smoketest.yml CI has no CREATE TABLE for 9 core tables — zero real coverage for anything touching them
 
@@ -590,6 +883,8 @@ Add a stale-while-revalidate cache layer so each surface still renders instantly
 
 **Status**: Open, narrowed scope (2026-10-08): `barberpilot-control`'s `BB` array and `BarberPilot_App`'s `LoginScreen.js`/`App.js` are the two confirmed-stale surfaces. `checkin.html`/`queue-dashboard.html`, `agenda-admin.html`, `sf-live`, and `saulfino-web` are all confirmed structurally fine (live-fetch with fallback) as of this date. Fail-loud-instead recommendation open, pending César's product call.
 
+**2026-10-12 update**: Recurred with the new barber Angie (October 2026), who had to be added by hand in several places. Now in scope of the "Configuration as single source of truth" program (barbers/staff stage, after the services and payment-methods stages). The owner's program rule also settles the fallback question above: no shipped fallback constants; the only allowed fallback is a read-only, timestamped last-known-good copy cached on the device with a visible "datos sin conexión" warning, and a clear error on first run with no network and no cache.
+
 ### 2026-08-04 — Migration numbering collision: two branches independently picked "Migration 040"
 
 **Repo:** barberpilot-api
@@ -616,7 +911,7 @@ Add a stale-while-revalidate cache layer so each surface still renders instantly
 
 **Urgency**: Eventual — worth doing whenever `STATIC_DURATIONS` needs to change per-tenant (a second tenant with different service names/durations onboarding onto the queue system) or needs to be editable without a deploy; no near-term trigger today.
 
-**Status**: Open.
+**Status**: Open. 2026-10-12: in scope of the "Configuration as single source of truth" program — durations become a field of the backend service catalog (Stage 1/2), managed in Administración. Note the key mismatch: these names (`Barba / Perfilado`, `Black Mask`, `Masaje craneal`) match the stale `tenant_services` seed, not the real `servicios` catalog.
 
 ### 2026-08-04 — `migrations/` folder contains inert files nothing executes — real schema evolution happens via idempotent IIFE blocks in `index.js`
 
@@ -660,7 +955,7 @@ Add a stale-while-revalidate cache layer so each surface still renders instantly
 
 **Fix**: Audit every current caller of `PUT /queue/:id` (Sala de espera editor's "Actualizar servicio", any others) to confirm they already send a panel JWT or dashboard token, then add `requireAnyAuth` — same pattern just applied to the `productos-adjuntos` endpoints.
 
-**Status**: Open.
+**Status**: Open. 2026-10-12: part of the systemic "Write routes with no authentication" entry (same date). **Deferred by owner decision on 2026-10-12 — scheduled after the functional program**; severity not downgraded.
 
 ### 2026-08-03 — "Servicio especial" (custom-priced service) sidebar feature is completely non-functional since 2026-07-17
 
@@ -796,7 +1091,7 @@ If a panel staff member attaches a product to an in-progress ticket (cross-sell)
 
 Replacing the literal values in `STAGING.md` with placeholders (matching `env.staging.example`'s `<generate-fresh-for-staging>` convention) is good hygiene but addresses neither of the two points above on its own.
 
-**Status**: Open.
+**Status**: Open. 2026-10-12: re-confirmed the values are still present in `STAGING.md` on `origin/main` (`e2d7c5c`). **Deferred by owner decision on 2026-10-12 — scheduled after the functional program** (stage S0: secrets exposure, rotation runbook, repo visibility, secret scanning); severity not downgraded.
 
 ### 2026-07-29 — `productos` data is coupled to servicios' fail-closed gate in `GET /config/negocio` and `.../publico`
 
@@ -903,6 +1198,8 @@ Confirmed examples from the client-memory feature (Phase 1): `GET /clientes/:id/
 Still open: every *other* route built on `requirePanelRole` (staff CRUD, `/config/bebidas-disponibles`, `/clientes*`, servicios/productos precio endpoints) still hardcodes `'saulfino'` literally — the middleware fix makes migrating them possible, it doesn't migrate them; that's separate, unscoped work per route. Also still open: there is no way to actually authenticate against `barberpilot-control` as `saulfino-maipu` yet — Migration 033 seeded that tenant minimally (id/slug only, explicitly no `panel_users` row), and the login form has no tenant selector.
 
 **2026-10-08 addition**: `POST /api/v2/staff` and `PATCH /api/v2/staff/:bid` (fixed in this same session — see the "Agregar barbero" auth regression entry above) are two more confirmed members of the still-hardcoded list. Deliberately used an explicit `const tenantId = 'saulfino';` with a comment pointing back to this entry, rather than `req.panelUser.tenant_id || 'saulfino'` — a silent `||` fallback here would misroute every future write to `'saulfino'` the instant a second tenant's panel admin calls either route, with nothing to surface the mistake. Migrating these two to real tenant resolution is still unscoped future work, same as every other route in this list.
+
+**2026-10-12 addition**: Program rule for the "Configuration as single source of truth" program — every new or modified route resolves the tenant from the logged-in `panel_users` record (the pattern the servicios/productos price routes already use), with no new hardcoded `'saulfino'`. Existing hardcoded routes touched by the program will be migrated as they're modified; each one will be noted here.
 
 ### 2026-07-24 — `bebida` never reaches `registros` when a barbero closes a service from BarberPilot_App instead of the control panel
 
@@ -1035,6 +1332,8 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **Recommended fix**: Add a `tenant_comisiones` table (or extend `tenant_metas`) with per-payment-method rates, expose via `GET /config/negocio`, and have `barberpilot-control` read `com_rates` from the server response for its preview.
 
+**2026-10-12 update — worse than described above.** There are at least five sources, not two: barberpilot-control `COM`/`COM_DEFAULT` (`index.html:1308`/`:6908`, **editable per browser** — see the 2026-10-12 entry), barberpilot-api `COM_PAGO` (`index.js:3552`, with `|| 0.50` fallbacks), `tenant_commissions_v2` (credito 40/60), and the App's inline `pago === 'debito' ? 0.43 : 0.50` (`PaymentSheet.js:59`, `RegistrarScreen.js:56`/`:130`). And the description above is wrong on one point: for `POST /registros` (control cobro, App), the ledger stores the **client's** computed `bb`/`neg`, not the backend's — see the Critical 2026-10-12 entry. Owner-confirmed rule: efectivo 50%, transferencia 50%, Tarjeta (any POS card) 43%; product cross-sale 10%, counter sale 0%. Planned: Stage 3 (one tenant payment-methods table, backend authoritative, frontends read-only).
+
 **Status**: Open.
 
 ### 2026-07-13 — Queue `ABANDONED` auto-cleanup (Migration 008) uses UTC `CURRENT_DATE`, not Santiago-local
@@ -1065,7 +1364,7 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **Urgency**: Near-term — a real, measured UX/workflow friction gap: roughly 1 in 6 real transactions closed via this screen force the barber to type the price manually instead of getting it auto-filled.
 
-**Status**: Open.
+**Status**: Open. 2026-10-12: the same screen also adds the tip into `bb` — separate entry, same date. Both are addressed by the program (Stage 1 normalized alias matching on the server; Stage 3 server-side price/commission resolution, so the App no longer decides amounts).
 
 ### 2026-07-13 — `/queue/control/registrar`'s `precioOverride` has no `override`/`override_reason` UI equivalent
 
@@ -1075,9 +1374,11 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **Why deferred**: Not itself broken — a pre-existing, working, legitimate staff workflow (e.g. discretionary discounts). Flagged as an asymmetry worth resolving for consistency, not an active defect.
 
-**Severity**: Low.
+**Severity**: Medium (raised from Low on 2026-10-12, owner decision).
 
 **Urgency**: Eventual — an audit-trail gap, not a correctness one.
+
+**2026-10-12 update**: Owner's query found ~60 Sala de Espera sales charged at a price different from the catalog. **Owner confirms all were authorized adjustments he entered himself — not revenue leakage.** The real gap is that they carry no record of who made them or why. Owner decision: an override requires admin role, a mandatory reason, and an audit record (who, when, catalog price, charged price, reason) on every path that allows one; Stage 1's schema must support overrides and per-service price ranges without rework. Note also that `POST /registros`'s audited `override:true` path is used by no client today.
 
 **Status**: Open.
 
