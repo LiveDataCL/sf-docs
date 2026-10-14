@@ -125,6 +125,237 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 > (rate limiter) → Step A-3 → Stage C → Stage 2b → Stage 3. Line references in the
 > 2026-10-13 entries are to barberpilot-api `9dbac29` and barberpilot-control `573ef84`.
 
+> **2026-10-14 batch.** **Stage L2a** live — barberpilot-api `3d21ed4` (PR #39) and
+> barberpilot-control `1a4ee35` (PR #34), both merged ≈10:02–10:05 Santiago on an
+> explicit owner exception: control's KPI month, history, today's sales, rotation and
+> the KPI dashboard read one authenticated range per period; `dashboard-config.js` is no
+> longer published. **KPI-tab fix** live — barberpilot-api `b521947` (PR #40) and
+> barberpilot-control `bf84697` (PR #35). Then the read-only KPI / bonus / barbers-per-period
+> investigation (findings below); the owner's final decisions are in the program notes.
+> Order (owner, 2026-10-14): sf-docs → layout → API barber periods → backfill → KPI tab and
+> Administración (October rules) → Comisión/Propina → KPI dashboard and sf-live → App →
+> remove hardcoded barber lists → November scoring (live and announced before 2026-11-01);
+> security phase after the functional program. Line references in this batch are to
+> barberpilot-api `b521947`, barberpilot-control `bf84697`, BarberPilot_App `2b101ff`,
+> sf-live `f2d2728`.
+
+### 2026-10-14 — `DASHBOARD_READ_TOKEN` was published on the public GitHub Pages site — CRITICAL (deferred)
+
+**Repo:** barberpilot-control (exposure), barberpilot-api (what the token unlocks)
+
+**Description**: From 2026-07-10 (commit `42a784d`) until 2026-10-14, `.github/workflows/deploy-pages.yml` wrote the `DASHBOARD_READ_TOKEN` GitHub secret into `dashboard-config.js` and published it with the site, so anyone could download the token at `livedatacl.github.io/barberpilot-control/dashboard-config.js`. Whether the published value equals production's was never verified (that would mean using the credential). Treat the token as **compromised**. In the API it unlocks: `POST /registros`, `GET /clientes/export/csv` (all clients), `/registros/rango`, `/gastos/rango`, `/resumen/rango`, `/queue/control`, `PUT /queue/:id/status`, `POST`/`DELETE /queue/:id/productos-adjuntos`, `POST /mensajes`, `GET /mensajes/:bid`, `GET /appointments/admin`, `POST /barber-schedule`, `/events` (as `?token=`), `/admin/restore-status`, `/admin/whatsapp/stats`. Stage L2a (`1a4ee35`) removed the publishing step; the file has answered 404 since 2026-10-14. Remaining senders of the token: control's manual staff-token field (`staffAdminToken`, the `x-dashboard-token` fallback in `getAuthHeaders`), and control's `/events` live-update stream, which connects **only** with that pasted token. The `DASHBOARD_READ_TOKEN` GitHub Actions secret is no longer read by anything.
+
+**Why deferred**: Owner decision 2026-10-13 — all security work (rotation included) goes to the final security phase.
+
+**Fix**: rotate `DASHBOARD_READ_TOKEN` in Railway (together with the staging `JWT_SECRET`/`DASHBOARD_READ_TOKEN` exposed in `STAGING.md`, see the 2026-07-30 entry); delete the unused GitHub secret; replace the pasted-token field and the `/events` token with the panel login.
+
+**Severity**: Critical — client personal data and sales writes were reachable with a publicly downloadable value.
+
+**Urgency**: Near-term — first item of the security phase (credential rotation).
+
+**Status**: Open — exposure stopped 2026-10-14; rotation deferred by owner decision.
+
+### 2026-10-14 — KPI tab: the individual goal was divided by a browser-dependent barber list (affects scores, tiers and bonuses)
+
+**Repo:** barberpilot-control
+
+**Description**: `calcPuntaje` divides the month's group goal by `BARBEROS_ACT = BB.length` (`index.html:4892`, comment "barberos activos"). `BB` is this browser's cached list: the localStorage cache, plus `BB_DEFAULT` after "Restaurar valores por defecto" (`:7004`, `:7815`), plus active barbers from `GET /barberos`. `_mergeBarberosLive` only ever adds barbers or marks them active, never inactive. The owner's laptop used **8** (b1, b2, b4, b5, b6, b7, admin, b3); the correct divisors are Aug 3, Sep 3, Oct 4. Every extra row lowers each barber's individual target, raising production points, scores, tiers and bonuses. The team-average score (`:5280`) also averages every row. Production check by the owner (information only; no retroactive correction): the tab showed tier A ($10.000) for b1, b5, b6 in August and for b6 in September, where the correct rules give B; service billing missed the group goal in both months ($4.865.000 and $4.742.000 vs $8.014.600), so nothing was payable. In total the tab showed **$40.000 more** in bonuses than the rules allow.
+
+**Why deferred**: Fixed in stage 5 (KPI tab on the barber-period function), after stages 3–4.
+
+**Severity**: High — pay-affecting figures.
+
+**Urgency**: Immediate — must be live before October bonuses are calculated (end of October).
+
+**Status**: Open — stages 3–5 in progress.
+
+### 2026-10-14 — KPI tab: bonus rules don't match the owner's rule
+
+**Repo:** barberpilot-control, barberpilot-api
+
+**Description**: Against the owner's rule (group goal first; individual goals only if met; equal individual goal for barbers active in the month; paid by tier):
+- **Group goal is only a banner.** `metaCumplida` (`index.html:5040`) drives the "bonos activos / bloqueados" message (`:5189`, `:5210`), but the per-barber bonus (`:5313`, shown `:5335`) and "Bonos a pagar" (`:5284`) ignore it.
+- **The goal check counts products.** The tab compares the month's total sales, products included (October to date: $1.598.000 = services $1.576.000 + products $22.000), while the API's goal (`calcularMetaAnchorServicios`) is services only, strictly `confirmado`.
+- **Two bonus amounts on one screen.** The table pays fixed `BONUS_MONTO` (S $20.000, A $10.000; `:4980`), while the panel above it shows `BONUS_PCT` of billing (S 0.5 %, A 0.25 %), the default mode (`:4979`).
+- **A low score shows as disqualified.** `gradeFromScore` (`:4936`) returns X both for an explicit disqualification and for any score below 35, and the tier card labels X "Descalificado · Falta grave" (`:5433`).
+- **Bonus settings live in each browser.** Mode, amounts, percentages and even a goal override (`metaOverride`) are read from that browser's localStorage `sfsf_kpi_config` (`cargarConfigKpi`, `:4984`).
+
+**Why deferred**: Stage 5 implements the decided rules (group goal from the API, services only, with an audited per-month override; potential vs payable bonus; S 0.5 % / A 0.25 % of the month's service billing; B/C/D without bonus; X only when the owner sets it; config in the backend).
+
+**Severity**: High — what is shown is what gets paid.
+
+**Urgency**: Immediate — before end-of-October bonuses.
+
+**Status**: Open — stage 5.
+
+### 2026-10-14 — Business values hardcoded in the KPI scoring and attendance stars; tips component unreachable
+
+**Repo:** barberpilot-control
+
+**Description**: Hardcoded in `index.html`: ticket references 12.300 and 14.000 (`:4894`–`:4895`, ticket points), the tips targets (26 working days, 5 tips/day, $5.000/day → 130 tips and $130.000 a month, `:4849`–`:4851`), the tier cut-offs 90/75/55/35 (`:4936`), the bonus defaults (`:4980`–`:4981`), the upsell threshold $12.000, and the attendance stars' fixed 10:00/20:00 with 15/30/60/90-minute steps (`HORARIO_APERTURA`/`HORARIO_CIERRE`, `estrellasPorHorario`, `:4596`), even though the backend keeps per-weekday shop hours in `tenant_calendar_config`. The tips targets are unreachable: the tips component scored **0 for every barber in every month** (owner's production check).
+
+**Why deferred**: Stage 5 moves the October values to backend config (`tenant_config`, seeded with today's values); stage 9 recalibrates the November values.
+
+**Severity**: Medium.
+
+**Urgency**: Near-term — stages 5 and 9.
+
+**Status**: Open.
+
+### 2026-10-14 — Shop hours missing in the backend; calendar, holidays and goal settings can't be edited from the panel
+
+**Repo:** barberpilot-api
+
+**Description**: `tenant_calendar_config` was seeded with weekday weights only (Sunday 0, Monday–Friday 1, Saturday 0.536; `index.js` Migration 017 seed), so its `hora_apertura`/`hora_cierre` are empty. The owner's hours: Monday–Friday 10:00–20:00, Saturday 10:00–15:00, Sunday closed. There is no API route to edit `tenant_calendar_config`, `feriados`/`tenant_feriados_override` or `tenant_meta_anchor_config` (goal floor 6.500.000, growth 10 %, base 2026-05). The goal grows only when a month meets its target; it has stayed at $8.014.600 since June.
+
+**Why deferred**: Stage 5 seeds the hours and adds the goal override; editing from Administración comes with the config screens.
+
+**Severity**: Medium.
+
+**Urgency**: Near-term — stage 5.
+
+**Status**: Open.
+
+### 2026-10-14 — Two holiday sources: a backend table seeded only from 2026-07-16, and a hardcoded list in sf-live
+
+**Repo:** barberpilot-api, sf-live, BarberPilot_App, barberpilot-control
+
+**Description**: The API has `feriados` (date, name, mandatory flag; global) plus `tenant_feriados_override` (whether the shop opens), seeded only from 2026-07-16 to 2027-03-27 (Migration 019), with no API route to edit them. The API's working-day count uses them (`/config/negocio`, `index.js:1265`–`1300`). sf-live keeps its own hardcoded `FERIADOS_CHILE_2026` (`index.html:1058`, used at `:1231`). The App's `metas.js` falls back to a Sundays-only count, and the control KPI tab assumes 26 working days. Missing May–July 2026 holidays: owner decision 2026-10-14 — not needed, logged only.
+
+**Why deferred**: Owner decision: one backend holiday source per tenant, editable from Administración and used everywhere (stage 6 for sf-live and the dashboard; stage 9 for punctuality). A holiday is never a "no clock-in = 0" day.
+
+**Severity**: Medium.
+
+**Urgency**: Near-term — stages 5–9.
+
+**Status**: Open.
+
+### 2026-10-14 — No history of when barbers started and left
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: Activar/Desactivar (`PATCH /api/v2/staff/:bid/deactivate|reactivate`, and `active` in `PATCH /api/v2/staff/:bid`) only flipped `tenant_staff.active` and `barberos.activo`, with no date, no audit row and no log line on success. `tenant_staff.created_at` is real only for barbers created from Administración (e.g. Angie, 2026-10-08); for the original barbers it is the date the multi-tenant seed ran. So no report could know who belonged to a past period. The owner confirmed the periods (b1 2026-05-02→open, b2 2026-05-02→2026-07-24, b3 2026-05-02→2026-07-18, b4 2026-05-22→2026-06-15, b5 2026-06-30→open, b6 2026-07-19→2026-10-09, b7 2026-10-08→open; 2026-05-02 is the start of the system's data, not a hire date).
+
+**Why deferred**: Being built — stage 3 (`barbero_periodos`, written by the toggles and creation in the same transaction; "barbers active in a period" API; sales-outside-periods check) and stage 4 (backfill with exactly the confirmed periods).
+
+**Severity**: High — the KPI divisor and every per-barber period view depend on it.
+
+**Urgency**: Immediate — before end-of-October bonuses.
+
+**Status**: Open — in progress.
+
+### 2026-10-14 — Barber lists hardcoded, keyed by name, or browser-dependent
+
+**Repo:** barberpilot-control, sf-live, BarberPilot_App, barberpilot-api
+
+**Description**: control: `BB_DEFAULT` (includes David; `index.html:7004`), `BB_CANONICAL_NAMES` (`:7014`), and a cached list that never marks barbers inactive (`_mergeBarberosLive`). KPI dashboard: `BB_COLORS` keys (`dashboard_kpis_barberia.html:301`), replaced by active names from `/config/negocio/publico` (`:325`); per-barber views filter **by name** (`:657`, `:794`, `:927`), so a past barber's sales in a past period drop out of the per-barber views. sf-live: `_sfBarberos` (`:1841`) and `SILLAS_BARBS` (`:882`), per-barber cards by name (`renderBarberos`, `:1857`). App: `BARBEROS_FALLBACK` (`constants/index.js:28`); `AdminScreen` keeps per-barber KPIs only for current barbers (`:146`, `:152`), silently skipping others' sales. Control's day close, summary and register already use a sound rule (`_barberosParaImpresion`, `:3033`: active barbers plus anyone with sales).
+
+**Why deferred**: Stages 5–8 move every period view to the barber-period function, keyed by `bid`, and remove the hardcoded lists.
+
+**Severity**: Medium.
+
+**Urgency**: Near-term.
+
+**Status**: Open.
+
+### 2026-10-14 — `GET /barbero/:bid/mes/:periodo` refuses inactive barbers (403), blocking their history
+
+**Repo:** barberpilot-api
+
+**Description**: The route checks `tenant_staff.active` (`index.js:2281`) and answers 403 for a deactivated barber, even for months when they worked here.
+
+**Why deferred**: Stage 7 (App) lifts it for past periods using the barber-period history.
+
+**Severity**: Low.
+
+**Urgency**: Eventual — stage 7.
+
+**Status**: Open.
+
+### 2026-10-14 — Clock-ins: typed corrections stay in the browser; the server overwrites without audit
+
+**Repo:** barberpilot-control, barberpilot-api
+
+**Description**: The owner records clock-ins in control. The "Entrada/Salida" button (`marcarHora`, `index.html:4209`) stores the moment it was pressed and sends the day's list 3 seconds later. A typed time (`guardarHoraManual`, `:4235`) is saved **only in that browser** until the next button press or the 23:00 automatic send. The server (`POST /horarios/:fecha`, `index.js:3588`) upserts with `COALESCE`, with no previous value, author or reason; a time can't be cleared, and only today's clock-ins can be edited in the panel. The `horarios` table (and `kpi_evaluaciones`) has no `CREATE TABLE` in the repo; both were created by hand.
+
+**Why deferred**: Stage 9 (November punctuality) adds an end-of-day "marcas faltantes" alert and an audit of every clock-in creation and correction (original value, new value, author, timestamp, mandatory reason). Barber self clock-in (App/QR) is a future idea, logged only.
+
+**Severity**: Medium — from November, clock-ins decide 15 points.
+
+**Urgency**: Near-term — before 2026-11-01.
+
+**Status**: Open.
+
+### 2026-10-14 — Staff activate/deactivate take the tenant from the request body — security (deferred)
+
+**Repo:** barberpilot-api
+
+**Description**: `PATCH /api/v2/staff/:bid/deactivate` and `/reactivate` read `tenant_id` from the request body instead of the verified panel JWT, so an admin of one tenant could toggle another tenant's staff.
+
+**Why deferred**: Owner decision 2026-10-13 — security after the functional program. Stage 3 keeps the existing behavior and writes the period with the same tenant as the flags.
+
+**Severity**: Medium.
+
+**Urgency**: Eventual — security phase.
+
+**Status**: Open — deferred by owner decision.
+
+### 2026-10-14 — The App's daily goal divides by today's active barbers, with hardcoded fallbacks
+
+**Repo:** BarberPilot_App
+
+**Description**: `metas.js` uses `meta.barberos_activos` (the current count, not the month's) with `NUM_BARBEROS_FALLBACK` and `METAS_NEGOCIO_FALLBACK` / `8000000` as fallbacks (`src/services/metas.js:36`–`52`).
+
+**Why deferred**: Stage 7 (App) moves it to the barber-period function and the API goal.
+
+**Severity**: Medium.
+
+**Urgency**: Near-term — stage 7.
+
+**Status**: Open.
+
+### 2026-10-14 — Date series that depend on the database's timezone (`generate_series(date, date, interval)`)
+
+**Repo:** barberpilot-api
+
+**Description**: `generate_series(date, date, interval)` silently runs as `timestamp with time zone`. Under `America/Santiago` it loses a day across Chile's clock change (proven locally). The API's working-day query uses this pattern (`/config/negocio`, `index.js:1268`). Production check by the owner: `TimeZone = Etc/UTC` and September 2026 counts 30 days, so it isn't affected today.
+
+**Why deferred**: Fix structurally (`::timestamp` or date arithmetic) in this query and every other occurrence, in the stage that touches `/config/negocio`.
+
+**Severity**: Low.
+
+**Urgency**: Monitor-only until that stage.
+
+**Status**: Open.
+
+### 2026-10-14 — Small items found during the investigation
+
+**Repo:** barberpilot-control, barberpilot-api
+
+**Description**: (1) `calcKpiCuantiLocal` (`index.html`) is dead code. (2) `index.js` contains a stray byte-order mark (U+FEFF) mid-file, already on `main`; harmless.
+
+**Why deferred**: Cosmetic; removed when those areas are next touched (stage 5 for the KPI code).
+
+**Severity**: Low.
+
+**Urgency**: Eventual.
+
+**Status**: Open.
+
+### 2026-10-14 — KPI tab crashed: NUMERIC values sent as text (`val.toFixed is not a function`)
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: `kpi_evaluaciones.valor` is NUMERIC; node-pg returns NUMERIC (and BIGINT) as text, and `GET /kpi-evaluaciones/:periodo` passed it through. Control merges the server's ratings over the local ones, and when the browser had no clock-in data for a barber that month, the text value stayed and `val.toFixed(1)` threw. Pre-existing since 2026-05 (reproduced on pre-L2a code); surfaced after the 2026-10-13 23:00 automatic send stored October's `apertura`/`cierre`.
+
+**Why deferred**: Not deferred — fixed the same day.
+
+**Severity**: Medium — the KPI tab didn't render.
+
+**Urgency**: Immediate (at the time).
+
+**Status**: Closed 2026-10-14 — barberpilot-api `b521947` (`queryConNumeros`: NUMERIC/BIGINT as JS numbers at the driver boundary, per query, for the report and KPI reads; writes untouched) and barberpilot-control `bf84697` (`renderSeguro`: any rendering error in the KPI tab, history or KPI dashboard shows a Spanish message with "Reintentar" instead of a blank pane). Verified live: `/kpi-evaluaciones` returns numbers. **Rule from now on: every API read that returns NUMERIC/BIGINT to a client goes through `queryConNumeros`.**
+
 > **2026-10-13 evening update.** **Stage 2a** live — barberpilot-control `cdfd303`
 > (PR #33, merged ≈17:46 Santiago on the owner's explicit deploy-window exception);
 > owner acceptance in production passed (created s14 "Corte + Matizado de canas"
@@ -158,7 +389,7 @@ Verified in production 2026-10-13 (status codes only, no body kept): `/resumen`,
 
 **Urgency**: Near-term — first security stage after the functional program.
 
-**Status**: Open — deferred by owner decision.
+**Status**: Open — deferred by owner decision. 2026-10-14: scheduled as the **first personal-data stage of the security phase**, right after Stage L2 removes its callers (L2a already moved every barberpilot-control caller to the authenticated range routes; the App's callers remain until L2b). Chile's new personal data protection law increases the impact of this exposure (the owner will confirm its effective date).
 
 ### 2026-10-13 — Per-day report loops that silently drop failed days remain in barberpilot-control and BarberPilot_App
 
@@ -178,7 +409,7 @@ A month is ≈30 requests (≈60 with expenses) fired together, enough to reach 
 
 **Urgency**: Near-term — candidate for Stage R (owner to decide), which already touches the limiter and client retry behavior.
 
-**Status**: Open.
+**Status**: Open — **barberpilot-control part resolved 2026-10-14** by Stage L2a (barberpilot-control `1a4ee35`, barberpilot-api `3d21ed4`): KPI month, history, today's sales, rotation and the KPI dashboard read one authenticated range per period, show a Spanish warning naming the missing dates, and never present partial totals (a failed expenses read never counts as $0). Negative control during testing: under injected faults the old per-day KPI code silently showed **$371.000 less** than the real month, with no warning. Remaining: BarberPilot_App (`SocioScreen`, `TendenciasScreen`, `AdminScreen`) — Stage L2b.
 
 ### 2026-10-13 — sf-live's monthly report showed understated totals on 2026-10-09 and 2026-10-13 (silently dropped days)
 
@@ -213,6 +444,8 @@ A month is ≈30 requests (≈60 with expenses) fired together, enough to reach 
 **Repo:** sf-live, barberpilot-api
 
 **Description**: `cargarReporteFinanciero()` (`index.html:1121`) downloads the month's raw sales and expenses and sums facturación, negocio, pago a barberos and gastos itself (`rfAgruparPorDia`, `:1179`; `rfRenderTodo`, `:1207`). The API computes the same totals in `resumirPeriodo` for `/resumen` and `/resumen/rango`. Two independent implementations of the same financial figures can drift apart (e.g. a future change to tip handling or to which `estado` counts).
+
+2026-10-14: barberpilot-control's KPI dashboard (`dashboard_kpis_barberia.html`) does the same — it receives complete rows since Stage L2a but adds up its own totals and barber pay (commission plus tip) in the browser (`:637`, `:651`, `:660`, `:845`, `:867`).
 
 **Why deferred**: Stage L kept scope to the silently dropped days; moving the report's math is a separate change.
 
