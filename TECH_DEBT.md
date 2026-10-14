@@ -356,6 +356,64 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 **Status**: Closed 2026-10-14 — barberpilot-api `b521947` (`queryConNumeros`: NUMERIC/BIGINT as JS numbers at the driver boundary, per query, for the report and KPI reads; writes untouched) and barberpilot-control `bf84697` (`renderSeguro`: any rendering error in the KPI tab, history or KPI dashboard shows a Spanish message with "Reintentar" instead of a blank pane). Verified live: `/kpi-evaluaciones` returns numbers. **Rule from now on: every API read that returns NUMERIC/BIGINT to a client goes through `queryConNumeros`.**
 
+### 2026-10-14 — October automatic arrival/closing stars judge Saturday against 20:00 (the shop closes at 15:00)
+
+**Repo:** barberpilot-control
+
+**Description**: The October rules still compute the "Cumplimiento apertura/cierre" stars in the browser (`estrellasPorHorario`, `calcEstrellaHorario`) against the fixed `HORARIO_APERTURA` 10:00 / `HORARIO_CIERRE` 20:00. On Saturdays the shop closes at 15:00, so a barber who leaves at closing time on a Saturday gets the lowest closing star (1) for that day, which lowers that barber's monthly "cierre" average. The stars are also computed only from the clock-ins this browser holds. Stage 5 keeps this calculation (October = error corrections only) but saves the result to the server right after each clock-in instead of at 23:00.
+
+**Why deferred**: Owner decision 2026-10-14: October keeps the stars structure; from 2026-11-01 stage 9 replaces these stars with punctuality computed in the server against each day's opening and closing times from `tenant_calendar_config`.
+
+**Severity**: Low — the closing star is worth at most 6,25 of the 50 conducta points (weight 2 of 16); Saturdays are about one working day in six, so the effect is about 1 point a month. October bonuses aren't payable (group goal not met).
+
+**Urgency**: Near-term — ends with stage 9 (before 2026-11-01).
+
+**Status**: Open.
+
+### 2026-10-14 — `kpi_evaluaciones` has no tenant column
+
+**Repo:** barberpilot-api
+
+**Description**: `kpi_evaluaciones (periodo, bid, metrica, valor, disq, disq_motivo)` has no `tenant_id`; its primary key is `(periodo, bid, metrica)`. Two tenants with the same barber ids (e.g. `b1`) would overwrite each other's stars and disqualifications, and the KPI calculation (stage 5, `calcularKpiMes`) can only scope the read by the month's barbers, not by tenant. The table has no `CREATE TABLE` in the repo (created by hand). MAE uses `p1`–`p4`, so nothing collides today.
+
+**Why deferred**: Out of scope for stage 5; stage 9 replaces the stars with "estándar del puesto" and is the natural point to give that data a tenant-scoped table.
+
+**Severity**: Medium — wrong scores and bonuses for a second tenant that reuses barber ids.
+
+**Urgency**: Eventual — no second tenant is operating.
+
+**Status**: Open.
+
+### 2026-10-14 — Saved stars and disqualifications are readable without login — security (deferred)
+
+**Repo:** barberpilot-api
+
+**Description**: `GET /kpi-evaluaciones/:periodo` has no authentication: anyone with the API address can read every barber's stars and disqualification (with its reason) for any month. Only the control panel reads it; since stage 5 the KPI tab reads the authenticated `GET /api/v2/kpi/mes` instead, so the public route has no caller left in the panel.
+
+**Why deferred**: Owner decision 2026-10-13 — all security work goes to the final security phase.
+
+**Fix**: require the panel login (admin) on the route, or remove it once nothing calls it.
+
+**Severity**: Medium — staff evaluation data, including disqualification reasons.
+
+**Urgency**: Near-term — security phase.
+
+**Status**: Open.
+
+### 2026-10-14 — The group-goal calculation adds up sales of every tenant
+
+**Repo:** barberpilot-api
+
+**Description**: `calcularMetaAnchorServicios(tenant_id)` read its monthly service totals from `registros` with no tenant filter, so another tenant's sales would raise saulfino's goal (and vice versa). Owner check 2026-10-14: `registros` holds only saulfino (2462 rows) — no effect today.
+
+**Why deferred**: Not deferred — fixed in stage 5 (the query is scoped to the tenant).
+
+**Severity**: Medium — a wrong group goal decides whether bonuses are payable.
+
+**Urgency**: Near-term — closes with the stage 5 deploy.
+
+**Status**: Open — fix built in stage 5 (barberpilot-api, branch `feature/kpi-config-octubre`); close when deployed.
+
 > **2026-10-13 evening update.** **Stage 2a** live — barberpilot-control `cdfd303`
 > (PR #33, merged ≈17:46 Santiago on the owner's explicit deploy-window exception);
 > owner acceptance in production passed (created s14 "Corte + Matizado de canas"
