@@ -575,7 +575,7 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 
 **Urgency**: Near-term — reachable today by anyone who can open the public check-in.
 
-**Status**: Open.
+**Status**: Fix live 2026-10-20 — barberpilot-api `a07855c` (PR #48, merged 12:56 Santiago) and barberpilot-control `4e76e46` (PR #41, merged 13:00), on the owner's daytime exception; no data change. The panel, the agenda, the KPI dashboard and the API's two pages show every value as plain text (shared `texto-seguro.js`); the server refuses only `< > { } `` ` and control characters on every write (owner decision after the production check of existing names: `con_marcado` 0 in every table; real names with parentheses and digits must never be rejected). Name limit from `tenant_config` `texto_limites`.`nombre_max` (default 60). Tests 64/64 (security), with the live panel running the planted payloads 53 times and the fixed panel 0. Production checks 2026-10-20: a check-in with `<img …>` or a control character answers 400 in Spanish; public reads unchanged; Pages deploy OK and the four live files identical to main. Closes when the owner confirms Sala de Espera, Sillas and Clientes in the panel.
 
 ### 2026-10-20 — Stage 3b verified in production
 
@@ -605,7 +605,7 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 
 **Urgency**: Near-term.
 
-**Status**: Closed 2026-10-20 — fixed in barberpilot-api `477adfd` (PR #47, merged 12:14 Santiago on the owner's daytime exception; merge tree identical to the reviewed commit `786d0a0`). Deploy SUCCESS, boot log clean (Migration 046 ✓, reaches `Puerto`), public reads identical before/after. Local test: live code 500 → fix 200 with the stored `com/bb/neg`. Production confirmation of the route itself is a real edit from the owner's panel (console check with identical values, no data change).
+**Status**: Closed 2026-10-20 — fixed in barberpilot-api `477adfd` (PR #47, merged 12:14 Santiago on the owner's daytime exception; merge tree identical to the reviewed commit `786d0a0`). Deploy SUCCESS, boot log clean (Migration 046 ✓, reaches `Puerto`), public reads identical before/after. Local test: live code 500 → fix 200 with the stored `com/bb/neg`. Production confirmation by the owner (console, 2026-10-20): re-sending a Tarjeta sale of 16.000 with its current payment method answered 200 `{"ok":true,"pago":"debito","precio":16000,"snom":"Corte + Perfilado de barba","com":0.43,"bb":6880,"neg":9120,"sale_type":"servicio"}`, equal to the stored values (bb 6880, neg 9120, com 0.43).
 
 ### 2026-10-20 — WhatsApp: no paid automated sends remain
 
@@ -634,6 +634,49 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 **Urgency**: Near-term — check which QR codes and links point to it.
 
 **Status**: Open.
+
+
+### 2026-10-20 — The text escaper lives in three deploy units
+
+**Repo:** barberpilot-control, barberpilot-api
+
+**Description**: After the security fix, barberpilot-control has ONE escaper for all its pages (`texto-seguro.js`), but the two pages barberpilot-api serves on its own (`checkin.html`, `queue-dashboard.html`) each keep their own copy (they cannot load the control file). Same logic in three places.
+
+**Why deferred**: Different repos and deploy units; serving one shared script from the API (e.g. `/texto-seguro.js`) would be a new route, out of scope for the fix.
+
+**Severity**: Low.
+
+**Urgency**: Eventual — with the security phase or the next change to those pages.
+
+**Status**: Open.
+
+### 2026-10-20 — sf-live and saulfino-web not yet swept for unescaped names
+
+**Repo:** sf-live, saulfino-web
+
+**Description**: The 2026-10-20 security fix escapes every value in barberpilot-control and in the API's two pages, and the API now refuses markup characters in names and free text on every write. sf-live (socios dashboard) and saulfino-web also render names (barbers, services; sf-live possibly client names) and were not swept. New malicious names can no longer be stored, and the production check found `con_marcado` 0 in every table, so the residual risk is low; the sweep is still owed.
+
+**Why deferred**: Separate repos; the owner scoped the fix to the panel and the API pages.
+
+**Severity**: Low — no stored row contains markup today.
+
+**Urgency**: Near-term — with the next change to each repo.
+
+**Status**: Open.
+
+### 2026-10-20 — Server text rule: only markup and control characters are refused (decision)
+
+**Repo:** barberpilot-api
+
+**Description**: The first version of the server rule accepted only letters, spaces, apostrophe, hyphen and period in names. The owner's read-only check of existing data (2026-10-20) found real operational names with parentheses and descriptions ("Gaspar (Niño…", "Renato (Niño…") and test rows with digits ("Usuario 1", "E2E Cierre"): 30 in `queue`, 26 in `registros`, `con_marcado` 0 everywhere. Decision: the panel's plain-text rendering is the primary defence and the server rule is a second layer that refuses only `< > { } \`` and control characters (names also refuse line breaks), with the name length from config. Consequence to remember: a value made of quotes, parentheses or semicolons is stored as typed; every page must keep escaping it.
+
+**Why deferred**: Nothing to defer — recorded as a decision.
+
+**Severity**: —
+
+**Urgency**: —
+
+**Status**: Closed 2026-10-20.
 
 
 > **2026-10-13 evening update.** **Stage 2a** live — barberpilot-control `cdfd303`
