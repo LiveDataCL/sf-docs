@@ -642,7 +642,7 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 
 **Repo:** barberpilot-api
 
-**Description**: The older `horarios` routes (the ones used before the Stage 8b `/api/v2/asistencia/*` routes) answer without a panel role check: any caller who can reach them can read or write clock-in times. Stage 8b (not yet merged: owner review Thursday 22, deploy Friday 23) puts audit rows behind them and makes the new clock-in routes role-checked, but does not close the old routes. The `horarios` table itself is also not created by anything in the repository (it exists only in production); local test databases have to create it by hand.
+**Description**: The older `horarios` routes (the ones used before the Stage 8b `/api/v2/asistencia/*` routes) answer without a panel role check: any caller who can reach them can read or write clock-in times. Stage 8b (deployed 2026-10-20, barberpilot-api #49) puts audit rows behind them and makes the new clock-in routes role-checked, but does not close the old routes. The `horarios` table itself is also not created by anything in the repository (it exists only in production); local test databases have to create it by hand.
 
 **Why deferred**: out of scope for 8b (clock-in with adjustable time and reason); the roles stage and the security phase close the unauthenticated panel-used routes.
 
