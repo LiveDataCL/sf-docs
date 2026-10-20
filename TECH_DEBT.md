@@ -417,11 +417,16 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 > **2026-10-15 batch.** Live: **Stages 3–4** (barber activity periods and the confirmed
 > backfill; barberpilot-api `827790c`, `933dbf3`), **Stage 5** (monthly KPI calculated in
 > the server; barberpilot-api `fa1486b`, barberpilot-control `3e21d8d`) and the
-> **Administración fix** (barberpilot-control `bd5d1fe`). Built, not yet deployed:
-> **Stage 2** (Comisión and Propina shown separately; barberpilot-control PR #39), the
-> **David fix** (barberpilot-api PR #44) and **Stage 3b** (commissions computed in the
-> server from tenant data; branches `feature/comisiones-servidor` in barberpilot-api,
-> barberpilot-control and BarberPilot_App). Line references in this batch are to
+> **Administración fix** (barberpilot-control `bd5d1fe`), and — merged 2026-10-15 on the
+> owner's daytime exception — **Stage 2** (Comisión and Propina shown separately;
+> barberpilot-control `7dc529c`, PR #39; verified by the owner in production) and the
+> **David fix** (barberpilot-api `938ea4a`, PR #44). **Stage 3b** (commissions computed in
+> the server from tenant data) was merged and deployed on 2026-10-16 on the owner's
+> daytime exception — barberpilot-api `3d0ff26` (PR #45, 10:34), barberpilot-control
+> `3b167fd` (PR #40, 10:44), barberpilot-expo `1db5bd2` (PR #1) and the App update
+> published to the production channel (group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`);
+> owner-confirmed in production 2026-10-20 (Comisiones editable, "Tarjeta" label, App in
+> use); its entries below close when the next-day SQL is clean. Line references in this batch are to
 > barberpilot-api `fa1486b`, barberpilot-control `bd5d1fe`, BarberPilot_App `2b101ff`.
 
 ### 2026-10-15 — Commission verification in production: no historical pay error
@@ -486,7 +491,7 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 
 **Urgency**: Near-term — closes with the Stage 2 deploy (PR #39).
 
-**Status**: Closed 2026-10-15 — Stage 2 live in barberpilot-control `7dc529c` (PR #39, merged 17:10 Santiago on the owner's explicit daytime exception); live files byte-identical to the merge commit, whose tree equals the tested head `2c7a5ed`.
+**Status**: Closed 2026-10-15 — Stage 2 live in barberpilot-control `7dc529c` (PR #39, merged 17:10 Santiago on the owner's explicit daytime exception); live files byte-identical to the merge commit, whose tree equals the tested head `2c7a5ed`. Verified by the owner in production the same evening: commissions and tips appear separately, with totals, everywhere.
 
 ### 2026-10-15 — Administración showed only section titles when opened from the KPI "Ajustar meta" button
 
@@ -557,6 +562,20 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 **Urgency**: Monitor-only.
 
 **Status**: Open — informational.
+
+### 2026-10-15 — Client names from the public check-in rendered unescaped in the staff panel
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: `POST /queue/checkin` (public, no login; barberpilot-api `938ea4a` `index.js:3844`) stores `client_name` with no length or content check, and barberpilot-control (`7dc529c`) writes it into `innerHTML` without `escHtml` in Sala de Espera (`index.html:6167`, `:6207`) and Sillas (`:6391`). Anyone using the public check-in could make script run in a logged-in staff session (which holds the panel login in `sessionStorage`). Found by reading code in the OPS investigation; not tested against production.
+
+**Why deferred**: Found 2026-10-15 during the read-only OPS investigation; the fix is proposed to the owner (escape every queue field in the panel, plus server-side length/character validation of `client_name`) and needs a decision on scheduling.
+
+**Severity**: High — script execution in an authenticated staff session from a public form.
+
+**Urgency**: Near-term — reachable today by anyone who can open the public check-in.
+
+**Status**: Open.
 
 > **2026-10-13 evening update.** **Stage 2a** live — barberpilot-control `cdfd303`
 > (PR #33, merged ≈17:46 Santiago on the owner's explicit deploy-window exception);
