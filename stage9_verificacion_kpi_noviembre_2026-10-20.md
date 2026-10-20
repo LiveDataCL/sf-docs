@@ -1,6 +1,6 @@
 # Stage 9 — November scoring: verification evidence (2026-10-20)
 
-**Status**: verification APPROVED by the owner on 2026-10-20 (mechanics and real-data run). Deploy pending: target Tue 2026-10-27 / Wed 2026-10-28, on the owner's word.
+**Status**: verification APPROVED by the owner on 2026-10-20 (mechanics and real-data run). **Deployed 2026-10-20** (see "Deploy record" below).
 
 ## What was verified
 
@@ -48,3 +48,21 @@ Rules by evaluated month (October keeps its rules); daily conduct entered for to
 - The run is month-to-date for October; the final October figures differ.
 - The current-model column is a recomputation, not a panel capture.
 - Production behaviour of the new code is not verified until deploy; the deploy must land before 2026-11-01.
+
+## Deploy record (2026-10-20, owner's daytime exception)
+
+Stage 8b first, then Stage 9, each verified before the next. Order and evidence:
+
+| Step | Change | Result |
+|---|---|---|
+| 1 | barberpilot-api #49 (Stage 8b, merge `caf758f`) | Railway deploy SUCCESS; boot log: Migration 047 applied, reaches `Puerto`, no failure line; `/api/v2/asistencia/hoy` and `/marcar` answer 401 without a login; `GET /horarios/:fecha` for 2026-10-14 and 2026-10-19 byte-identical to the pre-deploy hashes |
+| 2 | barberpilot-control #44 (8b panel, merge `116e8ff`) | Pages deploy success; live `index.html` identical to main. Owner checked Horarios in the panel: works |
+| 3 | Suites re-run on the code rebased onto `caf758f` / `116e8ff` | equality with the approved simulation 10/10; Stage 9 API 73/73; October regression against live main 13/13; Stage 9 browser 39/39; 8b API 97/97; 8b browser 21/21 (all check status and body) |
+| 4 | barberpilot-api #50 (Stage 9, merge `906c18a`) | Railway deploy SUCCESS; boot log: Migration 048 applied ("November rules added"), no failure line; the eight new conduct / reminder / preference routes answer 401 without a login; `/health` 200; `GET /horarios/:fecha` hashes unchanged |
+| 5 | barberpilot-control #45 (Stage 9 panel, merge `147b9cd`) | Pages deploy success; live `index.html`, `conducta-diaria.js`, `texto-seguro.js`, `reportes-api.js` identical to main |
+
+Pre-deploy October capture (owner, admin console): meta 6.500.000, divisor 5; Didian 64 B, Steven 60 B, Winder 26 D, Angie 64 B, Benjamín 54 C (potential bonus $0 for all). Post-deploy re-check: the owner re-runs the same console snippet; October must show the same totals and tiers unless new sales moved the services points (result to be added here).
+
+Rollback: revert the merge commits (API `906c18a`, control `147b9cd`). Migration 048 only adds tables and one appended rules version, so a revert needs no data change; the November rules version stays in `tenant_config` and is ignored by the older code for months before 2026-11.
+
+Behaviour to remember: the daily-conduct routes answer 409 (`conducta_no_activa`) until 2026-11-01, so nothing can be entered for October; every barber starts November at 0 in conduct until first evaluated (first working day Monday 2026-11-02). The A4 reminder already works in October for missing entry/exit marks.
