@@ -620,6 +620,40 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 **Urgency**: —
 
 **Status**: Closed 2026-10-20 (automated sends). Open: panel tab and manual API send paths — OPS stage.
+**Update 2026-10-20 (evening)**: the panel side is done and owner-verified in production (control PR #42): every WhatsApp button opens WhatsApp Web on the client's chat (`wa.me` link built in the browser) and the WhatsApp tab is gone. Still open for the OPS stage: the manual-send API paths (`/admin/whatsapp/conversaciones/…`) and the decision on the inbound webhook.
+
+### 2026-10-20 — October attendance stars are computed from each browser's localStorage, not from the server
+
+**Repo:** barberpilot-control (and barberpilot-api, which stores the result)
+
+**Description**: The two October attendance stars (apertura / cierre) are computed in the panel by `calcEstrellaHorario` / `_estrellasAutoLocales` from `sfsf_horarios_*` in the browser's localStorage and pushed to `kpi_evaluaciones` by `kpiSincronizarEstrellasAuto`. Only the clock-ins made in that browser count, so the stars for a month depend on which computer had the Horarios tab open; a barber whose marks were entered on another device is under-counted. The same bug class as every localStorage-derived number: the browser, not the server, is the source of truth.
+
+**Why deferred**: October scoring is frozen by the owner (October keeps its current rules). The November model (Stage 9) does not use these stars: punctuality is computed in the server from the `horarios` table, and the panel no longer syncs stars for months scored with the November model.
+
+**Severity**: Medium — October bonuses could be mis-scored for the two attendance stars.
+
+**Urgency**: Near-term — October is closed at the end of the month; check the October attendance stars against the `horarios` table before paying October bonuses.
+
+**What would close it**: score October attendance from the server's `horarios` before the October bonus run (or accept the stars after an owner check), then delete `_estrellasAutoLocales` / `kpiSincronizarEstrellasAuto` when no month uses the old model.
+
+**Status**: Open.
+
+### 2026-10-20 — Legacy horarios routes are unrestricted
+
+**Repo:** barberpilot-api
+
+**Description**: The older `horarios` routes (the ones used before the Stage 8b `/api/v2/asistencia/*` routes) answer without a panel role check: any caller who can reach them can read or write clock-in times. Stage 8b (not yet merged: owner review Thursday 22, deploy Friday 23) puts audit rows behind them and makes the new clock-in routes role-checked, but does not close the old routes. The `horarios` table itself is also not created by anything in the repository (it exists only in production); local test databases have to create it by hand.
+
+**Why deferred**: out of scope for 8b (clock-in with adjustable time and reason); the roles stage and the security phase close the unauthenticated panel-used routes.
+
+**Severity**: Medium — attendance marks feed the November punctuality points and the A4 reminder, so a forged mark changes scores.
+
+**Urgency**: Near-term — November punctuality scoring starts 2026-11-02.
+
+**What would close it**: put the legacy routes behind `requirePanelRole` (or retire them once the panel only uses the `/api/v2/asistencia/*` routes), and add the `horarios` table to the schema migrations.
+
+**Status**: Open.
+
 
 ### 2026-10-20 — The API's own `/checkin` page has a syntax error: its script never runs
 
