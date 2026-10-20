@@ -412,7 +412,170 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 
 **Urgency**: Near-term — closes with the stage 5 deploy.
 
-**Status**: Open — fix built in stage 5 (barberpilot-api, branch `feature/kpi-config-octubre`); close when deployed.
+**Status**: Closed 2026-10-14 — scoped to the tenant in Stage 5, live in barberpilot-api `fa1486b` (published goal history unchanged before/after the deploy).
+
+> **2026-10-15 batch.** Live: **Stages 3–4** (barber activity periods and the confirmed
+> backfill; barberpilot-api `827790c`, `933dbf3`), **Stage 5** (monthly KPI calculated in
+> the server; barberpilot-api `fa1486b`, barberpilot-control `3e21d8d`) and the
+> **Administración fix** (barberpilot-control `bd5d1fe`), and — merged 2026-10-15 on the
+> owner's daytime exception — **Stage 2** (Comisión and Propina shown separately;
+> barberpilot-control `7dc529c`, PR #39; verified by the owner in production) and the
+> **David fix** (barberpilot-api `938ea4a`, PR #44). **Stage 3b** (commissions computed in
+> the server from tenant data) was merged and deployed on 2026-10-16 on the owner's
+> daytime exception — barberpilot-api `3d0ff26` (PR #45, 10:34), barberpilot-control
+> `3b167fd` (PR #40, 10:44), barberpilot-expo `1db5bd2` (PR #1) and the App update
+> published to the production channel (group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`);
+> owner-confirmed in production 2026-10-20 (Comisiones editable, "Tarjeta" label, App in
+> use); its entries below close when the next-day SQL is clean. Line references in this batch are to
+> barberpilot-api `fa1486b`, barberpilot-control `bd5d1fe`, BarberPilot_App `2b101ff`.
+
+### 2026-10-15 — Commission verification in production: no historical pay error
+
+**Repo:** barberpilot-api (data)
+
+**Description**: Read-only queries run by the owner in production on 2026-10-15 (`comisiones_verificacion.sql`, Q1–Q6), after the code review found that the App's queue screen could store the tip inside the commission (next entry):
+- Q1/Q1b — sales with the tip counted twice (`bb + neg = precio + propina`, tip > 0): **0 rows**.
+- Q2 — service commission vs its method's rate: débito 0.43 → 904/904 match; efectivo 0.50 → 1183/1183; transferencia 0.50 → 358/358. **No service commission differs.**
+- Q3 — unknown payment methods: **0 rows**.
+- Q4 — counter sales that paid a commission: **0 rows**.
+- Q5 — products: with a barber, com 0.10, 16 sales, 0 mismatches; counter, com 0.50, 3 sales, 3 "mismatches" — `bb` = 0 (money correct, label only).
+- Q6 — `tenant_commissions_v2` saulfino: credito 40/60, debito 43/57, efectivo 50/50, transferencia 50/50.
+
+The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already returned only the 3 counter sales.
+
+**Why deferred**: Nothing to defer — no historical pay error, no retroactive correction (owner, 2026-10-15). The counter label is fixed going forward by `sale_type` (Stage 3b); history is not rewritten.
+
+**Severity**: —
+
+**Urgency**: —
+
+**Status**: Closed 2026-10-15 — evidence recorded.
+
+### 2026-10-15 — The App's queue screen saved the tip inside the commission
+
+**Repo:** BarberPilot_App, barberpilot-api
+
+**Description**: `PaymentSheet.js:61` computed `bb = Math.round(precio × rate) + propina` and sent it with `propina` as well; `POST /registros` stored the client's `bb` as-is. Every pay figure adds `bb + propina`, so on such a sale the tip would count twice (in "A cobrar" and in cierre de caja's "Le corresponde"). The production check (entry above, Q1) found **no** such sale.
+
+**Why deferred**: Not deferred — fixed in Stage 3b (the server computes `bb` = commission only and ignores the client's numbers; the App sends the tip only in `propina`).
+
+**Severity**: High — tips paid twice.
+
+**Urgency**: Near-term — closes with the Stage 3b deploy (API, then the App update).
+
+**Status**: Open — fix built in Stage 3b; close when the API and the App update are live.
+
+### 2026-10-15 — Changing the payment method of a product sale recomputed it at the service rate
+
+**Repo:** barberpilot-api
+
+**Description**: `PATCH /registros/:id/pago` (`index.js:3421`) recalculated every sale with `COM_PAGO[pago]` (50 %/43 %/50 %), product sales included: a product with a barber (10 %) changed to débito would pay 43 %. Production check (Q5): the 16 product sales with a barber are all at 10 % — it never happened.
+
+**Why deferred**: Not deferred — fixed in Stage 3b (`sale_type`; the change keeps the sale's own rate).
+
+**Severity**: Medium — overpays the barber on a product sale.
+
+**Urgency**: Near-term — closes with the Stage 3b deploy.
+
+**Status**: Open — fix built in Stage 3b; close when live.
+
+### 2026-10-15 — Resumen A4: barber pay total counted commissions only; the signature line too
+
+**Repo:** barberpilot-control
+
+**Description**: In the Resumen A4 (`generarHTMLA4`), the "Pago barberos" total added commissions only, while each barber card's "A cobrar" included tips; the "Conformidad de pago" line showed "Recibe" = commission only, so a barber signed for an amount without their tips. Cierre de caja (the money actually handed over) was correct.
+
+**Why deferred**: Not deferred — fixed in Stage 2 (Comisión and Propina shown separately everywhere, labelled total where it is money to hand over).
+
+**Severity**: Medium — a signed document showed the wrong amount.
+
+**Urgency**: Near-term — closes with the Stage 2 deploy (PR #39).
+
+**Status**: Closed 2026-10-15 — Stage 2 live in barberpilot-control `7dc529c` (PR #39, merged 17:10 Santiago on the owner's explicit daytime exception); live files byte-identical to the merge commit, whose tree equals the tested head `2c7a5ed`. Verified by the owner in production the same evening: commissions and tips appear separately, with totals, everywhere.
+
+### 2026-10-15 — Administración showed only section titles when opened from the KPI "Ajustar meta" button
+
+**Repo:** barberpilot-control
+
+**Description**: Stage 5 added an "Ajustar meta en Administración" button that called `showTabById('pStaff')`, which only switched panes and never ran `renderStaffPanel()`: Comisiones, Períodos de trabajo and Meta mensual stayed empty (no JavaScript error). The stage 5 browser test always opened Administración with the tab, never with the button, and did not check Comisiones.
+
+**Why deferred**: Not deferred — fixed the same day.
+
+**Severity**: Medium — the goal could not be adjusted from the reported path.
+
+**Urgency**: Immediate (at the time).
+
+**Status**: Closed 2026-10-15 — barberpilot-control `bd5d1fe` (PR #38): one function draws a tab for every way of opening it; each Administración section draws on its own with a Spanish error and "Reintentar" on any failure. The stage 5 browser suite now opens Administración from the KPI button.
+
+### 2026-10-15 — David (b4) had `tenant_staff.role = 'owner'`: missing from Períodos de trabajo and from the May/June KPI
+
+**Repo:** barberpilot-api (data and code)
+
+**Description**: The barbers list and the KPI excluded anyone whose staff role was not "barber", so David (worked 2026-05-22 → 2026-06-15) was missing from Administración's "Períodos de trabajo" and from the May and June KPI (wrong divisor). Owner-run correction, production, 2026-10-15: pre-check b4 role `owner`, active false, period 2026-05-22 → 2026-06-15 (migracion); change applied; post-check b4 role `barber`, every other row unchanged (admin admin false; b1 barber true; b2 barber false; b3 barber false; b5 barber true; b6 barber false; b7 barber true).
+
+**Why deferred**: Data corrected the same day; the structural rule (a recorded period makes a barber of that period, whatever the role; only `admin` excluded) is in barberpilot-api PR #44.
+
+**Severity**: Medium — wrong divisor for May/June scores.
+
+**Urgency**: Near-term — closes with PR #44.
+
+**Status**: Closed 2026-10-15 — data corrected by the owner; the structural rule is live in barberpilot-api `938ea4a` (PR #44, merged 17:06 Santiago on the owner's explicit daytime exception; deploy SUCCESS, clean boot, public reads identical before/after). David's appearance in Períodos and the May/June KPI is visible only logged in — owner to confirm in the panel.
+
+### 2026-10-15 — "Débito" label and a copy of the rates still hardcoded in sf-live and saulfino-web
+
+**Repo:** sf-live, saulfino-web
+
+**Description**: Stage 3b shows the payment method by the server's name ("Tarjeta" for the key `debito`) in control, the KPI dashboard and the App. sf-live's payment legend (`index.html:1895`) and saulfino-web's `barber.html` buttons (`:516`) still say "Débito". saulfino-web's `barber.html` also keeps its own rate table (`:563`, `COM = {efectivo:0.5, debito:0.43, transferencia:0.5}`, with a `|| 0.5` default at `:961`/`:1005`): it uses it for the on-screen "Para el barbero / Para el negocio" preview and sends `bb`/`neg` in `POST /registros`. Found in the Stage 3b verification sweep (2026-10-15). The commission stored is correct for every caller (from Stage 3b the server ignores the client's numbers and logs the difference); only that page's preview would show the old rate after a rate change in Administración.
+
+**Why deferred**: Out of scope for Stage 3b (separate repos; order API → control → App). Fix: read `metodos_pago` from the server like the App, drop `COM` and the default, stop sending `bb`/`neg`.
+
+**Severity**: Low — label and preview only; stored pay is correct.
+
+**Urgency**: Eventual — with the sf-live stage (6) and saulfino-web's next change.
+
+**Status**: Open.
+
+### 2026-10-15 — `/events` checks the dashboard token read once at startup; Railway variable changes apply only after a deploy
+
+**Repo:** barberpilot-api (operations)
+
+**Description**: `/events` compares `?token=` with `DASHBOARD_READ_TOKEN`, which the API reads once at boot (`index.js:201`). Railway stages variable changes until they are deployed (Railway docs: "Using Variables"). On 2026-10-14 the owner changed the variable after the 19:02 deploy and `/events` answered 401 with the new value — consistent with the change not yet applied. No other route used by the panel depends on that token.
+
+**Why deferred**: Informational; credential work stays in the security phase (owner decision).
+
+**Severity**: Low.
+
+**Urgency**: Monitor-only — remember to deploy after changing any Railway variable.
+
+**Status**: Open — informational.
+
+### 2026-10-15 — Stage 3b local tests: one `/resumen` difference observed once, not reproduced
+
+**Repo:** barberpilot-api (verification)
+
+**Description**: In the Stage 3b billing verification (local PostgreSQL 18, production-shaped data, live code `fa1486b` vs Stage 3b), the check "existing reads answer byte-identically" failed once: `/resumen?fecha=2026-10-13` answered differently between old and new code. Observed once in local tests, not reproduced in 13 further runs; the differing responses were not captured. Owner reports cash always reconciles.
+
+**Why deferred**: Owner decision, 2026-10-15: no further investigation.
+
+**Severity**: Low — local test only; every stored commission matched old vs new in all runs.
+
+**Urgency**: Monitor-only.
+
+**Status**: Open — informational.
+
+### 2026-10-15 — Client names from the public check-in rendered unescaped in the staff panel
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: `POST /queue/checkin` (public, no login; barberpilot-api `938ea4a` `index.js:3844`) stores `client_name` with no length or content check, and barberpilot-control (`7dc529c`) writes it into `innerHTML` without `escHtml` in Sala de Espera (`index.html:6167`, `:6207`) and Sillas (`:6391`). Anyone using the public check-in could make script run in a logged-in staff session (which holds the panel login in `sessionStorage`). Found by reading code in the OPS investigation; not tested against production.
+
+**Why deferred**: Found 2026-10-15 during the read-only OPS investigation; the fix is proposed to the owner (escape every queue field in the panel, plus server-side length/character validation of `client_name`) and needs a decision on scheduling.
+
+**Severity**: High — script execution in an authenticated staff session from a public form.
+
+**Urgency**: Near-term — reachable today by anyone who can open the public check-in.
+
+**Status**: Open.
 
 > **2026-10-13 evening update.** **Stage 2a** live — barberpilot-control `cdfd303`
 > (PR #33, merged ≈17:46 Santiago on the owner's explicit deploy-window exception);
@@ -837,7 +1000,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Immediate — Stage 0.
 
-**Status**: Open — contained. 2026-10-13: Stage 0 disabled local rate editing (live, `573ef84`; Stage 2a keeps it frozen). The underlying fix — rates from backend config — is Stage 3.
+**Status**: Open — contained. 2026-10-13: Stage 0 disabled local rate editing (live, `573ef84`; Stage 2a keeps it frozen). 2026-10-15: the underlying fix is built in Stage 3b — rates only in the server (`tenant_commissions_v2`), edited in Administración with reason, history and undo; the browser keeps no copy. Close when Stage 3b is live.
 
 ### 2026-10-12 — Sala de Espera close (`POST /queue/control/registrar`): not transactional, `sid` always `'queue'`, unknown payment method silently paid at 50%, unknown service passes with a $12.000 default
 
