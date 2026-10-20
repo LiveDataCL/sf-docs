@@ -463,7 +463,7 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 
 **Urgency**: Near-term — closes with the Stage 3b deploy (API, then the App update).
 
-**Status**: Open — fix built in Stage 3b; close when the API and the App update are live.
+**Status**: Closed 2026-10-20 — fixed in Stage 3b (the server stores the commission only and ignores the client's numbers; the App sends the tip only in `propina`). Live since 2026-10-16: barberpilot-api `3d0ff26`, barberpilot-control `3b167fd`, barberpilot-expo `1db5bd2` + EAS group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`. 2026-10-20: owner-verified in production with the next-day check from 2026-10-16 (Q0 no rate changes, Q1 0 rows with the tip inside the commission, Q2 débito 43 % 19/19, efectivo 50 % 26/26, transferencia 50 % 7/7, 0 without a rate, 0 that differ, Q5 0 rows, Q6 0 sales without sale_type).
 
 ### 2026-10-15 — Changing the payment method of a product sale recomputed it at the service rate
 
@@ -477,7 +477,7 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 
 **Urgency**: Near-term — closes with the Stage 3b deploy.
 
-**Status**: Open — fix built in Stage 3b; close when live.
+**Status**: Closed 2026-10-20 — fixed in Stage 3b (`sale_type`: a product sale keeps its own rate when the payment method changes). Live since 2026-10-16: barberpilot-api `3d0ff26`, barberpilot-control `3b167fd`, barberpilot-expo `1db5bd2` + EAS group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`. Note: no product sale was made between 2026-10-16 and the check (Q5 had 0 rows), so production did not exercise this path; it was verified locally (69-sale before/after comparison, 37/37). One related defect was found afterwards — see the 2026-10-20 PATCH entry below.
 
 ### 2026-10-15 — Resumen A4: barber pay total counted commissions only; the signature line too
 
@@ -576,6 +576,65 @@ The owner's 2026-10-13 query (rows with `bb <> ROUND(precio*com)`) had already r
 **Urgency**: Near-term — reachable today by anyone who can open the public check-in.
 
 **Status**: Open.
+
+### 2026-10-20 — Stage 3b verified in production
+
+**Repo:** barberpilot-api, barberpilot-control, barberpilot-expo
+
+**Description**: Owner-run read-only check on production (sales from 2026-10-16, after the 3b deploy): Q0 0 rows (no rate changes); Q1 0 rows (no tip inside a commission); Q2 débito 43 % 19/19, efectivo 50 % 26/26, transferencia 50 % 7/7, 0 without a rate, 0 that differ; Q5 0 rows (no product sale since the 16th); Q6 0 sales without `sale_type`. Owner also confirmed: Comisiones loads and is editable, Caja shows "Tarjeta", the App is installed and in use on Benjamín's phone, the owner's and Angie's.
+
+**Why deferred**: Nothing to defer — evidence recorded.
+
+**Severity**: —
+
+**Urgency**: —
+
+**Status**: Closed 2026-10-20.
+
+### 2026-10-20 — `PATCH /registros/:id/pago` answers 500 after saving (variables removed in Stage 3b)
+
+**Repo:** barberpilot-api
+
+**Description**: Stage 3b replaced the route's `newCom/newBB/newNeg` with the server computation but left them in the final `res.json(...)` (`index.js:3456`). Since 2026-10-16 10:34 the route saves the change and writes its audit rows correctly and then answers HTTP 500 "newCom is not defined". Effect: the panel's ✏ "Editar registro" shows "Error: newCom is not defined" and does not close or refresh, although the edit was saved (stored values verified: Tarjeta 43 % of 22.000 = 9.460). Sale amounts and commissions are not affected. Found on 2026-10-20 while checking the removed names; the 3b suite checked this route through the database, not through its HTTP response.
+
+**Why deferred**: Not deferred — fixed the same day (the response now returns `cv.com/bb/neg`; test 21/21, including the HTTP status and body of every other 3b route).
+
+**Lesson (owner, 2026-10-20)**: from now on, tests for every stage check the HTTP RESPONSE (status and body) of every route touched, not only the database state.
+
+**Severity**: Medium — confusing error on a billing screen; data is correct.
+
+**Urgency**: Near-term.
+
+**Status**: Closed 2026-10-20 — fixed in barberpilot-api `477adfd` (PR #47, merged 12:14 Santiago on the owner's daytime exception; merge tree identical to the reviewed commit `786d0a0`). Deploy SUCCESS, boot log clean (Migration 046 ✓, reaches `Puerto`), public reads identical before/after. Local test: live code 500 → fix 200 with the stored `com/bb/neg`. Production confirmation of the route itself is a real edit from the owner's panel (console check with identical values, no data change).
+
+### 2026-10-20 — WhatsApp: no paid automated sends remain
+
+**Repo:** barberpilot-api
+
+**Description**: Owner decision 2026-10-15: no paid WhatsApp messages; everything manual from the panel's WhatsApp Web button. The post-service poller (`startPostSvcPoller`, a Meta Cloud API send every 5 minutes for sales 2–48 h old, which also logged client phones and messages when Meta credentials were missing) was removed — barberpilot-api `447f170` (PR #46, merged 2026-10-20 10:41 Santiago; boot log clean, no poller started, public reads identical). The owner-run check on 2026-10-20 showed the three flags (`whatsapp_automation_enabled`, `whatsapp_confirmacion_reserva_enabled`, `whatsapp_notificar_barbero_enabled`) were ALREADY false before the change and remain false, so the booking confirmation to the client and the barber notice template were not sending either. What remains: admin-initiated sends and replies (`/admin/whatsapp/conversaciones/…`), the inbound webhook, and the panel's WhatsApp tab — removal of the tab and the manual-send paths is part of the OPS stage. This closes the poller half of the 2026-07-24 "two parallel WhatsApp-sending code paths" entry.
+
+**Why deferred**: Nothing to defer for the automated sends. The webhook / tab / manual paths are scheduled (OPS stage).
+
+**Severity**: —
+
+**Urgency**: —
+
+**Status**: Closed 2026-10-20 (automated sends). Open: panel tab and manual API send paths — OPS stage.
+
+### 2026-10-20 — The API's own `/checkin` page has a syntax error: its script never runs
+
+**Repo:** barberpilot-api
+
+**Description**: `checkin.html` (served at `/checkin`) contains a corrupted character in `btn.innerHTML = 'Confirmar llegada …'` (an arrow stored as `\uFFFD?` plus a stray quote), so the page's whole `<script>` fails to parse ("Invalid or unexpected token") and the page does nothing. The check-in in use is saulfino-web's own `checkin.html`, which calls `POST /queue/checkin` directly and is unaffected. Found while testing the 2026-10-15 security fix; it fails identically in the code live today.
+
+**Why deferred**: Out of scope for the security fix; needs the owner to decide whether the API's `/checkin` is still used (retire it, or repair the character).
+
+**Severity**: Low if nobody uses that URL; Medium if any QR still points to it.
+
+**Urgency**: Near-term — check which QR codes and links point to it.
+
+**Status**: Open.
+
 
 > **2026-10-13 evening update.** **Stage 2a** live — barberpilot-control `cdfd303`
 > (PR #33, merged ≈17:46 Santiago on the owner's explicit deploy-window exception);
@@ -1000,7 +1059,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Immediate — Stage 0.
 
-**Status**: Open — contained. 2026-10-13: Stage 0 disabled local rate editing (live, `573ef84`; Stage 2a keeps it frozen). 2026-10-15: the underlying fix is built in Stage 3b — rates only in the server (`tenant_commissions_v2`), edited in Administración with reason, history and undo; the browser keeps no copy. Close when Stage 3b is live.
+**Status**: Closed 2026-10-20 — rates exist only in the server (`tenant_commissions_v2`), edited in Administración with reason, history and undo; the browser keeps no copy. Live since 2026-10-16: barberpilot-api `3d0ff26`, barberpilot-control `3b167fd`, barberpilot-expo `1db5bd2` + EAS group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`. Owner confirmed in production 2026-10-20: Comisiones loads and is editable, Caja shows "Tarjeta". 2026-10-20: owner-verified in production with the next-day check from 2026-10-16 (Q0 no rate changes, Q1 0 rows with the tip inside the commission, Q2 débito 43 % 19/19, efectivo 50 % 26/26, transferencia 50 % 7/7, 0 without a rate, 0 that differ, Q5 0 rows, Q6 0 sales without sale_type). A rate copy remains in saulfino-web `barber.html` (see the 2026-10-15 "Débito" entry).
 
 ### 2026-10-12 — Sala de Espera close (`POST /queue/control/registrar`): not transactional, `sid` always `'queue'`, unknown payment method silently paid at 50%, unknown service passes with a $12.000 default
 
@@ -1019,7 +1078,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — Stage 3.
 
-**Status**: Open. 2026-10-13 (Stage 1, live): the catalog lookup now matches names case/accent/space-insensitively, so a variant spelling gets the catalog price instead of the $12.000 fallback, and an inactive service is rejected under any spelling (accepted behavior change). `precioOverride` precedence is unchanged (tested). The $12.000 fallback itself is now tracked in the 2026-10-13 "hardcoded business constants" entry.
+**Status**: Open. 2026-10-13 (Stage 1, live): the catalog lookup now matches names case/accent/space-insensitively, so a variant spelling gets the catalog price instead of the $12.000 fallback, and an inactive service is rejected under any spelling (accepted behavior change). `precioOverride` precedence is unchanged (tested). The $12.000 fallback itself is now tracked in the 2026-10-13 "hardcoded business constants" entry. 2026-10-16 (Stage 3b, live): an unknown payment method now answers 400 and a queue close with no price answers 400 (no $12.000 default, no 50 % default). Still open: the close is not transactional and `sid` is always `'queue'`.
 
 ### 2026-10-12 — `PATCH /registros/:id/pago` recomputes product rows at service rates, and the commission change isn't audited
 
@@ -1033,7 +1092,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — Stage 3.
 
-**Status**: Open.
+**Status**: Partly closed 2026-10-16 (Stage 3b, live): a product sale keeps the product rate when its payment method changes (the sale type decides the rate). Still open: the recalculated commission (`com`/`bb`/`neg`) is not written to the audit — only `pago`, `precio` and `servicio` are. The route's 500 after saving is a separate defect (2026-10-20 entry below).
 
 ### 2026-10-12 — Counter product sales are stored with `com = 0.50` although the barber gets 0%
 
@@ -1047,7 +1106,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Eventual — Stage 3.
 
-**Status**: Open.
+**Status**: Closed 2026-10-20 — from 2026-10-16 counter sales are stored with `com` 0 and `sale_type` producto_mostrador. History is not rewritten (owner decision: the money was always right, only the label was). Live since 2026-10-16: barberpilot-api `3d0ff26`, barberpilot-control `3b167fd`, barberpilot-expo `1db5bd2` + EAS group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`.
 
 ### 2026-10-12 — BarberPilot_App's queue close adds the tip into `bb`
 
@@ -1061,7 +1120,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — Stage 3.
 
-**Status**: Open.
+**Status**: Closed 2026-10-20 — the server computes `bb` as the commission only and the App sends the tip only in `propina`. Live since 2026-10-16: barberpilot-api `3d0ff26`, barberpilot-control `3b167fd`, barberpilot-expo `1db5bd2` + EAS group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`. 2026-10-20: owner-verified in production with the next-day check from 2026-10-16 (Q0 no rate changes, Q1 0 rows with the tip inside the commission, Q2 débito 43 % 19/19, efectivo 50 % 26/26, transferencia 50 % 7/7, 0 without a rate, 0 that differ, Q5 0 rows, Q6 0 sales without sale_type).
 
 ### 2026-10-12 — No explicit sale-type column on `registros` — service vs. product cross-sale vs. counter sale is inferred
 
@@ -1075,7 +1134,7 @@ Concrete consequence today: **s12 "Corte + Cejas" exists and is active server-si
 
 **Urgency**: Near-term — Stage 3.
 
-**Status**: Open.
+**Status**: Closed 2026-10-20 — `registros.sale_type` (servicio / producto_barbero / producto_mostrador) exists, past sales were typed by Migration 046 (2492 sales) and every new sale carries it. Live since 2026-10-16: barberpilot-api `3d0ff26`, barberpilot-control `3b167fd`, barberpilot-expo `1db5bd2` + EAS group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`. Q6: 0 sales without it.
 
 ### 2026-10-12 — Stale parallel service catalog `tenant_services` (saulfino) and its routes
 
@@ -2110,7 +2169,7 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **2026-10-12 update — worse than described above.** There are at least five sources, not two: barberpilot-control `COM`/`COM_DEFAULT` (`index.html:1308`/`:6908`, **editable per browser** — see the 2026-10-12 entry), barberpilot-api `COM_PAGO` (`index.js:3552`, with `|| 0.50` fallbacks), `tenant_commissions_v2` (credito 40/60), and the App's inline `pago === 'debito' ? 0.43 : 0.50` (`PaymentSheet.js:59`, `RegistrarScreen.js:56`/`:130`). And the description above is wrong on one point: for `POST /registros` (control cobro, App), the ledger stores the **client's** computed `bb`/`neg`, not the backend's — see the Critical 2026-10-12 entry. Owner-confirmed rule: efectivo 50%, transferencia 50%, Tarjeta (any POS card) 43%; product cross-sale 10%, counter sale 0%. Planned: Stage 3 (one tenant payment-methods table, backend authoritative, frontends read-only).
 
-**Status**: Open.
+**Status**: Closed 2026-10-20 — commission rates exist only in `tenant_commissions_v2` (and the product rules in `tenant_config` `comisiones_reglas`); `COM_PAGO` and the browser's `COM` are gone. Live since 2026-10-16: barberpilot-api `3d0ff26`, barberpilot-control `3b167fd`, barberpilot-expo `1db5bd2` + EAS group `ee33fc73-b74b-4ac9-b29c-8fe48a08b5b7`. Remaining copy: saulfino-web `barber.html:563`, tracked in the 2026-10-15 "Débito" entry.
 
 ### 2026-07-13 — Queue `ABANDONED` auto-cleanup (Migration 008) uses UTC `CURRENT_DATE`, not Santiago-local
 
