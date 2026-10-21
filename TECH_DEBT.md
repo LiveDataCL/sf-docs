@@ -154,6 +154,7 @@ segundo tenant (saulfino-maipu) y se reutiliza un email.
 **Urgency**: Near-term — first item of the security phase (credential rotation).
 
 **Status**: Open — exposure stopped 2026-10-14; rotation deferred by owner decision.
+**Update 2026-10-21**: the owner rotated `DASHBOARD_READ_TOKEN` in the Railway `barberpilot-api` service (new strong random value; never recorded or printed) and pasted it into the panel's "Token de administrador" field. **The rotation is not active yet**: the API reads the variable once at startup, and production has not restarted since 2026-10-20 22:29 UTC (still commit `3cc2671`) because Railway deploys are paused (see the 2026-10-21 Railway incident below). Until the API restarts the server still uses the previous value. Impact while pending: the panel's live-events stream (`/events?token=`) and any call that depends on the pasted token fail with 401; panel-login routes and sf-live (socio login) are unaffected. After the restart: anything still holding the OLD token is refused — including the UptimeRobot monitor of `/admin/restore-status`, which must be updated with the new value. Still open for the security phase: `JWT_SECRET` rotation, the staging values in `STAGING.md`, deleting the unused GitHub secret.
 
 ### 2026-10-14 — KPI tab: the individual goal was divided by a browser-dependent barber list (affects scores, tiers and bonuses)
 
@@ -2309,6 +2310,22 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 **Status**: Open.
 
 ---
+
+### 2026-10-21 — Railway platform incident: deploys paused; roles stage (API #52, `bc6765d`) merged but not deployed
+
+**Repo:** barberpilot-api (infrastructure)
+
+**Description**: API PR #52 (roles stage) was merged on 2026-10-21 at 10:40 Santiago as `bc6765d`, but Railway did not start a deployment (no new deployment in the list after 22:25 UTC on 2026-10-20 for about 4.5 hours; earlier merges deployed within seconds). The owner then saw Railway's status notice: ongoing platform incident "Dashboard and API unavailable, builds paused" — the most likely cause (not independently verifiable from our side; GitHub showed the same check suites for the deployed and the missed commit). Production stayed Online on `3cc2671` (OPS). Control PR #47 (roles panel) was deliberately NOT merged: it depends on the new API.
+
+**Why deferred**: platform-side; no action possible while builds are paused. Rule followed: no empty commit, no CLI deploy while builds are paused.
+
+**Severity**: Low — production unchanged and healthy; the new roles/observation/removed-routes code is simply not live.
+
+**Urgency**: Near-term — resume as soon as Railway recovers.
+
+**What to do when Railway resumes**: the owner checks the Deployments tab and applies the staged changes (rotated token) if no deploy starts by itself; confirm a new deployment row shows commit `bc6765d`; then run the roles deploy checks (Migrations 050, 051, 052 in the boot log, protected routes 401, the 13 removed routes 404, `/health`, `/admin/restore-status`, the owner's five-route console check), merge control #47, verify Pages. Prevention: after every merge, check within 2 minutes that a new deployment row appears; if not, stop and tell the owner. Update the UptimeRobot monitor with the new token after the restart.
+
+**Status**: Open — waiting for Railway.
 
 ## Closed / Resolved
 
