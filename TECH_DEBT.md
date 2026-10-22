@@ -2339,7 +2339,8 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **Urgency**: Near-term.
 
-**Status**: Open — owner-run SQL for b8 first; structural fix in the A-3 stage.
+**Status**: Data fixed 2026-10-22 — structural fix still open (A-3).
+**Update 2026-10-22 (owner-run SQL, production)**: pre-check: b1 and b8 active; b1 has 6 rows (Mon–Fri 10:00–20:00, Sat 10:00–15:00); b8 had none. The idempotent insert (copy of b1's rows, only missing days, only `bid='b8'`) ran; post-check: b8 has 6 rows identical to b1 (days 1–5 10:00–20:00, day 6 10:00–15:00, active). Owner also confirmed `tenant_calendar_config` (saulfino): hours NULL for days 0–6; `peso_jornada`: day 0 = 0, days 1–5 = 1.0, day 6 = 0.536 — Migration 053 fills only the NULL hours and never changes `peso_jornada` (tested). A-3 stage approved by the owner (barberpilot-api PR #53, barberpilot-control PR #48, not merged: deploy after the roles deploy, on the owner's word). Closes when A-3 is deployed and verified.
 
 ### 2026-10-22 — `barber_schedule` has no tenant column (rows of another tenant's barbers p1–p4 share it)
 
