@@ -2329,6 +2329,20 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 ## Closed / Resolved
 
+### 2026-10-21 — Verification probe sent write methods to unauthenticated production routes — verified no change
+
+**Repo:** barberpilot-tests (verification tooling)
+
+**Description**: A draft of the post-deploy check script (`tools/post_deploy_check_roles.sh`) was run BEFORE the roles deploy and probed the routes that the roles stage removes — which still existed in production — with empty `{}` bodies: `POST /registros/bulk` (answered 200, empty lists: a no-op), `PATCH /asignar/1` (answered 200; the handler runs `UPDATE assignments SET estado=NULL WHERE id=1`), `POST /asignar`, `POST /registros/barbero` and `POST /push/subscribe` (all answered 400 on validation, nothing written), plus GETs. The only possible write was the `PATCH /asignar/1`.
+
+**Verification**: owner-run read-only query on 2026-10-22: the `assignments` table has 0 rows — the probe changed nothing.
+
+**Resolution**: the script's removed-route section now runs only when the new code is proven live (the new admin route answers 401 instead of 404); otherwise it prints SKIP. Rule recorded: a verification script never sends write methods to routes that may still exist on the live version. (The routes in question are removed by the roles stage, API #52.)
+
+**Severity / Urgency**: — (no data affected)
+
+**Status**: Closed 2026-10-22.
+
 ### 2026-07-31 — `whatsapp_message_log.telefono` (no `+`) was compared directly against `clientes.telefono` (`+56...`), silently failing to resolve real registered clients
 
 **Repo:** barberpilot-api
