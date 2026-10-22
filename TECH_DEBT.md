@@ -2374,6 +2374,29 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **Status**: Open.
 
+### 2026-10-22 — App-shared routes: the App sends no token, and sales from the App have been rejected since 2026-07-02 (stage planned; owner decisions)
+
+**Repo:** BarberPilot_App, barberpilot-api (and barberpilot-control for its own unauthenticated calls)
+
+**Description**: `BarberPilot_App/src/services/api.js` `apiFetch` and the raw `fetch` calls attach **no Authorization header** to any data call (the token in secure storage `bp_auth_token` is only sent to `auth/me`, `set-pin`, `/config/negocio` and `PUT /queue/:id/status`). So every data route the App uses is open by necessity (`/registros/dia` 1,630 calls in the 2026-10-13..20 log, avatars, `/stats/mes`, `/appointments`, `/pendientes`, …). Since barberpilot-api `4085b4c` (2026-07-02) `POST /registros` requires a login (`requireAnyAuth`), so **a sale registered from the App answers 401** (the 7-day log shows zero App calls to it). The App's admin / socio / barber profiles all log in through `POST /api/v2/auth/login` (staff token; socio with the server-side PIN hash).
+
+**Owner decisions (2026-10-22, final)**:
+- (a) Barbers do not register sales in the App today (the owner registers every service from the panel). **Keep the option but repair it**: the barber registers a service with the App token → the server stores it as **pending**, never confirmed directly, commission computed by the server (stage 3b) → the admin or encargado approves it from the panel's Aprobar tab. A barber can only register his own services (the bid comes from the token; a different bid is refused).
+- (b) **Remove the approve/reject buttons from the App**: approving/rejecting belongs to the admin and encargado in the panel only.
+- (c) Barbers see **only their own** day list and stats in the App; admin, encargado and socio see all.
+- Rollout: attach the App token to every data call in one place; the server first accepts-and-logs (the route observation shows calls without a token), enforce route by route after the observation shows ~0 App calls without a token for several days; EAS update with the prepared rollback group `4a300110-0e5b-49d8-a354-a6daa790a8ad`.
+- Tests (status and body): a barber's App sale arrives as pending; cannot be self-approved (the estado route refuses a barber token); appears in the panel's Aprobar tab; a barber token cannot read or register another barber's rows; admin/encargado/socio see all.
+
+**Facts found while preparing** (for the build): the server already has a pending path (`POST /registros` stores `estado='pendiente'` when `sid === 'queue'`) and `GET /pendientes` feeds the Aprobar tab; the panel's own `/pendientes` and several other calls are also sent without a token (closed in the same stage on the control side); `PATCH /registros/:id/estado` is already panel-only (admin: approve/reject; encargado: approve a pending sale).
+
+**Why deferred**: order set by the owner: roles deploy → 7-day observation + second-group route removal → Stage 2b and A-3 together → App-shared routes → security phase.
+
+**Severity**: High — client personal data and sales reads are open to anyone who knows the URL; barbers cannot register sales from the App.
+
+**Urgency**: Near-term (after the roles deploy and the observation).
+
+**Status**: Open — planned, decisions recorded; nothing built yet.
+
 ## Closed / Resolved
 
 ### 2026-10-21 — Verification probe sent write methods to unauthenticated production routes — verified no change
