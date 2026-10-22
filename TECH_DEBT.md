@@ -2327,6 +2327,52 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **Status**: Open — waiting for Railway.
 
+### 2026-10-22 — Barber Benjamín (b8) has no `barber_schedule` rows: a new barber is created without a schedule
+
+**Repo:** barberpilot-api
+
+**Description**: owner query (production, 2026-10-22): b1–b7 all have Mon–Fri 10:00–20:00 and Sat 10:00–15:00 active; **b8 Benjamín has no rows** — `POST /api/v2/staff` creates the barber, staff row and work period but never a weekly schedule. Effects before the fix: the two slot generators (`GET /appointments/slots`, public booking) fall back to the hardcoded `DEFAULT_SCHEDULE` for him (**Saturday 10:00–20:00 in code, the real Saturday closing is 15:00**), so booking can offer Saturday slots until 20:00 for him. Stage 9 scoring is NOT affected: a barber with no rows counts as scheduled every open day, and the hours come from `tenant_calendar_config`/the rules version (Saturday 15:00), never from the API default.
+
+**Why deferred**: data fix is owner-run SQL (idempotent insert copying b1's rows, with read-only pre/post checks); the structural fix is in the A-3 stage (prepared 2026-10-22, not committed): one source for the shop hours (`tenant_calendar_config`, filled by Migration 053), a new barber gets his schedule from it in the same transaction (503 if the hours are not configured), and every hour fallback in code is removed or reads the same config. A barber's day off now stays closed (before, the code default opened it).
+
+**Severity**: Medium — wrong Saturday availability for one barber in booking.
+
+**Urgency**: Near-term.
+
+**Status**: Open — owner-run SQL for b8 first; structural fix in the A-3 stage.
+
+### 2026-10-22 — `barber_schedule` has no tenant column (rows of another tenant's barbers p1–p4 share it)
+
+**Repo:** barberpilot-api
+
+**Description**: `barber_schedule` is keyed by `(bid, dia_semana)` with no `tenant_id`; production also holds p1–p4 rows (MAE tenant barbers) in the same table. A bid collision between tenants would mix schedules. Queries must filter by bid only, so the structural fix and the b8 SQL are scoped by bid.
+
+**Why deferred**: multi-tenant cleanup (together with the other hardcoded `'saulfino'` literals, ~165 in the API); out of scope for the hours fix.
+
+**Severity**: Low today (one tenant in use) — Medium when a second tenant goes live.
+
+**Urgency**: Eventual.
+
+**What would close it**: add `tenant_id` (backfill by the barber's tenant), include it in the key and in every query.
+
+**Status**: Open.
+
+### 2026-10-22 — October attendance stars compare every exit with 20:00, but the shop closes at 15:00 on Saturdays
+
+**Repo:** barberpilot-control
+
+**Description**: `HORARIO_APERTURA = '10:00'` / `HORARIO_CIERRE = '20:00'` (`index.html` ~4643) are the reference for the October "cierre" attendance star on every weekday, including Saturday (real closing 15:00). A barber who leaves at 15:00 on a Saturday is scored as leaving 5 hours early (1 star for that day), pulling his monthly "cierre" average down. Affects October bonuses (the star is averaged over the month's days); the November model uses the real Saturday closing from the shop hours.
+
+**Why deferred**: October scoring is frozen by owner decision; the code retires with the October model (see the 2026-10-20 attendance-stars-from-localStorage entry).
+
+**Severity**: Medium — October scores/tier thresholds could move by a few points for every barber with Saturday shifts.
+
+**Urgency**: Near-term — before October bonuses are decided: check the October "cierre" stars against the real Saturday closing, or accept them after an owner review.
+
+**What would close it**: either score October attendance from the server with the real hours, or recompute the October cierre stars with the Saturday closing before the October bonus run.
+
+**Status**: Open.
+
 ## Closed / Resolved
 
 ### 2026-10-21 — Verification probe sent write methods to unauthenticated production routes — verified no change
