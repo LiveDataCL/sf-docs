@@ -2527,6 +2527,57 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 **Severity**: High — if values were read, every login, customer data route and backup credential is exposed. **Urgency**: Immediate.
 
 **Status**: Open — runbook APPROVED 2026-10-22; window Friday 2026-10-23 after 20:00 (owner decisions in section 0 of the runbook: socio PIN ≥ 8 digits, VAPID deleted, stale GitHub secret deleted by the owner, local `.env` deleted afterwards, owner runs `railway login`). Feature work continues in parallel with no deploys/merges until the rotation is verified.
+### 2026-10-23 — API startup initializers race on a FRESH database (test harness flake; production unaffected)
+
+**Repo:** barberpilot-api
+
+**Description**: `initNotified15min()` (`ALTER TABLE appointments …`) and later migrations such as the one that reads `barber_schedule` run as independent un-awaited calls at startup, while `initAgenda()` is what creates `appointments` / `barber_schedule`. On an EMPTY database the order is not guaranteed: in the 2026-10-23 full run the "equality (stage 9)" suite failed once (API logged `relation "appointments" does not exist`, then `[STARTUP] Fatal error: relation "barber_schedule" does not exist`, the suite then got ECONNREFUSED); the same suite passed in every other run and on an immediate rerun. The same code is in live main (3cc2671), not only in the A-3 branch.
+
+**Why deferred**: production tables already exist, so the race cannot trigger there; it only hits fresh databases (the local harness, a future staging copy, a disaster-recovery restore into an empty DB). Fixing it means ordering every startup initializer (await chain), which touches the whole startup block and belongs to a dedicated, tested change, not to the Sillas release.
+
+**Risk if left**: intermittent red in the verification harness (mitigated: failure is loud, rerun is clean); on a rebuilt-from-scratch database the API could exit at startup (fails closed, never serves half-initialized).
+
+**What would close it**: one ordered `async function iniciar()` that awaits each initializer in dependency order, plus a harness test that boots against an empty DB 10 times in a row.
+
+**Severity**: Low. **Urgency**: Eventual.
+
+**Status**: Open (found 2026-10-23).
+
+---
+### 2026-10-23 — Intermittent `page.goto` timeout (30 s) on the first navigation of a browser suite — CAUSE NOT FOUND
+
+**Repo:** barberpilot-tests
+
+**Description**: Twice (first full run of the day, and a Sillas UI run after editing the fixture) `page.goto(...)` with the default `load` wait timed out at 30 s on the very first navigation of a suite; an immediate rerun loaded the same page in ~3 s. Not reproduced on demand (a 15 s instrumented load: 3 s, nothing pending). Suspected cold-start (browser/AV scan) but NOT confirmed.
+
+**Why deferred**: not reproducible; mitigated rather than diagnosed. The Sillas fixture now navigates with `waitUntil: 'domcontentloaded'` and a 60 s timeout (the tests wait for their own selectors), so it no longer depends on `load`.
+
+**Risk if left**: a spurious red in the harness (loud, rerun clean); the cause could still be a real slow-start problem in the panel page that a user would also feel on a cold load (unlikely: the page loaded in 3 s every time it loaded).
+
+**What would close it**: capture `requestfinished/requestfailed` and Chromium tracing on the first navigation of every suite for a week; or reproduce after a reboot / cold browser cache.
+
+**Severity**: Low. **Urgency**: Monitor-only.
+
+**Status**: Open (2026-10-23).
+
+---
+### 2026-10-23 — Two intermittent harness failures in suites that do not touch the Sillas tree (teardown rejection; slow "Conducta de hoy")
+
+**Repo:** barberpilot-tests
+
+**Description**: In the full run for the Editar release, (1) "a3 browser (agenda-admin)" printed 5/5 passed and then exited 1: an unhandled rejection `route.fetch: Request context disposed` — the harness's request-forwarding route handler (rewrites the page's production-URL calls to the local API) fired a fetch after the browser context was closed at teardown; (2) "stage 9 browser" failed 1 check of 39 ("Conducta de hoy" cards still showed "Cargando la conducta de hoy…": the check ran before the server answered). Both passed on an immediate individual rerun (5/5 exit 0; 39/39). Neither suite runs the Sillas checkout (they run control-a3 and control-ops).
+
+**Why deferred**: found during the release window; both are harness timing, reproduced only in the full sequence, and unrelated to the change under test.
+
+**Risk if left**: spurious red runs (loud; the rerun is clean). Not a product defect as far as the logs show.
+
+**What would close it**: (1) wrap the forwarded `route.fetch` in a try/catch that ignores a disposed context (the handler is copied into every built e2e suite: fix it in the shared head and rebuild); (2) make the Conducta check wait for the cards (poll up to 15 s) instead of a fixed sleep.
+
+**Severity**: Low. **Urgency**: Near-term (before the next full run is used as a release gate).
+
+**Status**: Open (2026-10-23).
+
+---
 
 ## Closed / Resolved
 

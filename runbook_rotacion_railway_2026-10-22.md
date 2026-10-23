@@ -1,10 +1,10 @@
 # Rotation runbook — Railway security disclosure (2026-10-21)
 
 Prepared 2026-10-22. **No secret value appears in this file, in the chat, or in any log of this preparation.** Only variable NAMES.
-Status: **APPROVED by the owner (2026-10-22)**. Window: **Friday 2026-10-23 after 20:00** (not tonight).
+Status: **APPROVED by the owner (2026-10-22)**. Window: **Saturday 2026-10-24 after 15:00** (not tonight).
 
 ## 0. Owner decisions (2026-10-22)
-- Runbook approved as written; window Friday 2026-10-23 after 20:00.
+- Runbook approved as written; window Saturday 2026-10-24 after 15:00.
 - `SOCIO_PIN`: rotate to a LONGER PIN, at least 8 digits; the owner tells the socio in person.
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`: delete (not regenerate).
 - The stale GitHub Actions secret `DASHBOARD_READ_TOKEN` in `barberpilot-control`: the owner deletes it himself.
@@ -13,6 +13,13 @@ Status: **APPROVED by the owner (2026-10-22)**. Window: **Friday 2026-10-23 afte
 - Railway CLI: the owner runs `railway login` himself before the window; the assistant only runs read-only commands.
 - **Rules during the window**: one step at a time; verify after each; stop and report on any surprise; never print, log or compare secret values.
 - **Feature work continues in parallel** (build, test, commit, open PRs) but there are **no deploys and no merges until the rotation is done and verified**. Deploy order after the rotation: roles → A-3 → Sillas/durations/refresh/absence → ticket → check-in page → cash closing → session Part 2, each on the owner's word.
+
+## 0b. Updates 2026-10-23
+- **Railway's email (2026-10-23):** this workspace does NOT meet their higher-risk criteria, but compromise is not ruled out. They still recommend rotating all credentials, revoking the old ones with their providers and reviewing provider/audit logs. **Decision (owner): the plan is unchanged; the rotation is a precaution.**
+- **WINDOW (owner, 2026-10-23, later): SATURDAY 2026-10-24 after 15:00 (the shop closes at 15:00); SUNDAY 2026-10-25 as fallback.** The Friday-night window is cancelled. Nothing is rushed: if a gate below is not green, the window slides to Sunday.
+- **Real variable list:** copied by the owner from the dashboard (names only, values hidden) — section 2.0. It prevails over the code-derived lists in 2.1 to 2.3.
+- **Staging:** the owner deleted the staging Postgres service and its volume. Verified read-only afterwards (CLI `status`, structure only): production still has `barberpilot-api`, `Postgres-gl9n` and `livedata-db-backup`, all SUCCESS; `staging` has no services. Nothing in staging is left to rotate (section 2.6).
+- **CLI rules (owner):** read-only commands only; never print or log a value; the CLI cannot list names without values, so the names come from the dashboard.
 
 ## 1. The incident and what we know
 - Railway disclosed on 2026-10-21 that an unauthorized party may have accessed customer environment variables, some decrypted. Railway "strongly recommends that you revoke all environment variables stored in Railway" and review service logs. All Railway API/CLI tokens were invalidated (new ones must be created). Storage-bucket credentials and the GitHub tokens Railway held were reset by Railway. Source: Railway status page (https://status.railway.com/) and the guides under https://blog.railway.com/ ("Security Disclosure Recommendation: Rotate PostgreSQL Database Credentials", "…Redeploy Buckets and Reconnect GitHub After the Credential Reset").
@@ -23,7 +30,61 @@ Status: **APPROVED by the owner (2026-10-22)**. Window: **Friday 2026-10-23 afte
 ## 2. Inventory (names only)
 Source: code (`process.env.*` in barberpilot-api at live main), the backup service repo, docs, GitHub (`gh secret list`: names only). **The real list in the Railway dashboard may have more names: step P1 compares.**
 
-### 2.1 Railway service `barberpilot-api` (production)
+### 2.0 REAL inventory (dashboard copy by the owner, 2026-10-23; names only)
+**Production · `barberpilot-api` (20 own variables + 8 `RAILWAY_*` system):**
+| Name | Secret? | Action tonight | Also update / note |
+|---|---|---|---|
+| `JWT_SECRET` | yes | ROTATE (new random 48-byte hex) | everyone logs in again (panel, socios, App barbers) |
+| `DASHBOARD_READ_TOKEN` | yes | ROTATE (API only) | panel "Token de administrador" field, UptimeRobot monitor, any report reader; GitHub secret of barberpilot-control (stale, owner deletes it) |
+| `ADMIN_MASTER_PIN` | yes | ROTATE: new PIN, 8+ digits, chosen by the owner | the API hashes it at start (bcrypt); creating panel users and socios asks for it |
+| `SOCIO_PIN_HASH` | yes (a hash) | ROTATE: new 8+ digit PIN → new bcrypt hash | socios log in with the new PIN; generate the hash locally, never paste the PIN in chat |
+| `DATABASE_URL` | yes | follows the Postgres Regenerate (section F3: must be a REFERENCE) | API restart |
+| `META_WHATSAPP_ACCESS_TOKEN` | yes | ROTATE in Meta (new token, revoke old) | WhatsApp sends fail until set |
+| `WHATSAPP_APP_SECRET` | yes | ROTATE (Meta app → reset secret) | webhook POSTs are rejected (fail closed) between the Meta reset and the Railway update: do both back to back |
+| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | yes | ROTATE: new value here AND in the Meta webhook configuration | only used when Meta (re)verifies the callback URL |
+| `WHATSAPP_PHONE_2FA_PIN` | yes | CHANGE in WhatsApp Manager, then here | 6-digit PIN of the number |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | yes | ROTATE in Cloudflare (new token, revoke old) | SAME keys are in `livedata-db-backup`: update both in the same window (F4) |
+| `NEON_DR_URL` | yes (password inside) | DELETE (owner decision 2026-10-23: no code reads it) | none: nothing uses it |
+| `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY` | yes / no | DELETE (owner decision: push notifications are not used) | the API stops sending push; check the log shows no error loop |
+| `R2_BUCKET_NAME`, `R2_ENDPOINT`, `CONTACT_EMAIL`, `GOOGLE_REVIEW_URL`, `NODE_ENV`, `PORT` | no | keep | — |
+
+**Production · `Postgres-gl9n` (14 own + 13 `RAILWAY_*`):** `DATABASE_URL`, `DATABASE_PUBLIC_URL`, `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `PGDATA`, `SSL_CERT_DAYS`, `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`, **`DASHBOARD_READ_TOKEN` (!)**. Rotate ONLY through Database tab → Config → Connection → Regenerate (never edit by hand). `DASHBOARD_READ_TOKEN` here is not used by Postgres: delete it from THIS service only (F1).
+
+**Production · `livedata-db-backup` (6 own + 7 `RAILWAY_*`):** `DATABASE_URL` (reference? F3), `NEON_DATABASE_URL` (rotate with the Neon password), `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (rotate, same as the API), `R2_BUCKET_NAME`, `R2_ENDPOINT` (not secrets). There are NO `PROD_*` variables, so the helper scripts that read `PROD_PUBLIC_URL` only run locally.
+
+**Shared variables:** none. **Staging:** empty (deleted by the owner).
+
+#### Findings from the real list (read-only analysis of code and config, 2026-10-23)
+- **F1 — `DASHBOARD_READ_TOKEN` in `Postgres-gl9n`.** Nothing in the database service reads an application token; code reads it only in the API service. Delete it from the Postgres service only, never from the API's. (Owner's word needed.) Also treat that value as exposed everywhere it was ever pasted.
+- **F2 — `DATABASE_PUBLIC_URL` (the production database is reachable from the internet).** Who needs the public proxy, from code and docs:
+  1. **The API** and **the backup service**: NO. The API reads `DATABASE_URL`; the backup runs `pg_dump` against `DATABASE_URL` and writes to R2 / Neon. Both can use the private network if `DATABASE_URL` is the internal reference (F3).
+  2. **Neon DR:** outbound from our side (the backup service restores a dump into Neon with `NEON_DATABASE_URL`); Neon never connects INTO Railway in the code I read. No logical replication objects (publication/subscription) appear in either repo.
+  3. **Looker Studio:** the API README (section "Conectar Looker Studio") tells to connect Looker to `DATABASE_PUBLIC_URL`, views `v_dashboard` and `v_kpi_cuanti`. **If Looker Studio is still used, it needs the public proxy.** Owner to answer: is it in use?
+  4. **Manual recovery/diagnostic scripts run from the owner's PC** (`livedata-db-backup/psql-restore.js`, `recover-prod.js`, the `check-*.js` family via `PROD_PUBLIC_URL`): they use the public proxy by design (disaster recovery from outside Railway).
+  **Proposal (nothing changed without the owner's word):** after the rotation, if Looker Studio is not used, DISABLE public networking (TCP proxy) for `Postgres-gl9n`; manual recovery then needs it re-enabled for the minutes it takes (and disabled again). If Looker IS used: keep it only with a dedicated read-only role limited to those two views (a database change, its own stage), or move Looker to an export. Either way the proxy password changes with the Regenerate.
+  **Local finding:** `C:/Users/PC/livedata-db-backup/psql-restore.js` (untracked, never committed: checked with `git log --all`) contains a literal production URL WITH the database password. It showed once in this session's tool output when I searched for the proxy host; I did not copy it anywhere. The Regenerate invalidates it. After the rotation, change the script to read the URL from an environment variable (small separate change, owner's word). The `.env.example` files in barberpilot-api contain only placeholders (checked, masked).
+- **F3 — is `DATABASE_URL` a reference or a literal? (API and backup)** NOT verified: the CLI returns resolved values, so the owner checks it in the dashboard (it is a one-click look, no value needed). A reference shows as `${{ Postgres-gl9n.DATABASE_URL }}` (or a variable-reference chip); a literal shows a `postgresql://…` string. **If it is a literal, replace it with the reference BEFORE the Regenerate**; otherwise the API and the backup break after rotation. Ask the same for the backup service. This is gate item G1 below.
+- **F4 — R2 and Neon are shared credentials.** The same R2 key pair is in the API and the backup service: create the new Cloudflare token once, set it in BOTH services in the same window, then revoke the old one. Neon: one new password, set in `NEON_DR_URL` (API) and `NEON_DATABASE_URL` (backup). **Open question:** I found no reference to `NEON_DR_URL` in the API at live main (`index.js`, `services/`) or in the backup repo. It may be legacy: if nothing reads it, the owner can delete it instead of rotating it (decision pending; I did not search other repositories).
+
+#### Owner answers (2026-10-23) and what the logs show
+- **G1 — both `DATABASE_URL` are LITERAL** (`postgresql://postgres:…`), in `barberpilot-api` and in `livedata-db-backup`. Plan: BEFORE the Regenerate, replace both with the reference `${{Postgres-gl9n.DATABASE_URL}}` (private network), redeploy and verify each service connects; only then Regenerate (new step W0b).
+  - **Do the literals point to the public proxy? — backup service: NO.** Read-only from its own deployment log (`railway logs`, hostnames only): its restore-test safety guard prints `prod: postgres-gl9n.railway.internal`, i.e. its literal already uses the private host. **API service: UNKNOWN** from code or logs (the API does not log the host; its pool just uses `DATABASE_URL`, SSL on in production). The owner or I can check it WITHOUT reading any value: in the Railway Postgres **Data** tab run `SELECT application_name, client_addr, count(*) FROM pg_stat_activity WHERE datname = current_database() GROUP BY 1, 2 ORDER BY 3 DESC;` — sessions that come in through the public TCP proxy show the proxy's address, sessions over the private network show an internal one (Railway's private network is IPv6; I could not confirm its exact prefix in the official docs, so compare against the backup service's address, which is known to be private). If the API's sessions look like the proxy, the switch to the private reference is REQUIRED before W11 (it is planned before W1 anyway).
+- **G2 — Looker Studio is NOT in use.** After the rotation and once the API and the backup are verified on the private reference, disable the public proxy (W11). How to restore from the owner's PC afterwards: see "Restoring from the PC with the proxy off" below.
+- **Neon is KEPT** (redundant copy against a major Railway outage). Rotate its password (reset per branch; see rehearsal) and update `livedata-db-backup` `NEON_DATABASE_URL`. **DELETE `NEON_DR_URL` from `barberpilot-api`** (unused: no code reads it). Verify a backup reaches Neon after the rotation (W9).
+- **G4 — PINs.** The owner chooses two new 8+ digit PINs. `ADMIN_MASTER_PIN` is stored as the PIN itself in the variable (the API hashes it at start): the owner types it into the Railway variable. `SOCIO_PIN_HASH` needs a bcrypt hash: run `tools/hash_pin_socio.ps1` (hidden prompt, asks twice, rejects fewer than 8 digits or non-digits, copies ONLY the hash to the clipboard; bcrypt cost 10 = what the API uses; its `-SelfTest` passed on 2026-10-23: the hash verifies with bcrypt.compare; the interactive prompt itself was not exercised from here).
+- **G5 — fresh backup: OK as of the last run.** Read-only from the backup service log: `pg_dump` complete, upload to R2 `backups/2026/10/23/backup-2026-10-23T04-03-12.sql.gz`, restore into Neon, both PG 18.6, table counts sane (registros 2578, queue 1673), `restore-test status=ok`, "All steps completed successfully". Re-check the morning of the window.
+
+#### Readiness gate for the window (all must be true, else the window moves to Saturday/Sunday after closing)
+- G1: DONE (both literals; W0b switches them to the reference before W1).
+- G2: DONE (Looker not used; proxy off at W11).
+- G3: the rehearsal below read through by the owner, screen by screen, before Saturday.
+- G4: the two PINs chosen; `tools/hash_pin_socio.ps1` run once for the socio PIN hash (hash in the password manager).
+- G5: fresh backup re-checked the morning of the window (log read, or `/admin/restore-status`).
+- G6: the roles deploy and the control/API batch verified green by `run_all` (done) and the owner's go on each step.
+- **G7 (new): the Regenerate button exists and works.** Community reports show Railway Postgres rotations failing on some templates (no "Regenerate" in the postgres-ssl UI, "Password reset is not supported for Postgres HA clusters", and a case where the new variable did not match the role password). BEFORE Saturday the owner opens the Postgres service → Database tab and confirms the Credentials/Config → Regenerate control is there (do NOT press it). If it is missing or the service is HA, STOP and open a Railway support ticket; never edit `POSTGRES_PASSWORD`/`PGPASSWORD` by hand and never run `ALTER USER` (or edit `pg_hba.conf`) on the production database as a workaround.
+- **G8 (new): Neon identity.** The owner identifies in the Neon console which project, branch and role `NEON_DATABASE_URL` uses (the log shows the endpoint host `ep-tiny-bread-…`), so the password reset is done on the right branch (Neon resets are per branch) and the old password stops working immediately.
+
+### 2.1 Railway service `barberpilot-api` (production)  _(code-derived list; superseded by 2.0)_
 | Name | Used by | Rotate? / how | Impact | Update also in | Verify |
 |---|---|---|---|---|---|
 | `DATABASE_URL` | API; should be a reference to the Postgres service | Follows the Postgres Regenerate (section 2.2); make sure it is `${{ Postgres.DATABASE_URL }}`, not a pasted string | API cannot connect until redeployed | backup service, owner's ad-hoc DB access, local `.env` | deploy log has no "password authentication failed"; `/health` 200 |
@@ -52,8 +113,49 @@ Actions secrets found by name: only `DASHBOARD_READ_TOKEN` in `barberpilot-contr
 ### 2.5 Outside Railway (where values live or are typed)
 Panel "Token de administrador" field (browser), **UptimeRobot** monitor of `/admin/restore-status`, local untracked `C:\Users\PC\barberpilot-api\.env` (holds a copy of several of the names above; overwrite or delete after rotating), the owner's password manager, Meta Business, Cloudflare R2, Neon. The Firebase admin service-account JSON in the App folder is git-ignored, never committed, and not a Railway variable: out of scope of this incident.
 
+### 2.6 Railway `staging` environment (found 2026-10-23 with the owner's CLI session, read-only)
+**Facts (Railway CLI 4.66.0: `environment list`, `status` — structure only, no variable was read):**
+- Project `BarberPilot_backend` has TWO environments: `production` (updated 5 months ago) and `staging` (updated 4 months ago).
+- `production` runs 3 services, all deploy status SUCCESS: `barberpilot-api`, `Postgres-gl9n`, `livedata-db-backup`.
+- `staging` has ONE service instance: `Postgres-gl9n` (online, volume `postgres-volume-aEKy`). There is **no API service in staging** today (it was spun down; the staging guide says to delete only the services and keep the environment and its saved variables).
+- The CLI link in `C:\Users\PC\barberpilot-api` points at **staging**, not production, and its linked service id is stale ("not found in project"). Nothing was changed; every command below must pass `-e production` / `-e staging` and `-s <service>` explicitly instead of relying on the link.
+
+**What staging is for (from `STAGING.md` in the repo):** a disposable environment to test a feature before promoting `develop` to `main`: synthetic data only (seed script `scripts/seed-staging.js`), no Neon warm standby, no R2 backups, its own API URL and its own variables. It was used for the 2026-08-10 live-fire verification and a data-loss investigation (see TECH_DEBT).
+
+**Why it belongs in this rotation:** Railway's disclosure covers environment variables of the whole project, so the staging variables (including the Postgres template variables and any API variables still saved in the environment) may have been read too. In addition, `STAGING.md` committed the literal staging `JWT_SECRET` and `DASHBOARD_READ_TOKEN` to git history (TECH_DEBT 2026-07-30, open): those two values must be treated as public regardless of the Railway incident.
+
+**Decision needed from the owner (not taken by me):**
+| Option | What it does | Risk | Reversible? |
+|---|---|---|---|
+| A. Delete the staging Postgres service (keep the empty environment) | removes the only live staging asset and its credentials | loses synthetic data; confirm first that it holds NO real customer data | data: no (re-seedable with the seed script); environment: yes |
+| B. Keep and rotate | Database tab → Regenerate for staging Postgres + new random staging values for every variable still saved in the environment (the two committed secrets included) | more window time; staging stays an attack surface with nothing using it | yes |
+| C. Leave as is | nothing | staging DB credentials stay exposed; costs idle money | — |
+Recommendation: **A**, after the owner confirms staging has no real data (I cannot check: reading the database needs its secret). If the owner wants staging kept, do B. Either way nothing is touched without the owner's explicit word in the chat.
+
+**Outcome (2026-10-23):** the owner deleted the staging Postgres service and its volume himself. Read-only check afterwards: `staging` has no services; production is intact. The decision table above is closed (option A done). What remains: the committed staging secrets in git history (TECH_DEBT 2026-07-30) are no longer tied to any running service; scrubbing the history stays an open item with lower urgency. The empty `staging` environment can stay.
+
+**CLI rules for this window (owner, 2026-10-23):** read-only only (`status`, `logs`, listing variable NAMES). Never `up`, `deploy`, `redeploy`, `variable set/delete`, `link`, `environment` changes. Never print or log a value. The CLI has no "names only" listing: `variable list` returns values (`--json` includes raw values, `--kv` prints them). Names come either from the owner's dashboard copy or from a filter that reads the CLI output in a pipe and prints only the keys, with the owner's explicit OK.
+
+### 2.7 Rehearsal: the exact screens (from the vendors' documentation, 2026-10-23)
+Sources read: Neon "Manage roles"; Cloudflare R2 "Authentication" and "Roll API token"; Meta "Basic settings", "Two-step verification" and the WhatsApp "get started" guide; Railway "PostgreSQL", "Variables" guides and community threads (marked). **Vendor screens change: where a step was not in an official page it is marked UNVERIFIED and the owner checks it on screen in the rehearsal, without pressing anything.**
+1. **Neon** (verified in Neon's docs): Console → select the project → the branch used by `NEON_DATABASE_URL` → **Postgres database → Roles** → the role's menu → **Reset password** → in the modal click **Reset** → the new password is shown once. "The reset takes effect immediately; the old password is rejected on the next connection." Copy the updated connection string from the **Connect** modal; resets are per branch. → Put it in `livedata-db-backup` `NEON_DATABASE_URL` AT ONCE (the next 03:00 run would fail otherwise; nothing else uses Neon now).
+2. **Cloudflare R2** (verified: creation; revoke step UNVERIFIED): dashboard → **R2 object storage → Overview → Account Details → API Tokens → Manage** → **Create Account API token** (or User API token) → permission **Object Read & Write**, scope to the backup bucket only → create → copy the **Access Key ID** and the **Secret Access Key** (the secret is shown only once). Set both in BOTH services. After the backup is verified (W9), delete/revoke the OLD token from the same **Manage** list (Cloudflare's docs do not describe the revoke click for R2 tokens: a third-party source says "revoke" there; the owner confirms the label on screen).
+3. **Meta** (order matters; the app secret reset is disruptive — Meta: "This will cause all the business integrations to stop working as user data grants for the app will be revoked"; whether it also kills the existing system-user token is NOT documented, so do the steps in this order and test):
+   a. App Dashboard → **Settings → Basic** → App secret → **Reset** (not rotatable by API). Update `WHATSAPP_APP_SECRET` right after (webhook POSTs are rejected until then, fail closed).
+   b. Business Settings → **System users** → the system user → **Generate token** with the permissions `business_management`, `whatsapp_business_messaging`, `whatsapp_business_management` → copy → `META_WHATSAPP_ACCESS_TOKEN`. Revoking the OLD token: UNVERIFIED (Meta's page does not explain it): the owner finds the control in the same system-user screen.
+   c. Webhook verify token: choose a new random value, set `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, then in the app's WhatsApp → Configuration → webhook set the same value and **Verify and save**.
+   d. 2FA PIN: WhatsApp Manager (Business settings → Messaging accounts → the account → Settings → WhatsApp Manager) → the phone number → **Settings → Two-step verification → Change PIN** (or the API: POST to the phone number id with `{"pin": "<6 digits>"}`). Note: for eligible numbers Meta is deprecating the PIN and the tab may not appear; then use the API route. Then `WHATSAPP_PHONE_2FA_PIN`.
+   e. Test: send one WhatsApp from the panel, receive one.
+4. **Railway** (variables verified; Regenerate path UNVERIFIED by an official page — see G7): variables → staged changes → review → deploy; `${{Postgres-gl9n.DATABASE_URL}}`; Postgres service → Database → Config/Credentials → **Regenerate**; Settings → Networking → remove the public access (TCP proxy) at W11 (the CLI also has `railway tcp-proxy delete`, which is a state change: only on the owner's word).
+
+### 2.8 Restoring from the owner's PC with the proxy off (to document and rehearse)
+The public proxy only exists for manual work from outside Railway. With it off (W11), in order of preference:
+1. **Do not restore from the PC at all:** a full copy lives in Neon (restore-tested every night) and in R2 (gz dumps). For a major Railway outage the recovery target is Neon.
+2. **Temporary proxy:** Postgres service → Settings → Networking → add Public Access (creates a TCP proxy and the `DATABASE_PUBLIC_URL` variable; billed network egress), run the restore, then remove it again. The proxy host/port come from a shared pool and may differ each time (Railway staff reply in a community thread), so recovery scripts must read the URL from an environment variable (W12), never hardcode it, and a leftover old address must never receive real credentials.
+3. **Railway-side restore** (a one-off service in the project that downloads the dump from R2 and restores over the private network): not built or verified; propose building it only if the owner wants it.
+
 ## 3. Before the window (no impact on the shop)
-- **P1** In Railway, open the Variables tab of each service (`barberpilot-api`, `Postgres`, `livedata-db-backup`, any other) and send me the NAMES only (a screenshot with values hidden, or just the list). Never `railway variable list` in a shared place: it prints values.
+- **P1 — DONE 2026-10-23.** The owner copied the real variable NAMES from the dashboard (section 2.0). Still to confirm in the dashboard (gate G1): whether `DATABASE_URL` is a reference in `barberpilot-api` and in `livedata-db-backup` (F3). Never `railway variable list` in a shared place: it prints values.
 - **P2** (socio PIN: at least 8 digits; VAPID: delete, do not generate) Generate the new values on your own PC, straight to the clipboard, never displayed or pasted in chat (PowerShell):
   - JWT: `node -e "process.stdout.write(require('crypto').randomBytes(48).toString('hex'))" | Set-Clipboard`
   - Dashboard token: same with `randomBytes(32)`. Paste each into the password manager right away, then generate the next.
@@ -66,16 +168,20 @@ Panel "Token de administrador" field (browser), **UptimeRobot** monitor of `/adm
 ## 4. The window (after closing; the API restarts ONCE, together with the roles deploy `bc6765d`)
 Order matters: each step has its check and its way back.
 - **W0 — Reconnect GitHub (prerequisite for the deploy).** Railway Account Settings → reconnect GitHub; review https://github.com/apps/railway-app and accept pending permissions; for `barberpilot-api` (and the cron service) Settings → Source: confirm repository and branch, otherwise "Disconnect" then "Connect Repo"; Settings: confirm autodeploy is enabled. *Check:* the service shows the repo/branch connected. *Way back:* none needed.
+- **W0b — Both `DATABASE_URL` literals → the reference (BEFORE the Regenerate).** In `livedata-db-backup` AND `barberpilot-api`: Variables → `DATABASE_URL` → replace the literal with `${{Postgres-gl9n.DATABASE_URL}}` (Railway's reference syntax is `${{SERVICE_NAME.VAR}}`; changes appear as staged changes that must be reviewed and deployed). Deploy the backup service, then the API (this deploy is the CURRENT code; the new code goes at W4). *Check:* the API log shows its normal startup and answers; the backup service's next run (or "run now" if the button exists) shows the same `postgres-gl9n.railway.internal` guard line and a successful dump; in the Data tab the sessions query above shows the API connected. *Way back:* put the previous literal back from the password manager copy the owner took before editing (it is still valid because the Regenerate has not happened yet).
 - **W1 — Postgres Regenerate** (Database → Config → Connection → Regenerate). The database restarts; the shop is closed, so downtime is fine. *Check:* the Data view loads tables. *Way back:* not reversible (new password); never fix by editing the password by hand.
-- **W2 — Stage the new `barberpilot-api` variables** (Variables tab, staged, not yet deployed): `DATABASE_URL` as the reference to Postgres, `JWT_SECRET`, `DASHBOARD_READ_TOKEN`, `ADMIN_MASTER_PIN`, `SOCIO_PIN_HASH`, new `R2_*`, `META_*`/`WHATSAPP_*` (if present), delete `VAPID_*` and the `NEON_DATABASE_URL` copy. *Way back:* discard the staged changes before deploying.
-- **W3 — Stage `livedata-db-backup` variables** (`DATABASE_URL` reference, `PROD_*`, new `R2_*`, new Neon URL) and deploy it.
+- **W1b — Postgres service variable `DASHBOARD_READ_TOKEN`** (right after W1, on the owner's word): delete it from `Postgres-gl9n` ONLY, never from the API (F1). *Check:* the API's own `DASHBOARD_READ_TOKEN` is still listed.
+- **W2 — Stage the new `barberpilot-api` variables** (Variables tab, staged, not yet deployed): `DATABASE_URL` as the reference to Postgres-gl9n; new `JWT_SECRET`, `DASHBOARD_READ_TOKEN`, `ADMIN_MASTER_PIN`, `SOCIO_PIN_HASH`; new `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`; new `META_WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `WHATSAPP_PHONE_2FA_PIN`; DELETE `NEON_DR_URL` (unused, owner decision 2026-10-23); DELETE `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`. Do not touch `CONTACT_EMAIL`, `GOOGLE_REVIEW_URL`, `NODE_ENV`, `PORT`, `R2_BUCKET_NAME`, `R2_ENDPOINT`. *Way back:* discard the staged changes before deploying.
+- **W3 — Stage `livedata-db-backup` variables**: `DATABASE_URL` as the reference to Postgres-gl9n (if it was a literal, F3), `NEON_DATABASE_URL` with the new Neon password, the SAME new `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` as the API. (There are no `PROD_*` variables.) Deploy it.
 - **W4 — Deploy `barberpilot-api`**: apply the staged changes and Ctrl+K → **Deploy Latest Commit** (builds `bc6765d`). *Check in the deploy log:* "Migration 050", "051" and "052" lines with no failure line; no "password authentication failed"; the API answers. *Way back:* Deployments tab → previous deployment → Redeploy (the old code; whether it also restores the old variable values is UNVERIFIED — do not rely on it for secrets).
 - **W5 — Verify the API.** Run `tools/post_deploy_check_roles.sh` (read-only); log in as the owner (the page shows its in-page login because the old token is now invalid: this also proves the old `JWT_SECRET` is dead); five-route admin console check as agreed for the roles deploy.
 - **W6 — Dashboard token.** Paste the new token in Administración, update the UptimeRobot monitor. *Check:* `/admin/restore-status` 200 with the new token, 401 without; the monitor goes green.
 - **W7 — Database sessions.** `SELECT usename, application_name, client_addr, state, backend_start FROM pg_stat_activity WHERE datname = current_database();` — terminate any session you do not recognize with `pg_terminate_backend(<pid>)` (Railway's guide).
-- **W8 — Meta.** Update the webhook verify token in Meta (verify and save); send a test WhatsApp from the panel; receive one.
-- **W9 — Backups.** Run the backup service once (or wait for 03:00 and check next morning); confirm a new object in R2 and a fresh `/admin/restore-status`; then **revoke the OLD R2 token, the OLD Neon password and the OLD Meta token** in their consoles.
+- **W8 — Meta (in this order; see 2.7).** (1) Reset the app secret in the App Dashboard → `WHATSAPP_APP_SECRET` in the SAME minute: between the reset and the Railway update the API rejects every webhook POST (it fails closed). Meta warns the reset is disruptive (user data grants revoked) and does not say whether it kills the existing system-user token, so (2) generate a NEW system-user access token AFTER the reset → `META_WHATSAPP_ACCESS_TOKEN`. (3) New verify token: set `WHATSAPP_WEBHOOK_VERIFY_TOKEN` and the same value in the webhook configuration, "Verify and save". (4) Change the phone number 2FA PIN → `WHATSAPP_PHONE_2FA_PIN`. *Check:* send a test WhatsApp from the panel and receive one.
+- **W9 — Backups.** Run the backup service once (or wait for the 03:00 run and read its log next morning): confirm the new object in R2, the restore into Neon (`restore-test status=ok`, version match, sane table counts) and a fresh `/admin/restore-status`. Then **delete the OLD R2 token** and the **OLD Meta system-user token** in their consoles (the old Neon password is already dead: Neon's reset is immediate). Verify a backup reaches Neon after the rotation (owner requirement).
 - **W10 — Local PC.** DELETE `C:\Users\PC\barberpilot-api\.env` (owner decision: no secret copies on disk; a names-only `.env.example` replaces it); the Railway CLI session was re-authorized by the owner before the window (section 6).
+- **W11 — Public networking decision (F2), AFTER everything above is verified, on the owner's word:** if Looker Studio is not used, disable the TCP proxy of `Postgres-gl9n` (Settings → Networking). *Check:* the API and the backup still connect (they use the private `DATABASE_URL`); `DATABASE_PUBLIC_URL` no longer resolves. *Way back:* re-enable the proxy (new host/port may change: update the helper scripts).
+- **W12 — Helper script.** Change `C:/Users/PC/livedata-db-backup/psql-restore.js` to read the database URL from an environment variable instead of the literal (F2, local finding), then delete the old literal. Separate small change, owner's word.
 
 ## 5. Post-window checklist for the owner
 1. Log in again on every screen: panel (admin), the encargado, the socios (new PIN) in sf-live.
@@ -98,6 +204,8 @@ Order matters: each step has its check and its way back.
 **Railway CLI re-authorization (I never see a token):** the old CLI session is invalid. The safe way is that YOU run `railway login` in your own terminal (browser flow; `railway whoami` confirms) — the session stays on your PC and I only run read-only commands such as `railway logs`. A narrower alternative: create a Project Token in the project's settings (https://railway.com/account/tokens is for account/workspace tokens), set it as `RAILWAY_TOKEN` only in that terminal session, and delete the token when we finish. Do not paste tokens in chat.
 
 ## 7. What I could not verify (so it is not stated as fact)
+Added 2026-10-23: whether the API's `DATABASE_URL` literal uses the private host or the public proxy (the backup service's is private; the Data-tab sessions query in "Owner answers" tells for the API); whether the Postgres service has a working Regenerate (gate G7: community reports of failures on some templates); the exact Cloudflare revoke click for R2 tokens and the Meta system-user token revoke click (not in the official pages I read); whether a Meta app-secret reset also invalidates the existing system-user token; the Railway private-network address range; which Neon project/branch/role `NEON_DATABASE_URL` uses (gate G8).
+
 The real variable list in the dashboard; whether Railway keeps a history of variable values or restores them on rollback; the exact Cloudflare/Neon/Meta console steps; whether Railway's HTTP logs include client IPs; whether the cron service has a "run now" button; the cause of the missing roles deploy (hypothesis only).
 
 ## 8. After the rotation
