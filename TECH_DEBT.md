@@ -2397,7 +2397,203 @@ These must stay in sync manually. `SERVICE_PRICES` was the analogue for prices a
 
 **Status**: Open — planned, decisions recorded; nothing built yet.
 
+### 2026-10-22 — Client check-in wait estimate (server `remaining_min`) still uses learned durations and a hardcoded 28-minute fallback
+
+**Repo:** barberpilot-api
+
+**Description**: `getServiceDuration` / `barberQueueBreakdown` (GET /queue/control `remaining_min` and `queue_wait_min`, the wait time shown to a client at check-in) use learned averages from `service_durations` and, when there are fewer than 5 samples, `STATIC_DURATIONS[service] ?? 28` in code. The new Sillas dashboard (owner decision 2026-10-22) uses **only the catalog duration** (`servicios.duracion_min`), so the chair screen and the client-facing wait estimate can disagree for the same service. Durations in code also contradict the rule "durations only from the catalog".
+
+**Why deferred**: owner decision 2026-10-22: Sillas first, the check-in estimate in a later stage; the two numbers do not feed each other.
+
+**Severity**: Low — an estimate shown to clients, no money involved.
+
+**Urgency**: Eventual (plan together with Stage 2b "catalog on every surface").
+
+**What would close it**: compute remaining/wait from `servicios.duracion_min` (admin-edited, audited), drop `STATIC_DURATIONS`, decide what "learned" data is still used for (analytics only), and make a service without a duration answer "sin estimación" instead of 28.
+
+**Status**: Open.
+
+### 2026-10-22 — Service duration: the upper bound is a code constant; "Corte + Cejas" (s12) still has no duration until the screen is deployed
+
+**Repo:** barberpilot-api
+
+**Description**: `PATCH /api/v2/config/servicios/:id/duracion` (Migration 054) refuses durations above `DURACION_MAX_MIN = 480`, a constant in code (the magnitude guard for big changes does use the tenant's `servicio_precio_max_variacion_pct`). Separately, production has one active service without a duration, s12 "Corte + Cejas": until the duration-edit route and screen are deployed it shows "sin estimación" in Sillas. Owner decision 2026-10-22: no SQL; after the API is deployed the owner sets it to 35 minutes from Administración → Servicios, which records who/when/before/after in `servicios_audit`.
+
+**Why deferred**: the cap is a validity bound, not a business limit; s12 waits for the deploy queue (roles, A-3, then this).
+
+**Severity**: Low.
+
+**Urgency**: Near-term for s12 (right after the API deploy); Eventual for the cap.
+
+**What would close it**: s12 = 35 saved from Administración (audit row present); the cap moved to `tenant_config` like the other catalog limits.
+
+**Status**: Open.
+
+### 2026-10-22 — Panel session (8 h JWT) expires during the working day and cannot be renewed
+
+**Repo:** barberpilot-control (part 1), barberpilot-api (part 2)
+
+**Description**: the panel login token lasts 8 hours with no renewal. Reported by the owner every day between 18:00 and 19:00: every call answers 401 (`/queue/control`, `/clientes`, range routes), Sillas showed "Error: Unauthorized" while the header still said ADMIN; only closing and reopening fixed it, losing whatever was being typed.
+
+**Part 1 (control only, built, not deployed)**: a warning banner 10 minutes before expiry ("Tu sesión vence pronto · Renovar"); a fetch wrapper that, on a 401 caused by the session, opens an in-page login (same account only, no reload), then retries the failed requests once with the new token; no board shows a raw "Unauthorized"; typed closing-form values (price, payment method, tip) are kept as per-ticket drafts and put back after every redraw. It works against the CURRENT production API (tested against live main). Known limits: the 10-minute warning and the 20 s check interval are code constants in the control; a 401 with another meaning on a route that is not in the exclusion list would also open the login (the list: login routes, /events, and 401 bodies `invalid_credentials`, `invalid_pin`, `socio_not_configured`); `agenda-admin.html` makes no authenticated calls, so it is not affected.
+
+**Part 2 (API, planned, after Railway resumes)**: sliding session — an active panel renews its token silently before expiry; an idle panel expires after an idle limit; an absolute maximum per session; all durations as tenant config; renewal needs a valid unexpired token and re-checks `panel_users` (a deactivated user or a changed role cannot renew); tests for renewal, idle expiry, absolute maximum and deactivated user. When it exists the banner's "Renovar" becomes a silent renewal and the 10-minute constant moves to config.
+
+**Why deferred (part 2)**: depends on the Railway outage and the deploy queue (roles, A-3, Sillas); part 1 removes the daily pain without any API change.
+
+**Severity**: Medium — loses in-progress work and blocks the screen daily, no data exposure.
+
+**Urgency**: Part 1 Immediate (owner approved the daytime exception once reviewed); part 2 Near-term.
+
+**What would close it**: part 1 deployed and the 18:00–19:00 report stops; part 2 deployed and tested.
+
+**Status**: Open — part 1 ready for review.
+
+### 2026-10-22 — Live events: one /events connection per open panel, capped at 10 for the whole API
+
+**Repo:** barberpilot-api, barberpilot-control
+
+**Description**: the Sala/Sillas refresh now reacts to the "cambio" event of `GET /events`. Each open panel keeps one stream (two if a dashboard token is also set, because the old alert stream stays), and the API refuses the 11th connection (`sseClients.size >= 10`, 503). With many tabs/devices open at once the extra panels silently fall back to the periodic checks (30 s Sala / 180 s Sillas), which is the designed fallback but means slower updates on those screens.
+
+**Why deferred**: the cap is an existing resource guard; a normal day (2–3 screens) is far below it.
+
+**Severity**: Low.
+
+**Urgency**: Monitor-only.
+
+**What would close it**: raise or make the cap tenant config, or share one stream per browser (BroadcastChannel); log how many panels are connected.
+
+**Status**: Open.
+
+### 2026-10-22 — Cash base (fondo de caja): hardcoded constants, no dated values, fallback 30.000 — stage APPROVED, after the pending deploys
+
+**Repo:** barberpilot-control (only place found), barberpilot-api (new storage)
+
+**Owner definition (2026-10-22)**: the cash the shop starts each day with, to give change; today $50.000; it will increase as the business grows. Approved as a separate small stage after the pending deploys (roles → A-3 → Sillas/durations/refresh). Billing-adjacent: a verification report before any commit and a separate approval to deploy.
+
+**Read-only sweep (every repo, tracked files)**:
+- **barberpilot-control `index.html` only.** `BASE_CAJA = 50000` (cash at the start of the day, editable, stored per date in this browser: `sfsf_base_caja_<fecha>`), `BASE_MINIMA = 50000` (fixed constant: "what always stays in the drawer"), `AJUSTE_CAJA` (= BASE_CAJA − BASE_MINIMA, `sfsf_ajuste_caja_<fecha>`, resets each day). Used by: Cierre de caja tab (`renderCaja`: "Base inicial", "Total en caja", "A depositar", "Base que queda en caja", the base and ajuste inputs); the "Copiar texto" cash-closing text (`textoCierreWhatsapp`); the 58 mm cash-closing receipt (`printCaja`); the A4 cash closing (`printCajaA4Directo`: "Base inicial en caja", "Saldo físico en caja", "Base que queda en caja (fija)", "Retirar y depositar"). Also a code comment and a label with the literal "$50.000".
+- **Not found**: barberpilot-api (no cash-closing code at all), sf-live, saulfino-web, BarberPilot_App (its only 50000 is the KPI bonus tier `calcBonus`, a different concept), reports, range routes. The cash closing is computed ONLY in the browser from today's records; it has no date selector and no server record (see the 2026-08-18 entry "Cierre de caja has no server-side persistence").
+- **Inconsistency found**: `cambiarBase()` falls back to **30000** on an empty/invalid input while the rest uses 50000 — a silent different default.
+- Test fixtures that hold the current text: `barberpilot-tests/suites/stage2/s2_antes.json`, `s2_despues.json`, and `stage2a_e2e.mjs` (the localStorage key).
+
+**Approved requirements**: (1) this sweep; (2) editable in Administración, admin only, audited (who, when, before, after, reason); (3) DATED values, each with an effective-from date: a change applies from that day on, past days always use the base in force that day, seed $50.000 from the first operating day; (4) no code constants, every surface reads the server value for the day being closed; (5) verification report BEFORE commit: cash closing for several past days computed before and after must be identical, plus a test where the base changes mid-month and only later days use the new value; (6) tests (status and body + browser) in barberpilot-tests, diff + plain-language summary, STOP before commit, separate approval to deploy.
+
+**Owner decisions (2026-10-22, final)**: the editable value is the **fondo** that always stays in the drawer (today BASE_MINIMA $50.000); the per-day starting cash (BASE_CAJA) and the ajuste stay per day. Seed $50.000 effective from 2026-05-01. The per-day ajuste is stored on the server, audited (who, when, value, reason). An effective date in the past is refused. Server unreadable: last saved value labelled with its date, never a silent default; the 30000 fallback in `cambiarBase()` is removed. **Scope extension**: every daily cash closing is persisted on the server (base used, ajuste, counted cash, amount to deposit, base that stays, author from the login, time), corrections are new audited versions (never an overwrite), the admin sees past closings, the encargado closes but cannot edit past closings, and the A4 and 58 mm receipts print from the saved closing. Full design: `plan_caja_fondo_cierres_2026-10-22.md`.
+
+**Why deferred**: order set by the owner (pending deploys first); Railway outage.
+
+**Severity**: Medium — billing-adjacent (it feeds "a depositar" at the daily close), though today's value is correct. **Urgency**: Near-term (after the deploys).
+
+**Status**: Open — sweep done, owner decisions recorded, design plan written; build starts after the pending deploys.
+
+### 2026-10-22 — Barber absence is not consistent across screens ("Salió" in Sala does not reach Sillas or the next turn) — stage approved, part of the Sillas stage
+
+**Repo:** barberpilot-api, barberpilot-control (and two surfaces to decide: BarberPilot_App, saulfino-web)
+
+**Description (found by reading the code, 2026-10-22)**:
+- **Server**: the absence state is an in-memory `Set` (`unavailableBarbers`). It is **lost on every API restart/deploy** and nothing reads the audit table back. The audited route `PATCH /barbers/:name/availability` (admin + encargado, Migration 052, writes `barberos_disponibilidad_audit`) updates the Set and the table. `GET /queue/control` returns the state as `available` (true/false) per barber; there is **no `ausente` field**. The server's "cualquiera" assignment (`resolveAnyBarber`) already skips absent barbers.
+- **Control, root cause of the reported bug**: Sala's card reads `available === false` (correct, shows AUSENTE), but Sala's "Próximo turno" banner and the whole Sillas screen read `bd.ausente`, a field the server never sends, so it is always undefined: Sillas shows LIBRE and the next-turn banner still offers an absent barber. Sillas has no Salió/Volvió button; on main the Sala button is admin-only (the encargado gets it in the roles branch).
+- **sf-live** reads `available === false` (shows ⏸), correct. **BarberPilot_App**: `ColaScreen` has its own "Disponible / No disponible" toggle in local component state (`isAvailable`) that never calls the server: a local copy of the same fact. **saulfino-web** `checkin.html`: the barber list is static (`available:true` hardcoded), so a client can pick an absent barber (the "Cualquiera" option is protected by the server).
+
+**Owner requirements (2026-10-22)**: one source of truth on the server (the audited route; author from the login, timestamps); migrate every reader, no local copies; Sillas card with a gray AUSENTE state and Salió/Volvió for admin and encargado, same effect as from Sala; an absent barber is temporarily out of the next-turn rotation on every screen (Sillas strip, Sala, the server's "cualquiera", the App if it shows turns), back per the existing rule on "Volvió" (the rule itself unchanged); "Próxima silla libre" ignores absent barbers; a change in one screen shows in the other on the next change check and instantly via live events; tests (absent in Sala → Sillas AUSENTE and excluded; back in Sillas → included again; encargado allowed, no login refused; audit rows).
+
+**Plan**: (1) server: the state is DERIVED from `barberos_disponibilidad_audit` (latest row per barber with today's date in Santiago; an older absence does not carry over to the next day; short cache cleared on every change) instead of the in-memory Set; `/queue/control` and the change marker read it; restart-safe. (2) control: one helper `barberoAusente(bd)` (`available === false`) replaces every `bd.ausente`; Sillas card AUSENTE (gray) with Salió/Volvió for admin and encargado calling the same route; Sala's button for admin and encargado; the next-turn banners and "Próxima silla libre" use the helper. (3) the change notice already exists (`cambio` event, area "asistencia", and the marker includes the absence). (4) tests in barberpilot-tests, status + body and browser.
+
+**Owner decisions (2026-10-22, final)**: (a) **BarberPilot_App `ColaScreen`**: the toggle becomes READ-ONLY — a barber only sees their own status in the App; absence is marked only by the admin and the encargado from the panel; the local toggle is removed; done in the App-shared-routes stage. (b) **saulfino-web `checkin.html`**: FIX — read the barber list and each barber's availability from the server (no hardcoded roster); an absent or inactive barber cannot be chosen; a small separate change, customer-facing: tests + screenshots, deploy outside opening hours on the owner's word. (c) The existing fallback "if EVERY barber is absent, assign among all" stays.
+
+**Work order**: ticket print test → PRs (Sillas/durations/refresh) and force-push #47/#48 → live smoke check of PR #49 → absence implementation (diff, summary, screenshots, STOP before commit) → `checkin.html` fix.
+
+**Why deferred**: runs with the rest of the Sillas stage; deploy order unchanged (roles first, since the server route is there).
+
+**Severity**: Medium — the wrong barber is offered the next turn. **Urgency**: Near-term (with the Sillas stage).
+
+**Status**: Open — plan and owner decisions final; implementation after the current full runs release the trees.
+
+### 2026-10-22 — Railway security disclosure (2026-10-21): rotate every secret — runbook prepared, window Friday 2026-10-23 after 20:00 (priority over the feature queue)
+
+**Repo:** infrastructure (Railway: barberpilot-api, Postgres, livedata-db-backup), GitHub, Cloudflare R2, Neon, Meta
+
+**Incident**: Railway disclosed that an unauthorized party may have accessed customer environment variables, some decrypted; it recommends rolling every variable and reviewing logs; all Railway API/CLI tokens were invalidated; storage-bucket credentials and GitHub tokens held by Railway were reset; builds are back (Hobby builds returned 2026-10-22 21:59 UTC). Sources: status.railway.com and the guides on blog.railway.com.
+
+**Owner checks (2026-10-22)**: no Railway email saying this account was affected; plan HOBBY; no OpenAI/Anthropic keys in use; no unknown access in the GitHub account `LiveDataCL` (a personal account, not an organization). **Decision: rotate everything as a precaution.**
+
+**Findings while preparing (names only, no values read)**: the API references 19 variable names (`JWT_SECRET`, `DATABASE_URL`, `DASHBOARD_READ_TOKEN`, `ADMIN_MASTER_PIN`, `SOCIO_PIN_HASH`, `META_WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `VAPID_*`, `R2_*`, plus non-secret settings); the backup cron service adds `NEON_DATABASE_URL`, `PROD_PUBLIC_URL`, `PROD_DATABASE_URL`; the `barberpilot-control` repo still holds a stale GitHub Actions secret named `DASHBOARD_READ_TOKEN` (its workflow no longer reads it) — to be deleted; a local untracked `.env` in the API folder holds copies; the Firebase admin JSON in the App folder is git-ignored and never committed (not part of the incident). The unexplained non-start of the roles deploy may be Railway's GitHub reset (hypothesis, unverified).
+
+**Plan**: `runbook_rotacion_railway_2026-10-22.md` — inventory, per-variable impact and verification, one maintenance window combined with the roles deploy (`bc6765d`) so the API restarts once, rollback per step, post-window checklist, log review since 2026-10-20, CLI re-authorization without printing tokens. Awaiting the owner's approval.
+
+**Why now**: security recommendation from the platform provider; priority over the feature queue by owner decision.
+
+**Severity**: High — if values were read, every login, customer data route and backup credential is exposed. **Urgency**: Immediate.
+
+**Status**: Open — runbook APPROVED 2026-10-22; window Friday 2026-10-23 after 20:00 (owner decisions in section 0 of the runbook: socio PIN ≥ 8 digits, VAPID deleted, stale GitHub secret deleted by the owner, local `.env` deleted afterwards, owner runs `railway login`). Feature work continues in parallel with no deploys/merges until the rotation is verified.
+### 2026-10-23 — API startup initializers race on a FRESH database (test harness flake; production unaffected)
+
+**Repo:** barberpilot-api
+
+**Description**: `initNotified15min()` (`ALTER TABLE appointments …`) and later migrations such as the one that reads `barber_schedule` run as independent un-awaited calls at startup, while `initAgenda()` is what creates `appointments` / `barber_schedule`. On an EMPTY database the order is not guaranteed: in the 2026-10-23 full run the "equality (stage 9)" suite failed once (API logged `relation "appointments" does not exist`, then `[STARTUP] Fatal error: relation "barber_schedule" does not exist`, the suite then got ECONNREFUSED); the same suite passed in every other run and on an immediate rerun. The same code is in live main (3cc2671), not only in the A-3 branch.
+
+**Why deferred**: production tables already exist, so the race cannot trigger there; it only hits fresh databases (the local harness, a future staging copy, a disaster-recovery restore into an empty DB). Fixing it means ordering every startup initializer (await chain), which touches the whole startup block and belongs to a dedicated, tested change, not to the Sillas release.
+
+**Risk if left**: intermittent red in the verification harness (mitigated: failure is loud, rerun is clean); on a rebuilt-from-scratch database the API could exit at startup (fails closed, never serves half-initialized).
+
+**What would close it**: one ordered `async function iniciar()` that awaits each initializer in dependency order, plus a harness test that boots against an empty DB 10 times in a row.
+
+**Severity**: Low. **Urgency**: Eventual.
+
+**Status**: Open (found 2026-10-23).
+
+---
+### 2026-10-23 — Intermittent `page.goto` timeout (30 s) on the first navigation of a browser suite — CAUSE NOT FOUND
+
+**Repo:** barberpilot-tests
+
+**Description**: Twice (first full run of the day, and a Sillas UI run after editing the fixture) `page.goto(...)` with the default `load` wait timed out at 30 s on the very first navigation of a suite; an immediate rerun loaded the same page in ~3 s. Not reproduced on demand (a 15 s instrumented load: 3 s, nothing pending). Suspected cold-start (browser/AV scan) but NOT confirmed.
+
+**Why deferred**: not reproducible; mitigated rather than diagnosed. The Sillas fixture now navigates with `waitUntil: 'domcontentloaded'` and a 60 s timeout (the tests wait for their own selectors), so it no longer depends on `load`.
+
+**Risk if left**: a spurious red in the harness (loud, rerun clean); the cause could still be a real slow-start problem in the panel page that a user would also feel on a cold load (unlikely: the page loaded in 3 s every time it loaded).
+
+**What would close it**: capture `requestfinished/requestfailed` and Chromium tracing on the first navigation of every suite for a week; or reproduce after a reboot / cold browser cache.
+
+**Severity**: Low. **Urgency**: Monitor-only.
+
+**Status**: Open (2026-10-23).
+
+---
+### 2026-10-23 — Two intermittent harness failures in suites that do not touch the Sillas tree (teardown rejection; slow "Conducta de hoy")
+
+**Repo:** barberpilot-tests
+
+**Description**: In the full run for the Editar release, (1) "a3 browser (agenda-admin)" printed 5/5 passed and then exited 1: an unhandled rejection `route.fetch: Request context disposed` — the harness's request-forwarding route handler (rewrites the page's production-URL calls to the local API) fired a fetch after the browser context was closed at teardown; (2) "stage 9 browser" failed 1 check of 39 ("Conducta de hoy" cards still showed "Cargando la conducta de hoy…": the check ran before the server answered). Both passed on an immediate individual rerun (5/5 exit 0; 39/39). Neither suite runs the Sillas checkout (they run control-a3 and control-ops).
+
+**Why deferred**: found during the release window; both are harness timing, reproduced only in the full sequence, and unrelated to the change under test.
+
+**Risk if left**: spurious red runs (loud; the rerun is clean). Not a product defect as far as the logs show.
+
+**What would close it**: (1) wrap the forwarded `route.fetch` in a try/catch that ignores a disposed context (the handler is copied into every built e2e suite: fix it in the shared head and rebuild); (2) make the Conducta check wait for the cards (poll up to 15 s) instead of a fixed sleep.
+
+**Severity**: Low. **Urgency**: Near-term (before the next full run is used as a release gate).
+
+**Status**: Open (2026-10-23).
+
+---
+
 ## Closed / Resolved
+
+### 2026-10-22 — Control PR #49 (session expiry) merged during the day: owner-authorized daytime merge
+
+**Repo:** barberpilot-control (process record, not code)
+
+**What happened**: the owner's message approved Part 1 and, in the pasted block, said the merge would be "TONIGHT after 20:00 on my word 'Merge sesión now'". The same message ended with the owner's own line: "Once completed, proceed to merge. I give you my daytime exception approval". The assistant merged during the day on that line. The owner later confirmed (2026-10-22) that this line came directly from them: **the merge was authorized**. This is not a process deviation.
+
+**Result**: merged tree identical to the reviewed commit (`eb4b9cd`), Pages deploy for `4b5fd7f` succeeded, all five live control files matched main byte for byte (new code present). Nothing reverted.
+
+**Working rule kept as a precaution (assistant side)**: when one message contains both a named word/time gate and a looser line ("proceed", "daytime exception"), the assistant asks one short question before acting, and quotes the exact approval it relies on in each merge/deploy message. It costs one line and removes any doubt about which instruction applies.
+
+**Severity**: n/a. **Urgency**: n/a.
+
+**Status**: Closed 2026-10-22 — recorded as an owner-authorized daytime merge.
 
 ### 2026-10-21 — Verification probe sent write methods to unauthenticated production routes — verified no change
 
